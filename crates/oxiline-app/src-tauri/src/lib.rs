@@ -46,7 +46,7 @@ pub fn run() {
         );
     }
 
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();
@@ -56,7 +56,14 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
-        ))
+        ));
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.plugin(tauri_nspanel::init());
+    }
+
+    builder
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
         .manage(state::AppState::new())
@@ -68,6 +75,11 @@ pub fn run() {
 
             tray::build(app.handle())?;
             shortcuts::register_default(app.handle());
+            // macOS: convert hud window to non-activating NSPanel.
+            #[cfg(target_os = "macos")]
+            if let Err(e) = hud::init_panel(app.handle()) {
+                eprintln!("oxiline: hud init_panel failed: {e}");
+            }
             watcher::spawn(app.handle().clone());
 
             // Refresh the tray's dynamic "지금" row when the DB changes.

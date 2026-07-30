@@ -71,3 +71,59 @@ fn position_top_center(hud: &WebviewWindow) {
     let _ = hud.set_position(PhysicalPosition::new(x, y));
     let _ = hud.set_size(LogicalSize::new(win_w, win_h));
 }
+
+/// macOS: convert the `hud` window to a non-activating NSPanel so it
+/// never steals focus from the foreground app (Phase 2 spec §1).
+/// Non-macOS: no-op (the existing transparent overlay already works).
+pub fn init_panel(app: &AppHandle) -> tauri::Result<()> {
+    #[cfg(target_os = "macos")]
+    {
+        use tauri::Manager;
+        use tauri_nspanel::{
+            CollectionBehavior, PanelLevel, StyleMask, WebviewWindowExt,
+        };
+
+        let Some(win) = app.get_webview_window("hud") else {
+            return Ok(());
+        };
+        let panel = win.to_panel::<HudPanel>()?;
+
+        // HUD window style: borderless + non-activating so the panel
+        // never takes focus from the foreground app.
+        panel
+            .set_style_mask(StyleMask::empty().borderless().nonactivating_panel().into());
+        // Floating level — above normal windows, below modal.
+        panel.set_level(PanelLevel::Floating.value());
+        // Don't hide when the app deactivates.
+        panel.set_hides_on_deactivate(false);
+        // Show on every Space + above fullscreen apps.
+        panel.set_collection_behavior(
+            CollectionBehavior::new()
+                .can_join_all_spaces()
+                .full_screen_auxiliary()
+                .value(),
+        );
+        // Start hidden.
+        panel.hide();
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok(())
+    }
+}
+
+/// Custom NSPanel subclass for the HUD.
+///
+/// Config: never becomes key (no focus steal), floats above other windows,
+/// stays visible when the app deactivates.
+#[cfg(target_os = "macos")]
+tauri_nspanel::tauri_panel! {
+    panel!(HudPanel {
+        config: {
+            can_become_key_window: false,
+            is_floating_panel: true,
+            hides_on_deactivate: false
+        }
+    })
+}
