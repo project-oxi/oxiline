@@ -37,6 +37,7 @@ notify = "7"
 r2d2 = "0.8"
 r2d2_sqlite = "0.25"
 parking_lot = "0.12"
+image = { version = "0.25", default-features = false, features = ["png"] }
 tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 

@@ -87,6 +87,14 @@ pub fn run() {
                 eprintln!("oxiline: hud init_panel failed: {e}");
             }
             notifier::spawn_scheduler(app.handle().clone());
+
+            // 60-second tray progress refresh timer.
+            let h = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(60));
+                crate::tray::refresh(&h);
+            });
+
             watcher::spawn(app.handle().clone());
 
             // Refresh the tray's dynamic "지금" row when the DB changes.

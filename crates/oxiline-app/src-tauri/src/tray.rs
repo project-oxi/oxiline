@@ -4,6 +4,8 @@ use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, MenuEvent};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
+use image::{ImageBuffer, Rgba};
+
 use crate::{hud, state::AppState};
 
 const EVENT_OPEN_PREFERENCES: &str = "oxiline://open-preferences";
@@ -34,7 +36,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 /// Build the tray icon and its menu.
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app)?;
-    let icon = load_tray_icon();
+    let icon = render_progress_icon(0.0);
     tauri::tray::TrayIconBuilder::with_id("main-tray")
         .icon(icon)
         .tooltip("OxiLine")
@@ -47,7 +49,17 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
 
 /// Refresh the dynamic menu (now-label + autostart) by rebuilding it.
 pub fn refresh(app: &AppHandle) {
+    // Update tray icon with current day progress.
     if let Some(tray) = app.tray_by_id("main-tray") {
+        let state = app.state::<AppState>();
+        let conn = state.conn();
+        let now_min = oxiline_core::util::now_minute_local() as f32;
+        let day_start = oxiline_core::settings::get_i64(&conn, "day_start_hour", 5) as f32 * 60.0;
+        let day_end = oxiline_core::settings::get_i64(&conn, "day_end_hour", 26) as f32 * 60.0;
+        let progress = ((now_min - day_start) / (day_end - day_start)).clamp(0.0, 1.0);
+        let _ = tray.set_icon(Some(render_progress_icon(progress)));
+
+        // Rebuild the menu (dynamic now-label + autostart state).
         if let Ok(menu) = build_menu(app) {
             let _ = tray.set_menu(Some(menu));
         }
@@ -124,23 +136,50 @@ fn now_summary(app: &AppHandle) -> String {
     }
 }
 
-/// A small verdigris rounded-square tray icon rendered procedurally (no asset).
-fn load_tray_icon() -> tauri::image::Image<'static> {
-    let (w, h) = (22u32, 22u32);
-    let mut rgba = Vec::with_capacity((w * h * 4) as usize);
-    let (r, g, b, a) = (0x2b_u8, 0xb3_u8, 0xa0_u8, 0xff_u8);
-    for y in 0..h {
-        for x in 0..w {
-            let corner = (x < 4 && y < 4 && (x + y) < 5)
-                || (x >= w - 4 && y < 4 && ((w - 1 - x) + y) < 5)
-                || (x < 4 && y >= h - 4 && (x + (h - 1 - y)) < 5)
-                || (x >= w - 4 && y >= h - 4 && ((w - 1 - x) + (h - 1 - y)) < 5);
-            if corner {
-                rgba.extend_from_slice(&[0, 0, 0, 0]);
-            } else {
-                rgba.extend_from_slice(&[r, g, b, a]);
+/// render_progress_icon: 22×22 RGBA progress bar.
+/// `progress` = 0.0 (start of day) → 1.0 (end of day).
+fn render_progress_icon(progress: f32) -> tauri::image::Image<'static> {
+    const SIZE: u32 = 22;
+    const BAR_PAD: u32 = 4;
+    const OXIDE_R: u8 = 0x2b;
+    const OXIDE_G: u8 = 0xb3;
+    const OXIDE_B: u8 = 0xa0;
+
+    let p = progress.clamp(0.0, 1.0);
+    let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
+        ImageBuffer::from_pixel(SIZE, SIZE, Rgba([0, 0, 0, 0]));
+
+    // Bar background: subtle outline
+    for y in BAR_PAD..(SIZE - BAR_PAD) {
+        for x in 2..(SIZE - 2) {
+            img.put_pixel(x, y, Rgba([128, 128, 128, 60]));
+        }
+    }
+    // Bar fill
+    let fill_w = ((SIZE - 4) as f32 * p) as u32;
+    for y in BAR_PAD..(SIZE - BAR_PAD) {
+        for x in 2..(2 + fill_w) {
+            img.put_pixel(x, y, Rgba([OXIDE_R, OXIDE_G, OXIDE_B, 255]));
+        }
+    }
+    // Leading white dot at the fill edge
+    if p > 0.0 && fill_w > 0 {
+        let cx = (2 + fill_w - 1) as i32;
+        let cy = (SIZE / 2) as i32;
+        for dy in -2..=2 {
+            for dx in -2..=2 {
+                if dx * dx + dy * dy <= 4 {
+                    let px = (cx + dx) as u32;
+                    let py = (cy + dy) as u32;
+                    if px < SIZE && py < SIZE {
+                        img.put_pixel(px, py, Rgba([255, 255, 255, 255]));
+                    }
+                }
             }
         }
     }
-    tauri::image::Image::new_owned(rgba, w, h)
+
+    let rgba = img.into_raw();
+    tauri::image::Image::new_owned(rgba, SIZE, SIZE)
 }
+

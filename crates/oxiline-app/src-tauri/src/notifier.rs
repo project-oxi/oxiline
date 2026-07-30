@@ -44,7 +44,7 @@ pub fn spawn_scheduler(app: AppHandle) {
                 // Sleep/wake detection: if wall time jumped significantly,
                 // drop the dedup set so stale items can be re-notified.
                 if last_now_minute >= 0
-                    && (now_minute - last_now_minute).abs() > SLEEP_GAP_MINUTES * 60
+                    && (now_minute - last_now_minute).abs() > SLEEP_GAP_MINUTES
                 {
                     last_notified.lock().clear();
                 }
@@ -73,7 +73,18 @@ pub fn spawn_scheduler(app: AppHandle) {
                     continue;
                 }
 
-                let body = format!("{}분 후 시작돼요", starts_in);
+                let body = {
+                    let locale = oxiline_core::settings::get_string(
+                        &conn,
+                        "locale",
+                        "system",
+                    );
+                    if locale.starts_with("en") {
+                        format!("Starts in {} min", starts_in)
+                    } else {
+                        format!("{}분 후 시작돼요", starts_in)
+                    }
+                };
                 let _ = app
                     .notification()
                     .builder()
