@@ -131,7 +131,6 @@ export function DayTimeline() {
                 categories={catsQ.data ?? []}
                 left={col}
                 columns={columns}
-                pxPerMin={pxPerMin}
                 top={top}
                 height={height}
                 past={past}

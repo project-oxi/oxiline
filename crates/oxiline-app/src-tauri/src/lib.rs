@@ -40,6 +40,11 @@ pub fn run() {
         commands::is_notification_permission_granted,
         commands::open_notification_settings,
         commands::materialize_if_virtual,
+        commands::list_routine_groups,
+        commands::create_routine_group,
+        commands::update_routine_group,
+        commands::delete_routine_group,
+        commands::set_routine_group_active,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

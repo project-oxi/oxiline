@@ -107,5 +107,12 @@
     "openSystemSettings": "macOS 시스템 설정 열기",
     "granted": "권한 허용됨",
     "denied": "권한 거부됨 — 시스템 설정에서 켜주세요"
+  },
+  "routineGroup": {
+    "sidebar": "그룹",
+    "addGroup": "그룹 추가",
+    "deleteGroup": "그룹 삭제",
+    "noGroup": "그룹 없음",
+    "unGrouped": "분류 안 됨"
   }
 }

@@ -155,4 +155,6 @@ pub struct SettingsSnapshot {
     pub launch_at_login: bool,
     pub workload_warning_minutes: i64,
     pub onboarding_done: bool,
+    pub notifications_enabled: bool,
+    pub notification_lead_minutes: u32,
 }

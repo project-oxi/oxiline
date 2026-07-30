@@ -3,6 +3,16 @@
 
 export type TaskSource = "manual" | "routine";
 
+export interface RoutineGroup {
+  id: string;
+  name: string;
+  icon: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Category {
   id: string;
   name: string;

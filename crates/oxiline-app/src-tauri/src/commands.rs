@@ -58,6 +58,64 @@ pub fn delete_category(state: State<AppState>, id: String) -> Result<(), String>
 
 #[tauri::command]
 #[specta::specta]
+pub fn list_routine_groups(state: State<AppState>) -> Result<Vec<oxiline_core::model::RoutineGroup>, String> {
+    oxiline_core::routine_groups::list(&state.conn()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn create_routine_group(
+    state: State<AppState>,
+    name: String,
+    icon: Option<String>,
+) -> Result<oxiline_core::model::RoutineGroup, String> {
+    oxiline_core::routine_groups::create(
+        &state.conn(),
+        oxiline_core::routine_groups::NewRoutineGroup { name, icon },
+    )
+    .map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn update_routine_group(
+    state: State<AppState>,
+    id: String,
+    name: Option<String>,
+    icon: Option<Option<String>>,
+    sort_order: Option<i64>,
+) -> Result<oxiline_core::model::RoutineGroup, String> {
+    oxiline_core::routine_groups::update(
+        &state.conn(),
+        &id,
+        oxiline_core::routine_groups::RoutineGroupUpdate {
+            name,
+            icon,
+            sort_order,
+        },
+    )
+    .map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_routine_group(state: State<AppState>, id: String) -> Result<(), String> {
+    oxiline_core::routine_groups::delete(&state.conn(), &id).map_err(map_err)?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_routine_group_active(
+    state: State<AppState>,
+    id: String,
+    active: bool,
+) -> Result<oxiline_core::model::RoutineGroup, String> {
+    oxiline_core::routine_groups::set_active(&state.conn(), &id, active).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn list_routines(
     state: State<AppState>,
     active_only: bool,

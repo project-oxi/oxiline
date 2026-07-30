@@ -7,6 +7,7 @@ import type {
   Category,
   NowContext,
   RoutineBlock,
+  RoutineGroup,
   Settings,
   Task,
   TimelineItem,
@@ -101,6 +102,18 @@ export const api = {
 
   // drag-and-drop
   materializeIfVirtual: (id: string) => invoke<string>("materialize_if_virtual", { id }),
+
+  // routine groups
+  listRoutineGroups: () => invoke<RoutineGroup[]>("list_routine_groups"),
+  createRoutineGroup: (name: string, icon: string | null) =>
+    invoke<RoutineGroup>("create_routine_group", { name, icon }),
+  updateRoutineGroup: (
+    id: string,
+    patch: { name?: string; icon?: string | null; sortOrder?: number },
+  ) => invoke<RoutineGroup>("update_routine_group", { id, ...patch }),
+  deleteRoutineGroup: (id: string) => invoke<void>("delete_routine_group", { id }),
+  setRoutineGroupActive: (id: string, active: boolean) =>
+    invoke<RoutineGroup>("set_routine_group_active", { id, active }),
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */

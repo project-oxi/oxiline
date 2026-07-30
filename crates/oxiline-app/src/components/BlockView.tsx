@@ -1,4 +1,4 @@
-import { Check, GripVertical } from "lucide-react";
+import { Check } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
@@ -9,15 +9,14 @@ import { useSetTaskDone } from "../hooks";
 interface Props {
   item: TimelineItem;
   categories: Category[];
-  left: number; // column index
-  columns: number; // # of concurrent lanes in this group
-  pxPerMin: number;
+  left: number;
+  columns: number;
   top: number;
   height: number;
   past: boolean;
 }
 
-export function BlockView({ item, categories, left, columns, pxPerMin, top, height, past }: Props) {
+export function BlockView({ item, categories, left, columns, top, height, past }: Props) {
   const { t } = useTranslation();
   const done = useSetTaskDone();
   const cat = categoryById(categories, item.category_id);
@@ -30,16 +29,6 @@ export function BlockView({ item, categories, left, columns, pxPerMin, top, heig
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `block:${item.id}`,
     data: { kind: "block", item: { id: item.id, start_minute: item.start_minute } },
-  });
-
-  // Resize handle: separate draggable at the bottom.
-  const {
-    attributes: resizeAttr,
-    listeners: resizeListeners,
-    setNodeRef: resizeRef,
-  } = useDraggable({
-    id: `resize:${item.id}`,
-    data: { kind: "resize", item, pxPerMin },
   });
 
   const style: React.CSSProperties = {
@@ -61,7 +50,7 @@ export function BlockView({ item, categories, left, columns, pxPerMin, top, heig
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="absolute rounded-md border border-border-subtle bg-raised group" title={item.title} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} className="absolute rounded-md border border-border-subtle bg-raised" title={item.title} {...attributes} {...listeners}>
       <button
         className="flex h-full w-full flex-col justify-start px-2 py-1 text-left"
         onClick={(e) => { e.stopPropagation(); done.mutate({ id: item.id, done: !item.is_done }); }}
@@ -104,14 +93,6 @@ export function BlockView({ item, categories, left, columns, pxPerMin, top, heig
           </span>
         )}
       </button>
-      {/* Resize handle — only visible on hover */}
-      <div
-        ref={resizeRef}
-        {...resizeAttr}
-        {...resizeListeners}
-        className="absolute bottom-0 left-0 right-0 h-[6px] cursor-ns-resize opacity-0 transition group-hover:opacity-100"
-        style={{ background: "var(--accent-oxide)" }}
-      />
     </div>
   );
 }

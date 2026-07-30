@@ -171,3 +171,52 @@ export function useSetSetting() {
     },
   });
 }
+
+export function useRoutineGroups() {
+  return useQuery({
+    queryKey: ["routine-groups"],
+    queryFn: api.listRoutineGroups,
+  });
+}
+
+export function useCreateRoutineGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; icon: string | null }) =>
+      api.createRoutineGroup(input.name, input.icon),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routine-groups"] }),
+  });
+}
+
+export function useUpdateRoutineGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id: string;
+      name?: string;
+      icon?: string | null;
+      sortOrder?: number;
+    }) => api.updateRoutineGroup(input.id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routine-groups"] }),
+  });
+}
+
+export function useDeleteRoutineGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteRoutineGroup(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["routine-groups"] }),
+  });
+}
+
+export function useSetRoutineGroupActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; active: boolean }) =>
+      api.setRoutineGroupActive(input.id, input.active),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["routine-groups"] });
+      qc.invalidateQueries({ queryKey: ["routines"] });
+    },
+  });
+}

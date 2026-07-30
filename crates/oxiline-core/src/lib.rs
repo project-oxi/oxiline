@@ -11,6 +11,7 @@ pub mod model;
 pub mod paths;
 pub mod util;
 pub mod routines;
+pub mod routine_groups;
 pub mod settings;
 pub mod tasks;
 pub mod timeline;

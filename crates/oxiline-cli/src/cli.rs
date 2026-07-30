@@ -145,6 +145,12 @@ pub enum TaskAction {
 
 #[derive(Subcommand)]
 pub enum RoutineAction {
+    /// Manage routine groups.
+    #[command(name = "group")]
+    Group {
+        #[command(subcommand)]
+        action: GroupAction,
+    },
     /// Add a routine block.
     Add {
         title: String,
@@ -212,6 +218,28 @@ pub enum CategoryAction {
     List,
     /// Remove a category.
     Rm { id: String },
+}
+
+/// Manage routine groups.
+#[derive(Subcommand)]
+pub enum GroupAction {
+    /// List all groups.
+    List,
+    /// Show group details.
+    Show { id: String },
+    /// Create a new group.
+    Add { name: String, icon: Option<String> },
+    /// Edit a group.
+    Edit {
+        id: String,
+        name: Option<String>,
+        icon: Option<Option<String>>,
+        sort_order: Option<i64>,
+    },
+    /// Delete a group.
+    Rm { id: String },
+    /// Toggle a group active/inactive.
+    Toggle { id: String, on: Option<bool>, off: Option<bool> },
 }
 
 #[derive(Subcommand)]

@@ -9,12 +9,12 @@ use std::process::ExitCode;
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
 use oxiline_core::{
-    categories, routines, settings, tasks, timeline,
+    categories, routine_groups, routines, settings, tasks, timeline,
 };
 use oxiline_core::{util, CoreError, Result};
 use serde_json::{json, Value};
 
-use cli::{Cli, Command, RoutineAction, TaskAction};
+use cli::{Cli, Command, GroupAction, RoutineAction, TaskAction};
 use lang::{Lang, L};
 
 fn main() -> ExitCode {
@@ -336,6 +336,7 @@ fn run(opts: Cli) -> Result<()> {
                     format!("{}: {}", l.removed(), id)
                 });
             }
+            RoutineAction::Group { action } => handle_group(action, &conn, &opts)?,
         },
 
         Command::Category { action } => match action {
@@ -538,4 +539,59 @@ fn resolve_category_opt(
         None => Ok(None),
         Some(s) => Ok(Some(categories::resolve(conn, s)?.id)),
     }
+}
+
+fn handle_group(
+    action: &GroupAction,
+    conn: &rusqlite::Connection,
+    opts: &Cli,
+) -> Result<()> {
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |s: String| if !opts.quiet { println!("{s}") };
+    match action {
+        GroupAction::List => {
+            let groups = routine_groups::list(conn)?;
+            say(resource_out(json, "groups", &groups));
+        }
+        GroupAction::Show { id } => {
+            let g = routine_groups::get(conn, id)?;
+            say(resource_out(json, "group", &g));
+        }
+        GroupAction::Add { name, icon } => {
+            let g = routine_groups::create(conn, routine_groups::NewRoutineGroup {
+                name: name.clone(),
+                icon: icon.clone(),
+            })?;
+            say(resource_out(json, "created", &g));
+        }
+        GroupAction::Edit { id, name, icon, sort_order } => {
+            let g = routine_groups::update(conn, id, routine_groups::RoutineGroupUpdate {
+                name: name.clone(),
+                icon: icon.clone(),
+                sort_order: *sort_order,
+            })?;
+            say(resource_out(json, "updated", &g));
+        }
+        GroupAction::Rm { id } => {
+            routine_groups::delete(conn, id)?;
+            say(if json {
+                json!({ "id": id, "removed": true }).to_string()
+            } else {
+                format!("{}: {}", l.removed(), id)
+            });
+        }
+        GroupAction::Toggle { id, on, off } => {
+            if on == off {
+                return Err(CoreError::InvalidArgument(
+                    "use exactly one of --on / --off".into(),
+                ));
+            }
+            let active = on.unwrap_or(!off.unwrap_or(true));
+            let g = routine_groups::set_active(conn, id, active)?;
+            say(resource_out(json, "toggled", &g));
+        }
+    }
+    Ok(())
 }

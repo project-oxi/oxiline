@@ -107,5 +107,12 @@
     "openSystemSettings": "Open macOS System Settings",
     "granted": "Permission granted",
     "denied": "Permission denied — enable in System Settings"
+  },
+  "routineGroup": {
+    "sidebar": "Groups",
+    "addGroup": "Add group",
+    "deleteGroup": "Delete group",
+    "noGroup": "No group",
+    "unGrouped": "Ungrouped"
   }
 }
