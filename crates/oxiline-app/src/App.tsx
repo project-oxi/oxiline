@@ -61,6 +61,8 @@ function useGlobalKeys() {
   }, [ui]);
 }
 
+import { DndProvider } from "./lib/dnd";
+
 export default function App() {
   useGlobalKeys();
   const view = useUi((s) => s.view);
@@ -68,11 +70,13 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col" style={{ background: "var(--surface-canvas)" }}>
       <Header />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {view === "today" && <DayTimeline />}
-        {view === "week" && <WeekView />}
-        {view === "backlog" && <BacklogView />}
-      </div>
+      <DndProvider>
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {view === "today" && <DayTimeline />}
+          {view === "week" && <WeekView />}
+          {view === "backlog" && <BacklogView />}
+        </div>
+      </DndProvider>
 
       <CommandPalette />
       <Preferences />

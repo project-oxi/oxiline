@@ -98,6 +98,9 @@ export const api = {
   requestNotificationPermission: () => invoke<boolean>("request_notification_permission"),
   isNotificationPermissionGranted: () => invoke<boolean>("is_notification_permission_granted"),
   openNotificationSettings: () => invoke<void>("open_notification_settings"),
+
+  // drag-and-drop
+  materializeIfVirtual: (id: string) => invoke<string>("materialize_if_virtual", { id }),
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */

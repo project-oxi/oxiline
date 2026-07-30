@@ -1,15 +1,16 @@
 import { useTranslation } from "react-i18next";
-import { Trash2, CalendarPlus } from "lucide-react";
+import { Trash2, CalendarPlus, GripVertical } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { useBacklog, useDeleteTask, useUpdateTask } from "../hooks";
 import { useUi } from "../lib/store";
 
 export function BacklogView() {
   const { t } = useTranslation();
   const q = useBacklog();
-  const del = useDeleteTask();
-  const upd = useUpdateTask();
   const { date } = useUi();
   const items = q.data ?? [];
+  const del = useDeleteTask();
 
   if (items.length === 0) {
     return (
@@ -28,50 +29,73 @@ export function BacklogView() {
       </p>
       <ul className="space-y-1">
         {items.map((it) => (
-          <li
-            key={it.id}
-            className="group flex items-center gap-2 rounded-md px-2 py-2 hover:bg-sunken"
-          >
-            <button
-              onClick={() => del.mutate(it.id)}
-              className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-border-subtle"
-              aria-label={t("task.delete")}
-            >
-              <Trash2 size={14} style={{ color: "var(--text-tertiary)" }} />
-            </button>
-            <span
-              className="flex-1 truncate text-[13px]"
-              style={{
-                textDecoration: "line-through",
-                opacity: 0.6,
-              }}
-              hidden={!it.is_done}
-            >
-              {it.title}
-            </span>
-            <span
-              className="flex-1 truncate text-[13px]"
-              hidden={it.is_done}
-            >
-              {it.title}
-            </span>
-            <button
-              className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-border-subtle"
-              aria-label={t("backlog.scheduleToday")}
-              title={t("backlog.scheduleToday")}
-              onClick={() =>
-                upd.mutate({
-                  id: it.id,
-                  date,
-                  startMinute: it.start_minute ?? null,
-                })
-              }
-            >
-              <CalendarPlus size={14} style={{ color: "var(--accent-oxide)" }} />
-            </button>
-          </li>
+          <DraggableBacklogRow key={it.id} item={it} date={date} del={del} />
         ))}
       </ul>
     </div>
+  );
+}
+
+function DraggableBacklogRow({
+  item,
+  date,
+  del,
+}: {
+  item: { id: string; title: string; is_done: boolean; start_minute?: number | null };
+  date: string;
+  del: { mutate: (id: string) => void };
+}) {
+  const upd = useUpdateTask();
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `backlog:${item.id}`,
+    data: { kind: "backlog", task: item },
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="group flex items-center gap-2 rounded-md px-2 py-2 hover:bg-sunken"
+      style={{
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : 1,
+        cursor: "grab",
+      }}
+    >
+      <GripVertical size={14} className="shrink-0 opacity-30" style={{ color: "var(--text-tertiary)" }} />
+      <button
+        onClick={(e) => { e.stopPropagation(); del.mutate(item.id); }}
+        className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-border-subtle"
+        aria-label="Delete"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <Trash2 size={14} style={{ color: "var(--text-tertiary)" }} />
+      </button>
+      <span
+        className="flex-1 truncate text-[13px]"
+        style={{
+          textDecoration: item.is_done ? "line-through" : "none",
+          opacity: item.is_done ? 0.6 : 1,
+        }}
+      >
+        {item.title}
+      </span>
+      <button
+        className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-border-subtle"
+        aria-label="Schedule for today"
+        onClick={(e) => {
+          e.stopPropagation();
+          upd.mutate({
+            id: item.id,
+            date,
+            startMinute: item.start_minute ?? null,
+          });
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <CalendarPlus size={14} style={{ color: "var(--accent-oxide)" }} />
+      </button>
+    </li>
   );
 }

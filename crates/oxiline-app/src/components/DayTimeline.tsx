@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTimeline, useCategories, useCreateTask, useSettings } from "../hooks";
 import { useUi } from "../lib/store";
+import { useDroppable } from "@dnd-kit/core";
 import { BlockView } from "./BlockView";
 import { NowLine } from "./NowLine";
 import type { TimelineItem } from "../types";
@@ -181,17 +182,8 @@ export function DayTimeline() {
             </div>
           )}
 
-          {/* click empty time to add (sits below blocks so they stay clickable) */}
-          <div
-            className="absolute left-0 right-0"
-            style={{ top: 0, height: heightPx, zIndex: 0 }}
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-              const y = e.clientY - rect.top;
-              const minute = Math.round(y / pxPerMin + dayStartMin);
-              setAdding({ minute: Math.max(0, Math.min(1439, minute)) });
-            }}
-          />
+          {/* click empty time to add + droppable area */}
+          <DropZone dayStartMin={dayStartMin} pxPerMin={pxPerMin} date={date} heightPx={heightPx} onAdd={(minute) => setAdding({ minute })} />
 
           <NowLine pxPerMin={pxPerMin} dayStartMin={dayStartMin} />
         </div>
@@ -207,5 +199,45 @@ export function DayTimeline() {
         <span>{tight ? t("timeline.workloadTight") : t("timeline.workloadEasy")}</span>
       </div>
     </div>
+  );
+}
+
+/** Droppable area over the timeline for drag-and-drop scheduling. */
+function DropZone({
+  dayStartMin,
+  pxPerMin,
+  date,
+  heightPx,
+  onAdd,
+}: {
+  dayStartMin: number;
+  pxPerMin: number;
+  date: string;
+  heightPx: number;
+  onAdd: (minute: number) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "timeline-slot",
+    data: { kind: "timeline-slot", date, pxPerMin, dayStartMin },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="absolute left-0 right-0"
+      style={{
+        top: 0,
+        height: heightPx,
+        zIndex: 0,
+        background: isOver ? "var(--accent-oxide-subtle)" : undefined,
+        transition: "background var(--motion-sweep) var(--ease-standard)",
+      }}
+      onClick={(e) => {
+        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const minute = Math.round(y / pxPerMin + dayStartMin);
+        onAdd(Math.max(0, Math.min(1439, minute)));
+      }}
+    />
   );
 }

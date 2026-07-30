@@ -39,6 +39,7 @@ pub fn run() {
         commands::request_notification_permission,
         commands::is_notification_permission_granted,
         commands::open_notification_settings,
+        commands::materialize_if_virtual,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

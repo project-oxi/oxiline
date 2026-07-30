@@ -332,3 +332,13 @@ pub fn open_notification_settings(app: tauri::AppHandle) -> Result<(), String> {
         )
         .map_err(|e| format!("opener: {e}"))
 }
+
+// ---- drag-and-drop ----
+
+/// Materialize a virtual task (turn a routine occurrence into a real DB row)
+/// if the given id is virtual, returning the real task id.
+#[tauri::command]
+#[specta::specta]
+pub fn materialize_if_virtual(state: State<AppState>, id: String) -> Result<String, String> {
+    tasks::materialize_if_virtual(&state.conn(), &id).map_err(map_err)
+}
