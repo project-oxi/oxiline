@@ -50,6 +50,17 @@ export function rangeLabel(start: number | null, dur: number | null): string {
   return `${minuteToHHMM(start)}–${minuteToHHMM(end)}`;
 }
 
+/** Human duration: 90 → "1시간 30분" / "1h 30m"; 45 → "45분" / "45m"; 60 → "1시간" / "1h". */
+export function formatDuration(min: number, lang: "ko" | "en" = "ko"): string {
+  if (min <= 0) return lang === "ko" ? "0분" : "0m";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (lang === "ko") {
+    return [h && `${h}시간`, m && `${m}분`].filter(Boolean).join(" ");
+  }
+  return [h && `${h}h`, m && `${m}m`].filter(Boolean).join(" ");
+}
+
 export const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 export type WeekdayKey = (typeof WEEKDAY_KEYS)[number];
 

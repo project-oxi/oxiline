@@ -71,7 +71,7 @@ function computeDropMinute(
   const activeRect =
     event.active.rect.current.translated ?? event.active.rect.current.initial;
   if (!overRect || !activeRect) return 0;
-  const dropY = activeRect.top + activeRect.height / 2 - overRect.top;
+  const dropY = activeRect.top - overRect.top;
   const minute = Math.round(
     dropY / (overData.pxPerMin ?? 1) + (overData.dayStartMin ?? 0),
   );

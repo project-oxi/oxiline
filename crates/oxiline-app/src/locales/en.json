@@ -11,7 +11,7 @@
     "remaining": "{{n}} min left",
     "workloadEasy": "comfortable",
     "workloadTight": "tight",
-    "planned": "{{n}} min planned today"
+    "plannedDur": "{{dur}} planned today"
   },
   "backlog": {
     "title": "Backlog",
@@ -111,7 +111,7 @@
     "skip": "Skip",
     "done": "Get started"
   },
-  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h", "delete": "Delete" },
+  "common": { "add": "Add", "close": "Close", "minutes": "{{n}} min", "hour": "h", "delete": "Delete" },
   "week": {
     "title": "Week",
     "today": "Today",

@@ -8,23 +8,31 @@ const pct = (r: number | null): string => (r == null ? "—" : `${Math.round(r *
  *  Three neutral buckets (done / skipped / no check-in) + per-category rates +
  *  per-routine current streaks. No judgment copy, no green/red verdict colors. */
 export function ReportView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: report, isLoading } = useWeekReport();
 
+  const lang = i18n.language?.startsWith("en") ? "en" : "ko";
+  const fmt = (s: string) => {
+    const [y, m, d] = s.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString(lang === "ko" ? "ko-KR" : "en-US", {
+      month: lang === "ko" ? "long" : "short",
+      day: "numeric",
+    });
+  };
   if (isLoading || !report) {
     return (
-      <div className="p-4" style={{ color: "var(--text-secondary)" }}>
+      <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "var(--text-tertiary)" }}>
         {t("report.loading")}
       </div>
     );
   }
-
   const tot = report.totals;
   return (
     <div className="flex-1 overflow-auto p-4" style={{ color: "var(--text-primary)" }}>
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-medium">
-          {report.week_start} ~ {report.week_end}
+          {fmt(report.week_start)} – {fmt(report.week_end)}
         </h2>
         <span className="text-sm" style={{ color: "var(--text-tertiary)" }}>
           {t("report.thisWeek")}

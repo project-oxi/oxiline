@@ -11,7 +11,7 @@
     "remaining": "{{n}}분 남음",
     "workloadEasy": "여유 있음",
     "workloadTight": "빠듯해요",
-    "planned": "오늘 계획 {{n}}분"
+    "plannedDur": "오늘 계획 {{dur}}"
   },
   "backlog": {
     "title": "백로그",
@@ -111,7 +111,7 @@
     "skip": "건너뛰기",
     "done": "시작하기"
   },
-  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시", "delete": "삭제" },
+  "common": { "add": "추가", "close": "닫기", "minutes": "{{n}}분", "hour": "시", "delete": "삭제" },
   "week": {
     "title": "주간",
     "today": "오늘",
