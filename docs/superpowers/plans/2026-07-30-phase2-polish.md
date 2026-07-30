@@ -1506,15 +1506,52 @@ export interface RoutineGroup {
 
 - [ ] **Step 3: `hooks.ts`에 5개 훅 추가**
 
+기존 `useInvalidate()` (private, `qc.invalidateQueries()` 전체 무효화) 패턴을 따른다. `useSetRoutineGroupActive`는 `["routine-groups"]` + `["routines"]` 두 쿼리 키를 무효화해야 하므로 그 훅만 `useQueryClient`를 직접 사용:
+
 ```ts
+// hooks.ts 안, useRoutineGroups는 일반 useQuery
 export function useRoutineGroups() {
   return useQuery({ queryKey: ["routine-groups"], queryFn: api.listRoutineGroups });
 }
-export function useCreateRoutineGroup() { return useMutation({ mutationFn: (args: { name: string; icon: string | null }) => api.createRoutineGroup(args.name, args.icon).then(() => qc.invalidateQueries({ queryKey: ["routine-groups"] })) }); }
-export function useUpdateRoutineGroup() { return useMutation({ mutationFn: (args: { id: string; patch: any }) => api.updateRoutineGroup(args.id, args.patch).then(() => qc.invalidateQueries({ queryKey: ["routine-groups"] })) }); }
-export function useDeleteRoutineGroup() { return useMutation({ mutationFn: (id: string) => api.deleteRoutineGroup(id).then(() => qc.invalidateQueries({ queryKey: ["routine-groups"] })) }); }
-export function useSetRoutineGroupActive() { return useMutation({ mutationFn: (args: { id: string; active: boolean }) => api.setRoutineGroupActive(args.id, args.active).then(() => { qc.invalidateQueries({ queryKey: ["routine-groups"] }); qc.invalidateQueries({ queryKey: ["routines"] }); }) }); }
+
+export function useCreateRoutineGroup() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (args: { name: string; icon: string | null }) => api.createRoutineGroup(args.name, args.icon),
+    onSuccess: () => inv(),
+  });
+}
+
+export function useUpdateRoutineGroup() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (args: { id: string; patch: { name?: string; icon?: string | null; sortOrder?: number } }) =>
+      api.updateRoutineGroup(args.id, args.patch),
+    onSuccess: () => inv(),
+  });
+}
+
+export function useDeleteRoutineGroup() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteRoutineGroup(id),
+    onSuccess: () => inv(),
+  });
+}
+
+export function useSetRoutineGroupActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; active: boolean }) => api.setRoutineGroupActive(args.id, args.active),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["routine-groups"] });
+      qc.invalidateQueries({ queryKey: ["routines"] });
+    },
+  });
+}
 ```
+
+(`useInvalidate`는 hooks.ts에 이미 정의된 private helper. `useQueryClient`는 파일 상단에서 이미 import 되어 있음.)
 
 - [ ] **Step 4: `RoutineManager.tsx` 재작성**
 
