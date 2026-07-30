@@ -1,0 +1,30 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Frontend (Tauri app)
+crates/oxiline-app/node_modules
+crates/oxiline-app/dist
+crates/oxiline-app/.vite
+crates/oxiline-app/src/bindings.ts
+
+# Tauri
+crates/oxiline-app/src-tauri/target
+crates/oxiline-app/src-tauri/gen
+
+# Local data (never commit)
+/data
+*.db
+*.db-shm
+*.db-wal
+oxiline.env
+oxiline.toml
+
+# Editor / OS
+.DS_Store
+.vscode
+.idea
+
+# Agent tooling scratch (managed skills, session state) — not project content
+.agent/
+*.tsbuildinfo

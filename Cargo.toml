@@ -1,0 +1,44 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/oxiline-core",
+    "crates/oxiline-cli",
+    "crates/oxiline-app/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Oxi"]
+license = "MIT"
+repository = ""
+
+[workspace.dependencies]
+oxiline-core = { path = "crates/oxiline-core" }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+rusqlite_migration = "1.3"
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Typescript bindings for Tauri IPC
+specta = { version = "2.0.0-rc", features = ["derive"] }
+specta-typescript = "0.0.9"
+
+# Misc
+uuid = { version = "1", features = ["v7"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+thiserror = "2"
+dirs = "5"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+panic = "abort"
