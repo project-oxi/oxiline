@@ -10,6 +10,8 @@ use oxiline_core::model::{
 use oxiline_core::{categories, routines, settings, tasks, timeline, util};
 use serde_json::Value;
 use tauri::State;
+use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_opener::OpenerExt;
 
 use crate::state::AppState;
 
@@ -287,4 +289,46 @@ pub fn set_onboarding_done(state: State<AppState>) -> Result<(), String> {
 #[specta::specta]
 pub fn is_onboarding_done(state: State<AppState>) -> Result<bool, String> {
     Ok(settings::get_bool(&state.conn(), "onboarding_done", false))
+}
+
+// ---- notifications ----
+
+/// Request macOS notification permission. Returns true if granted.
+#[tauri::command]
+#[specta::specta]
+pub async fn request_notification_permission(
+    app: tauri::AppHandle,
+) -> Result<bool, String> {
+    use tauri_plugin_notification::PermissionState;
+    match app.notification().request_permission() {
+        Ok(PermissionState::Granted) => Ok(true),
+        Ok(PermissionState::Denied) => Ok(false),
+        Ok(_) => Ok(false),
+        Err(e) => Err(format!("notification:request_permission: {e}")),
+    }
+}
+
+/// Check whether notification permission has been granted.
+#[tauri::command]
+#[specta::specta]
+pub fn is_notification_permission_granted(
+    app: tauri::AppHandle,
+) -> Result<bool, String> {
+    use tauri_plugin_notification::PermissionState;
+    match app.notification().permission_state() {
+        Ok(PermissionState::Granted) => Ok(true),
+        _ => Ok(false),
+    }
+}
+
+/// Open macOS System Settings → Notifications (for when permission is denied).
+#[tauri::command]
+#[specta::specta]
+pub fn open_notification_settings(app: tauri::AppHandle) -> Result<(), String> {
+    app.opener()
+        .open_path(
+            "x-apple.systempreferences:com.apple.preference.notifications",
+            None::<&str>,
+        )
+        .map_err(|e| format!("opener: {e}"))
 }

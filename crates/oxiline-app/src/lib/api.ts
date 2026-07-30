@@ -93,6 +93,11 @@ export const api = {
   // onboarding
   setOnboardingDone: () => invoke<void>("set_onboarding_done"),
   isOnboardingDone: () => invoke<boolean>("is_onboarding_done"),
+
+  // notifications
+  requestNotificationPermission: () => invoke<boolean>("request_notification_permission"),
+  isNotificationPermissionGranted: () => invoke<boolean>("is_notification_permission_granted"),
+  openNotificationSettings: () => invoke<void>("open_notification_settings"),
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */

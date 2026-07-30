@@ -91,5 +91,15 @@
     "skip": "건너뛰기",
     "done": "시작하기"
   },
-  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시" }
+  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시" },
+  "notifications": {
+    "section": "알림",
+    "enable": "블록 시작 전 알림 보내기",
+    "enableHelp": "다음 항목이 곧 시작될 때 macOS 알림을 보냅니다",
+    "leadMinutes": "몇 분 전",
+    "requestPermission": "권한 요청",
+    "openSystemSettings": "macOS 시스템 설정 열기",
+    "granted": "권한 허용됨",
+    "denied": "권한 거부됨 — 시스템 설정에서 켜주세요"
+  }
 }

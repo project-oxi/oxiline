@@ -35,6 +35,9 @@ pub fn run() {
         commands::get_db_path,
         commands::set_onboarding_done,
         commands::is_onboarding_done,
+        commands::request_notification_permission,
+        commands::is_notification_permission_granted,
+        commands::open_notification_settings,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.
@@ -66,6 +69,8 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_positioner::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(state::AppState::new())
         .invoke_handler(specta.invoke_handler())
         .setup(|app| {

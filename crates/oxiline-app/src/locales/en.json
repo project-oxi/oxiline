@@ -91,5 +91,15 @@
     "skip": "Skip",
     "done": "Get started"
   },
-  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h" }
+  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h" },
+  "notifications": {
+    "section": "Notifications",
+    "enable": "Notify me before a block starts",
+    "enableHelp": "Show a macOS notification when the next block is about to start",
+    "leadMinutes": "Minutes before",
+    "requestPermission": "Request permission",
+    "openSystemSettings": "Open macOS System Settings",
+    "granted": "Permission granted",
+    "denied": "Permission denied — enable in System Settings"
+  }
 }

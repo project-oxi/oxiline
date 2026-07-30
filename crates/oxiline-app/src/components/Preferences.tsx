@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory } from "../hooks";
+import { api } from "../lib/api";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUi } from "../lib/store";
 import { applyTheme, setThemeMode, type ThemeMode } from "../lib/theme";
 import { changeLang, type Lang } from "../lib/i18n";
@@ -37,6 +39,15 @@ export function Preferences() {
   const catsQ = useCategories();
   const createCat = useCreateCategory();
   const delCat = useDeleteCategory();
+  const permQ = useQuery({
+    queryKey: ["notification-permission"],
+    queryFn: () => api.isNotificationPermissionGranted(),
+    staleTime: 5000,
+  });
+  const requestPerm = useMutation({
+    mutationFn: () => api.requestNotificationPermission(),
+    onSuccess: () => permQ.refetch(),
+  });
   const [catName, setCatName] = useState("");
   const [catHue, setCatHue] = useState(200);
 
@@ -113,6 +124,56 @@ export function Preferences() {
           <Row label={t("settings.hudDuration")}>
             <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
           </Row>
+        </section>
+
+        <section className="mb-4">
+          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("notifications.section")}</h3>
+          <Row label={t("notifications.enable")}>
+            <input
+              type="checkbox"
+              checked={s.notifications_enabled === true}
+              onChange={(e) =>
+                setSetting.mutate({ key: "notifications_enabled", value: String(e.target.checked) })
+              }
+            />
+          </Row>
+          <div className="py-1 text-[12px]" style={{ color: "var(--text-tertiary)" }}>{t("notifications.enableHelp")}</div>
+          <Row label={t("notifications.leadMinutes")}>
+            <input
+              type="range"
+              min={1}
+              max={30}
+              defaultValue={(s.notification_lead_minutes as number) ?? 5}
+              onChange={(e) =>
+                setSetting.mutate({ key: "notification_lead_minutes", value: e.target.value })
+              }
+              className="w-24"
+            />
+            <span className="ml-2 w-6 text-center text-[12px]">{String(s.notification_lead_minutes ?? 5)}</span>
+          </Row>
+          <div className="flex items-center gap-2 py-1">
+            {permQ.data ? (
+              <span className="text-[12px]" style={{ color: "var(--signal-verdant)" }}>{t("notifications.granted")}</span>
+            ) : (
+              <>
+                <span className="text-[12px]" style={{ color: "var(--signal-rust)" }}>{t("notifications.denied")}</span>
+                <button
+                  className="rounded px-2 py-1 text-[12px]"
+                  style={{ background: "var(--accent-oxide)", color: "var(--text-on-accent)" }}
+                  onClick={() => requestPerm.mutate()}
+                >
+                  {t("notifications.requestPermission")}
+                </button>
+                <button
+                  className="rounded px-2 py-1 text-[12px]"
+                  style={{ background: "var(--surface-subtle)" }}
+                  onClick={() => api.openNotificationSettings()}
+                >
+                  {t("notifications.openSystemSettings")}
+                </button>
+              </>
+            )}
+          </div>
         </section>
 
         <section className="mb-4">
