@@ -2,6 +2,7 @@
 
 mod commands;
 mod hud;
+mod notifier;
 mod shortcuts;
 mod state;
 mod tray;
@@ -85,6 +86,7 @@ pub fn run() {
             if let Err(e) = hud::init_panel(app.handle()) {
                 eprintln!("oxiline: hud init_panel failed: {e}");
             }
+            notifier::spawn_scheduler(app.handle().clone());
             watcher::spawn(app.handle().clone());
 
             // Refresh the tray's dynamic "지금" row when the DB changes.
