@@ -3,24 +3,26 @@ import { useUi, todayStr, shift } from "../lib/store";
 import { useTimelineRange } from "../hooks";
 import type { TimelineItem } from "../types";
 
-function weekdayLabel(date: string): string {
+function weekdayLabel(date: string, locale: string): string {
   const d = new Date(date + "T12:00:00");
-  return d.toLocaleDateString("ko", { weekday: "short" });
+  return d.toLocaleDateString(locale, { weekday: "short" });
 }
 
-function monthDay(date: string): string {
+function monthDay(date: string, locale: string): string {
   const d = new Date(date + "T12:00:00");
-  return d.toLocaleDateString("ko", { month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 function MiniDay({
   date,
   items,
   onJump,
+  locale,
 }: {
   date: string;
   items: TimelineItem[];
   onJump: (d: string) => void;
+  locale: string;
 }) {
   const { t } = useTranslation();
   const total = items
@@ -33,10 +35,10 @@ function MiniDay({
     >
       <div className="flex items-baseline justify-between">
         <span className="font-mono text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-          {weekdayLabel(date)}
+          {weekdayLabel(date, locale)}
         </span>
         <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-          {monthDay(date)}
+          {monthDay(date, locale)}
         </span>
       </div>
       {items.length === 0 ? (
@@ -77,7 +79,8 @@ function MiniDay({
 }
 
 export function WeekView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en" : "ko";
   const ui = useUi();
   const today = todayStr();
   const from = shift(today, -3);
@@ -98,6 +101,7 @@ export function WeekView() {
             key={date}
             date={date}
             items={items}
+            locale={locale}
             onJump={(d) => {
               ui.setDate(d);
               ui.setView("today");
