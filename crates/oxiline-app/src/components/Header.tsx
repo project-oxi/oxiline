@@ -96,7 +96,7 @@ export function Header() {
         </div>
       </div>
 
-      <div className="mt-2 mb-2 px-1">
+      <div className="mt-1.5 mb-1.5 px-1">
         <OxideBar
           items={tlQ.data ?? []}
           categories={catsQ.data ?? []}
@@ -105,7 +105,7 @@ export function Header() {
         />
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border-subtle pb-1.5">
+      <div className="flex items-center gap-1 border-b border-border-subtle pb-1">
         {tabs.map((tb) => (
           <button
             key={tb.key}

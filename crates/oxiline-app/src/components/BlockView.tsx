@@ -39,15 +39,18 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     height: Math.max(height, 22),
     left: `calc(${leftPct}% + ${leftPct > 0 ? 4 : 0}px)`,
     width: `calc(${widthPct}% - 4px)`,
-    borderLeft: `4px solid ${accent}`,
+    borderLeft: `4px ${item.is_virtual ? 'dashed' : 'solid'} ${accent}`,
     opacity: isDragging ? 0.5 : item.is_virtual && !item.is_done ? 0.92 : 1,
-    boxShadow: past && !item.is_done ? "inset 3px 0 0 var(--signal-rust)" : undefined,
+    boxShadow: past && !item.is_done
+      ? "inset 3px 0 0 var(--signal-rust), var(--elevation-card)"
+      : "var(--elevation-card)",
     transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 999 : undefined,
+    zIndex: isDragging ? 999 : 2,
     transition: isDragging
       ? undefined
       : `opacity var(--motion-sweep) var(--ease-standard),
-          filter var(--motion-sweep) var(--ease-standard)`,
+          filter var(--motion-sweep) var(--ease-standard),
+          margin-top var(--motion-base) var(--ease-standard)`,
     filter: past ? "saturate(0.4)" : undefined,
     cursor: "grab",
   };
@@ -74,7 +77,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     <div
       ref={setNodeRef}
       style={style}
-      className="absolute rounded-md border border-border-subtle bg-raised"
+      className={`absolute overflow-hidden rounded-lg border border-border-subtle bg-raised${past ? '' : ' hover:-mt-0.5'}`}
       title={item.title}
       {...attributes}
       {...listeners}
@@ -87,8 +90,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
         tabIndex={-1}
         className="flex h-full w-full flex-col justify-start px-2 py-1 text-left"
         onClick={(e) => { e.stopPropagation(); done.mutate({ id: item.id, done: !item.is_done }); }}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
+        >
         <span className="flex items-center gap-1">
           <span
             className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"

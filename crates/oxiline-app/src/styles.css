@@ -60,6 +60,8 @@
   --ease-emphasized: cubic-bezier(0.3, 0, 0.1, 1);
   --elevation-panel: 0 8px 24px oklch(0.2 0.02 250 / 0.24),
     0 2px 6px oklch(0.2 0.02 250 / 0.16);
+  --elevation-card: 0 1px 2px oklch(0.2 0.02 250 / 0.08),
+    0 1px 1px oklch(0.2 0.02 250 / 0.05);
 
   color-scheme: light;
 }
@@ -86,6 +88,8 @@
   --signal-success-subtle: oklch(0.3 0.05 145);
   --signal-info: oklch(0.72 0.1 240);
 
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 0.28),
+    0 1px 1px oklch(0 0 0 / 0.18);
   color-scheme: dark;
 }
 
