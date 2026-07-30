@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { api } from "./lib/api";
 import { useUi } from "./lib/store";
 
 export const qk = {
   timeline: (date: string) => ["timeline", date] as const,
+  timelineRange: (from: string, to: string) => ["timeline-range", from, to] as const,
   categories: ["categories"] as const,
   routines: (activeOnly: boolean) => ["routines", activeOnly] as const,
   backlog: ["backlog"] as const,
@@ -28,6 +30,33 @@ export function useRoutines(activeOnly = false) {
 
 export function useBacklog() {
   return useQuery({ queryKey: qk.backlog, queryFn: api.listBacklog });
+}
+
+export function useTimelineRange(from: string, to: string) {
+  const dates = useMemo(() => {
+    const out: string[] = [];
+    const [y, m, d] = from.split("-").map(Number);
+    let dt = new Date(y, m - 1, d);
+    const [y2, m2, d2] = to.split("-").map(Number);
+    const end = new Date(y2, m2 - 1, d2);
+    while (dt <= end) {
+      out.push(
+        `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`,
+      );
+      dt = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + 1);
+    }
+    return out;
+  }, [from, to]);
+
+  return useQuery({
+    queryKey: qk.timelineRange(from, to),
+    queryFn: async () => {
+      const results = await Promise.all(
+        dates.map(async (date) => ({ date, items: await api.getTimeline(date) })),
+      );
+      return results;
+    },
+  });
 }
 
 export function useNowContext() {

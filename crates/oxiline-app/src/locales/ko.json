@@ -92,6 +92,12 @@
     "done": "시작하기"
   },
   "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시" },
+  "week": {
+    "title": "주간",
+    "today": "오늘",
+    "workload": "{{n}}분",
+    "empty": "비어 있음"
+  },
   "notifications": {
     "section": "알림",
     "enable": "블록 시작 전 알림 보내기",

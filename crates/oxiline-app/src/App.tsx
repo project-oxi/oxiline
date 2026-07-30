@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Header } from "./components/Header";
 import { DayTimeline } from "./components/DayTimeline";
 import { BacklogView } from "./components/BacklogView";
+import { WeekView } from "./components/WeekView";
 import { RoutineManager } from "./components/RoutineManager";
 import { CommandPalette } from "./components/CommandPalette";
 import { Preferences } from "./components/Preferences";
@@ -60,16 +61,6 @@ function useGlobalKeys() {
   }, [ui]);
 }
 
-function WeekPlaceholder() {
-  return (
-    <div className="flex h-full items-center justify-center px-6 text-center">
-      <p className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>
-        Week view — coming soon (Phase 2).
-      </p>
-    </div>
-  );
-}
-
 export default function App() {
   useGlobalKeys();
   const view = useUi((s) => s.view);
@@ -79,7 +70,7 @@ export default function App() {
       <Header />
       <div className="flex flex-1 flex-col overflow-hidden">
         {view === "today" && <DayTimeline />}
-        {view === "week" && <WeekPlaceholder />}
+        {view === "week" && <WeekView />}
         {view === "backlog" && <BacklogView />}
       </div>
 

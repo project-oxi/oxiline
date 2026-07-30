@@ -92,6 +92,12 @@
     "done": "Get started"
   },
   "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h" },
+  "week": {
+    "title": "Week",
+    "today": "Today",
+    "workload": "{{n}} min",
+    "empty": "Empty"
+  },
   "notifications": {
     "section": "Notifications",
     "enable": "Notify me before a block starts",
