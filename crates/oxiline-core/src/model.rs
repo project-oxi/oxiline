@@ -158,3 +158,67 @@ pub struct SettingsSnapshot {
     pub notifications_enabled: bool,
     pub notification_lead_minutes: u32,
 }
+
+// ---- report types (habit streak / weekly report) -------------------------
+
+/// Per-day completion breakdown for reports (`reports::day_breakdown`).
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct DayBreakdown {
+    pub date: String,
+    pub done: u32,
+    pub skipped: u32,
+    pub not_recorded: u32,
+    pub upcoming: u32,
+    pub completion_rate: Option<f64>,
+    pub categories: Vec<CategoryBreakdown>,
+}
+
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct CategoryBreakdown {
+    pub category_id: Option<String>,
+    /// Localized at the display layer when empty (no category).
+    pub category_name: String,
+    pub done: u32,
+    pub skipped: u32,
+    pub not_recorded: u32,
+    pub completion_rate: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct DayTotals {
+    pub done: u32,
+    pub skipped: u32,
+    pub not_recorded: u32,
+    pub upcoming: u32,
+}
+
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct WeekReport {
+    pub week_start: String,
+    pub week_end: String,
+    pub days: Vec<DayBreakdown>,
+    pub totals: DayTotals,
+    pub completion_rate: Option<f64>,
+    pub prev_completion_rate: Option<f64>,
+    pub categories: Vec<CategoryBreakdown>,
+    pub streaks: Vec<RoutineStreak>,
+}
+
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct RangeReport {
+    pub from: String,
+    pub to: String,
+    pub days: Vec<DayBreakdown>,
+    pub totals: DayTotals,
+    pub completion_rate: Option<f64>,
+    pub categories: Vec<CategoryBreakdown>,
+    pub streaks: Vec<RoutineStreak>,
+}
+
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct RoutineStreak {
+    pub routine_id: String,
+    pub title: String,
+    pub current: u32,
+    pub last_done_date: Option<String>,
+}
