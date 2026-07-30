@@ -29,7 +29,6 @@ fn report_types_serialize_to_snake_case() {
     .unwrap();
 }
 
-use chrono::Datelike;
 use oxiline_core::reports;
 use oxiline_core::tasks;
 use oxiline_core::{routines, settings};
@@ -107,4 +106,78 @@ fn scheduled_for_respects_effective_from_weekday_and_active() {
     assert!(!reports::scheduled_for(&block, "2026-08-04")); // Tue, wrong weekday
     let inactive = routines::set_active(&conn, &b.id, false).unwrap();
     assert!(!reports::scheduled_for(&inactive, "2026-08-03")); // inactive
+}
+
+fn add_dated_task(
+    conn: &rusqlite::Connection,
+    date: &str,
+    title: &str,
+    start: Option<u16>,
+) -> oxiline_core::model::Task {
+    tasks::create(
+        conn,
+        tasks::NewTask {
+            date: Some(date.into()),
+            title: title.into(),
+            category_id: None,
+            start_minute: start,
+            duration_minute: Some(30),
+            notes: None,
+        },
+    )
+    .unwrap()
+}
+
+#[test]
+fn day_breakdown_classifies_three_buckets_and_excludes_skipped_from_rate() {
+    let (_f, conn) = fresh_db();
+    let past = "2026-07-28"; // a past day
+    let today = "2026-07-30";
+    // done, skipped, and an untouched virtual routine occurrence (not_recorded).
+    let d = add_dated_task(&conn, past, "done one", Some(540));
+    tasks::set_done(&conn, &d.id, true).unwrap();
+    let s = add_dated_task(&conn, past, "skipped one", Some(600));
+    tasks::set_skipped(&conn, &s.id, true).unwrap();
+    let b = routines::create(
+        &conn,
+        routines::NewRoutineBlock {
+            title: "virt".into(),
+            start_minute: 700,
+            duration_minute: 30,
+            weekday_mask: 0b1111111,
+            category_id: None,
+            effective_from: None,
+            effective_until: None,
+            notes: None,
+        },
+    )
+    .unwrap();
+    backdate_created(&conn, &b.id, "2026-01-01T00:00:00Z");
+
+    let bd = reports::day_breakdown(&conn, past, today, 800).unwrap();
+    assert_eq!((bd.done, bd.skipped, bd.not_recorded, bd.upcoming), (1, 1, 1, 0));
+    // rate = done/(done+not_recorded) = 1/2; skipped excluded.
+    assert_eq!(bd.completion_rate, Some(0.5));
+}
+
+#[test]
+fn day_breakdown_untimed_today_is_due_not_upcoming() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30";
+    add_dated_task(&conn, today, "anytime", None); // untimed → due mid-day
+    let bd = reports::day_breakdown(&conn, today, today, 600).unwrap();
+    assert_eq!(bd.not_recorded, 1);
+    assert_eq!(bd.upcoming, 0);
+    assert_eq!(bd.completion_rate, Some(0.0));
+}
+
+#[test]
+fn day_breakdown_timed_today_before_start_is_upcoming() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30";
+    add_dated_task(&conn, today, "later", Some(800)); // 13:20, now 09:00 (540)
+    let bd = reports::day_breakdown(&conn, today, today, 540).unwrap();
+    assert_eq!(bd.not_recorded, 0);
+    assert_eq!(bd.upcoming, 1);
+    assert_eq!(bd.completion_rate, None); // denominator 0
 }
