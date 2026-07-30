@@ -1,0 +1,95 @@
+{
+  "app": { "name": "OxiLine", "tagline": "하루는 흐릅니다. OxiLine은 그 흐름을 보여줍니다." },
+  "nav": { "today": "오늘", "week": "주간", "backlog": "백로그" },
+  "weekdays": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금", "sat": "토", "sun": "일" },
+  "weekdayFull": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금", "sat": "토", "sun": "일" },
+  "dayPresets": { "daily": "매일", "weekdays": "평일", "weekends": "주말" },
+  "timeline": {
+    "freeTime": "자유 시간",
+    "allDone": "오늘 예정된 일이 모두 끝났어요",
+    "empty": "오늘 예정된 일이 없어요. ⌘K로 빠르게 추가해보세요.",
+    "remaining": "{{n}}분 남음",
+    "workloadEasy": "여유 있음",
+    "workloadTight": "빠듯해요",
+    "planned": "오늘 계획 {{n}}분"
+  },
+  "backlog": {
+    "title": "백로그",
+    "empty": "아직 정해지지 않은 할일이 없어요. ⌘K로 빠르게 추가해보세요.",
+    "scheduleToday": "오늘로 예약"
+  },
+  "hud": {
+    "now": "지금",
+    "next": "다음",
+    "freeTime": "자유 시간",
+    "allDone": "오늘 예정된 일이 모두 끝났어요",
+    "in": "{{n}}분 후",
+    "left": "{{n}}분 남음"
+  },
+  "palette": {
+    "placeholder": "할일 추가 또는 검색…",
+    "hint": "Enter로 추가 · @시간 으로 예약",
+    "addToList": "백로그에 추가",
+    "noMatch": "일치하는 항목이 없어요"
+  },
+  "routine": {
+    "title": "루틴 관리",
+    "add": "추가",
+    "edit": "수정",
+    "delete": "삭제",
+    "pause": "일시정지",
+    "resume": "재개",
+    "name": "이름",
+    "at": "시작 시각",
+    "duration": "소요 시간(분)",
+    "days": "반복 요일",
+    "category": "카테고리",
+    "empty": "루틴이 없어요. 추가 버튼으로 하루의 뼈대를 만들어보세요."
+  },
+  "task": {
+    "addTitle": "할일 추가",
+    "title": "제목",
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "skipToday": "오늘만 건너뛰기"
+  },
+  "settings": {
+    "title": "환경설정",
+    "general": "일반",
+    "language": "언어",
+    "theme": "테마",
+    "themeLight": "라이트",
+    "themeDark": "다크",
+    "themeSystem": "시스템",
+    "launchAtLogin": "로그인 시 자동 실행",
+    "timeline": "타임라인",
+    "dayStart": "하루 시작 시각",
+    "dayEnd": "하루 종료 시각",
+    "weekStartsOn": "주 시작 요일",
+    "workloadWarning": "워크로드 경고 임계값(분, 0=끔)",
+    "shortcut": "단축키",
+    "globalHotkey": "전역 단축키",
+    "recordKey": "눌러서 기록",
+    "hudDuration": "HUD 표시 시간(초)",
+    "data": "데이터",
+    "dbPath": "데이터베이스 경로",
+    "showInFinder": "Finder에서 보기",
+    "about": "정보",
+    "version": "버전",
+    "livesInMenubar": "창을 닫아도 OxiLine은 메뉴바에서 계속 실행됩니다.",
+    "categories": "카테고리"
+  },
+  "onboarding": {
+    "welcome": "환영합니다",
+    "welcomeBody": "하루는 흐릅니다. OxiLine은 그 흐름을 보여줍니다.",
+    "background": "백그라운드 동작",
+    "backgroundBody": "창을 닫아도 OxiLine은 메뉴바에 남아 언제든 단축키로 지금 할일을 보여줘요.",
+    "shortcut": "단축키 설정",
+    "shortcutBody": "전역 단축키로 언제든 '지금 뭘 해야 하지'에 답을 얻을 수 있어요. 손쉬운 사용 권한이 필요할 수 있어요.",
+    "next": "다음",
+    "skip": "건너뛰기",
+    "done": "시작하기"
+  },
+  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시" }
+}

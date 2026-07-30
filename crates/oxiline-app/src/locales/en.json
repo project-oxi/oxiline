@@ -1,0 +1,95 @@
+{
+  "app": { "name": "OxiLine", "tagline": "A day flows. OxiLine shows the flow." },
+  "nav": { "today": "Today", "week": "Week", "backlog": "Backlog" },
+  "weekdays": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
+  "weekdayFull": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
+  "dayPresets": { "daily": "Daily", "weekdays": "Weekdays", "weekends": "Weekends" },
+  "timeline": {
+    "freeTime": "Free time",
+    "allDone": "All done for today",
+    "empty": "Nothing scheduled. Press ⌘K to add something.",
+    "remaining": "{{n}} min left",
+    "workloadEasy": "comfortable",
+    "workloadTight": "tight",
+    "planned": "{{n}} min planned today"
+  },
+  "backlog": {
+    "title": "Backlog",
+    "empty": "No undated tasks yet. Press ⌘K to add one.",
+    "scheduleToday": "Schedule for today"
+  },
+  "hud": {
+    "now": "now",
+    "next": "next",
+    "freeTime": "Free time",
+    "allDone": "All done for today",
+    "in": "in {{n}} min",
+    "left": "{{n}} min left"
+  },
+  "palette": {
+    "placeholder": "Add or search a task…",
+    "hint": "Enter to add · @time to schedule",
+    "addToList": "Add to backlog",
+    "noMatch": "No matches"
+  },
+  "routine": {
+    "title": "Routines",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "pause": "Pause",
+    "resume": "Resume",
+    "name": "Name",
+    "at": "Start time",
+    "duration": "Duration (min)",
+    "days": "Repeat on",
+    "category": "Category",
+    "empty": "No routines yet. Add one to build the skeleton of your day."
+  },
+  "task": {
+    "addTitle": "Add task",
+    "title": "Title",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "skipToday": "Skip today"
+  },
+  "settings": {
+    "title": "Preferences",
+    "general": "General",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "launchAtLogin": "Launch at login",
+    "timeline": "Timeline",
+    "dayStart": "Day starts at",
+    "dayEnd": "Day ends at",
+    "weekStartsOn": "Week starts on",
+    "workloadWarning": "Workload warning threshold (min, 0=off)",
+    "shortcut": "Shortcuts",
+    "globalHotkey": "Global shortcut",
+    "recordKey": "Press to record",
+    "hudDuration": "HUD duration (s)",
+    "data": "Data",
+    "dbPath": "Database path",
+    "showInFinder": "Show in Finder",
+    "about": "About",
+    "version": "Version",
+    "livesInMenubar": "OxiLine keeps running in the menu bar even after you close the window.",
+    "categories": "Categories"
+  },
+  "onboarding": {
+    "welcome": "Welcome",
+    "welcomeBody": "A day flows. OxiLine shows the flow.",
+    "background": "Background behavior",
+    "backgroundBody": "Even with the window closed, OxiLine lives in the menu bar and shows what's next on a keystroke.",
+    "shortcut": "Shortcut",
+    "shortcutBody": "Use the global shortcut to answer 'what now?' anytime. Accessibility permission may be required.",
+    "next": "Next",
+    "skip": "Skip",
+    "done": "Get started"
+  },
+  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h" }
+}

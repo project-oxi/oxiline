@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/* Map live (runtime-switchable) CSS variables into Tailwind theme tokens so
+   utilities like bg-canvas / text-primary / border-default follow the theme.
+   `inline` keeps the indirection so [data-theme] swaps resolve at use-site. */
+@theme inline {
+  --color-canvas: var(--surface-canvas);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-tertiary: var(--text-tertiary);
+  --color-oxide: var(--accent-oxide);
+  --color-oxide-strong: var(--accent-oxide-strong);
+  --color-oxide-subtle: var(--accent-oxide-subtle);
+  --color-rust: var(--signal-rust);
+  --color-rust-subtle: var(--signal-rust-subtle);
+  --color-success: var(--signal-success);
+  --color-success-subtle: var(--signal-success-subtle);
+  --color-info: var(--signal-info);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system,
+    BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* ---- Light theme (06-design-system.md §6.2) ------------------------------ */
+:root {
+  --surface-canvas: oklch(0.98 0.004 250);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.95 0.006 250);
+  --border-subtle: oklch(0.88 0.008 250);
+  --border-default: oklch(0.8 0.01 250);
+
+  --text-primary: oklch(0.22 0.015 250);
+  --text-secondary: oklch(0.48 0.014 250);
+  --text-tertiary: oklch(0.62 0.012 250);
+
+  --accent-oxide: oklch(0.62 0.1 189);
+  --accent-oxide-strong: oklch(0.52 0.12 189);
+  --accent-oxide-subtle: oklch(0.94 0.03 189);
+
+  --signal-rust: oklch(0.6 0.16 35);
+  --signal-rust-subtle: oklch(0.94 0.04 35);
+  --signal-success: oklch(0.65 0.14 145);
+  --signal-success-subtle: oklch(0.94 0.03 145);
+  --signal-info: oklch(0.6 0.09 240);
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-sweep: 600ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0.1, 1);
+  --elevation-panel: 0 8px 24px oklch(0.2 0.02 250 / 0.24),
+    0 2px 6px oklch(0.2 0.02 250 / 0.16);
+
+  color-scheme: light;
+}
+
+/* ---- Dark theme ---------------------------------------------------------- */
+[data-theme="dark"] {
+  --surface-canvas: oklch(0.19 0.012 250);
+  --surface-raised: oklch(0.24 0.014 250);
+  --surface-sunken: oklch(0.15 0.01 250);
+  --border-subtle: oklch(0.32 0.014 250);
+  --border-default: oklch(0.4 0.016 250);
+
+  --text-primary: oklch(0.95 0.006 250);
+  --text-secondary: oklch(0.75 0.012 250);
+  --text-tertiary: oklch(0.58 0.014 250);
+
+  --accent-oxide: oklch(0.75 0.11 189);
+  --accent-oxide-strong: oklch(0.82 0.13 189);
+  --accent-oxide-subtle: oklch(0.3 0.05 189);
+
+  --signal-rust: oklch(0.72 0.15 35);
+  --signal-rust-subtle: oklch(0.32 0.06 35);
+  --signal-success: oklch(0.75 0.13 145);
+  --signal-success-subtle: oklch(0.3 0.05 145);
+  --signal-info: oklch(0.72 0.1 240);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* smooth theme crossfade (06-design-system.md §6.8) */
+  transition: background-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard);
+}
+
+/* Draggable titlebar region for the Overlay title bar. */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] input {
+  -webkit-app-region: no-drag;
+}
+
+/* Reduced motion: drop the oxidation sweep / pulse (06 §6.5, §6.9). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Focus ring baseline (06 §6.9). */
+:focus-visible {
+  outline: 2px solid var(--accent-oxide);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Thin custom scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-default) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 999px;
+}
