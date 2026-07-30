@@ -45,6 +45,9 @@ pub fn run() {
         commands::update_routine_group,
         commands::delete_routine_group,
         commands::set_routine_group_active,
+        commands::get_week_report,
+        commands::get_range_report,
+        commands::get_routine_streaks,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

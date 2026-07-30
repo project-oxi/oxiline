@@ -5,9 +5,10 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    Category, NowContext, RoutineBlock, Task, TimelineItem,
+    Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task,
+    TimelineItem, WeekReport,
 };
-use oxiline_core::{categories, routines, settings, tasks, timeline, util};
+use oxiline_core::{categories, reports, routines, settings, tasks, timeline, util};
 use serde_json::Value;
 use tauri::State;
 use tauri_plugin_notification::NotificationExt;
@@ -399,4 +400,32 @@ pub fn open_notification_settings(app: tauri::AppHandle) -> Result<(), String> {
 #[specta::specta]
 pub fn materialize_if_virtual(state: State<AppState>, id: String) -> Result<String, String> {
     tasks::materialize_if_virtual(&state.conn(), &id).map_err(map_err)
+}
+
+// ---- reports (habit streak / weekly report) -------------------------------
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_week_report(state: State<AppState>) -> Result<WeekReport, String> {
+    let conn = state.conn();
+    reports::week_report(&conn, &util::today_local(), util::now_minute_local()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_range_report(
+    state: State<AppState>,
+    from: String,
+    to: String,
+) -> Result<RangeReport, String> {
+    let conn = state.conn();
+    reports::range_report(&conn, &from, &to, &util::today_local(), util::now_minute_local())
+        .map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_routine_streaks(state: State<AppState>) -> Result<Vec<RoutineStreak>, String> {
+    let conn = state.conn();
+    reports::routine_streaks(&conn, &util::today_local()).map_err(map_err)
 }
