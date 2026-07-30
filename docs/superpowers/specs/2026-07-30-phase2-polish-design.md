@@ -22,17 +22,23 @@ Phase 2의 7개 항목은 다음 의존을 가진다. 이 순서대로 구현한
 
 **목적**: Phase 1 인수 기준 3번("전역 단축키가 다른 앱 위에서 눌렸을 때 HUD가 뜨고, 포커스가 그 앱에 그대로 유지된 채 2초 후 사라진다") 완전 충족. 현재는 transparent always-on-top 오버레이라 일부 환경(전체화면 앱 위)에서 포커스 theft 발생 가능.
 
-**변경**:
-
-- `crates/oxiline-app/src-tauri/Cargo.toml`: `tauri-nspanel = "2"` 추가. `cfg(target_os = "macos")`로 게이팅.
+- `crates/oxiline-app/src-tauri/Cargo.toml`: `tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v1" }` 추가. `cfg(target_os = "macos")`로 게이팅.
 - `crates/oxiline-app/src-tauri/src/hud.rs`:
-  - macOS: `tauri_nspanel::PanelBuilder`로 NSPanel 빌드. `no_activate(true)`, `level(PanelLevel::Floating)`, `style_mask(StyleMask::empty().hud_window())`, `corner_radius(16)`, `transparent(true)`.
+  - **tauri-nspanel의 API는 빌더가 아니라 윈도우 스위즐**: `tauri.conf.json`에서 정의한 `hud` window를 `to_panel()`로 NSPanel로 변환.
+  - macOS (`#[cfg(target_os = "macos")]`):
+    1. `setup`에서 `app.get_webview_window("hud")`로 윈도우 핸들 획득.
+    2. `let panel = window.to_panel()?;` (Use `tauri_nspanel::WindowExt`).
+    3. NSPanel의 `set_style_mask(...)`로 `NSWindowStyleMask::HUDWindow | NSWindowStyleMask::Resizable | NSWindowStyleMask::Borderless` 적용.
+    4. `set_level(NSPanelLevel::Floating as i64)` (위 레이어).
+    5. `set_hides_on_deactivate(false)` (다른 앱 활성화돼도 숨기지 않음).
+    6. `set_collection_behavior(... fullScreenAuxiliary)` (전체화면 앱 위에도 표시).
   - 비-macOS: 기존 transparent always-on-top 오버레이 그대로 (CI/리눅스 빌드 대응).
   - `position_top_center()` 재사용.
 - `crates/oxiline-app/src-tauri/src/lib.rs`:
-  - `setup`에서 `hud::init_panel(app.handle())` 추가 (사전 빌드, 평소엔 숨김).
+  - `.plugin(tauri_nspanel::init())` 등록.
+  - `setup`에서 macOS면 `hud::init_panel(app.handle())?` 호출.
   - `on_window_event`는 hud 패널에는 적용하지 않음.
-- `tauri.conf.json`: hud window 정의 그대로 유지 (`"visible": false`, `"focus": false`, `"decorations": false`, `"transparent": true`).
+- `tauri.conf.json`: hud window 정의 그대로 유지 (`"visible": false`, `"focus": false`, `"decorations": false`, `"transparent": true`). NSPanel 변환은 코드에서.
 
 **검증**: macOS GUI 부팅 후 전체화면 브라우저 위에서 `⌘⇧O` → 텍스트 입력 커서 유지 확인 (사용자 수동 검증).
 
