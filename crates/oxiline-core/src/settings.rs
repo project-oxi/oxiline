@@ -135,5 +135,7 @@ pub fn snapshot(conn: &Connection) -> crate::model::SettingsSnapshot {
         launch_at_login: get_bool(conn, "launch_at_login", true),
         workload_warning_minutes: get_i64(conn, "workload_warning_minutes", 600),
         onboarding_done: get_bool(conn, "onboarding_done", false),
+        notifications_enabled: get_bool(conn, "notifications_enabled", false),
+        notification_lead_minutes: get_i64(conn, "notification_lead_minutes", 5) as u32,
     }
 }
