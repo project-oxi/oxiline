@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUi } from "../lib/store";
 import { applyTheme, setThemeMode, type ThemeMode } from "../lib/theme";
 import { changeLang, type Lang } from "../lib/i18n";
+import { Modal } from "./Modal";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -31,6 +32,29 @@ function Select<T extends string>(props: { value: T; options: { v: T; label: str
   );
 }
 
+/** Convert a Tauri accelerator string ("CmdOrCtrl+Shift+O") to display glyphs ("⌘⇧O"). */
+function formatHotkey(acc: string): string {
+  return acc
+    .replace(/CmdOrCtrl|CommandOrCtrl|Super/g, "⌘")
+    .replace(/Ctrl|Control/g, "⌃")
+    .replace(/Alt|Option/g, "⌥")
+    .replace(/Shift/g, "⇧")
+    .replace(/\+/g, "");
+}
+
+/** Static in-app shortcut rows for the §7.10 reference table. */
+const SHORTCUT_ROWS: { key: string; actionKey: string; scopeKey: string }[] = [
+  { key: "⌘K", actionKey: "settings.actPalette", scopeKey: "settings.scopeApp" },
+  { key: "⌘N", actionKey: "settings.actNewTask", scopeKey: "settings.scopeMain" },
+  { key: "⌘,", actionKey: "settings.actPrefs", scopeKey: "settings.scopeMain" },
+  { key: "T", actionKey: "settings.actToday", scopeKey: "settings.scopeViews" },
+  { key: "← / →", actionKey: "settings.actPrevNext", scopeKey: "settings.scopeDay" },
+  { key: "1 / 2 / 3", actionKey: "settings.actTabs", scopeKey: "settings.scopeMain" },
+  { key: "Enter", actionKey: "settings.actToggle", scopeKey: "settings.scopeList" },
+  { key: "⌫", actionKey: "settings.actDelete", scopeKey: "settings.scopeList" },
+  { key: "Esc", actionKey: "settings.actClose", scopeKey: "settings.scopeGlobal" },
+];
+
 export function Preferences() {
   const { t } = useTranslation();
   const { preferencesOpen: open, setPreferencesOpen } = useUi();
@@ -51,7 +75,6 @@ export function Preferences() {
   const [catName, setCatName] = useState("");
   const [catHue, setCatHue] = useState(200);
 
-  if (!open) return null;
   const s = settingsQ.data ?? {};
 
   const changeTheme = (mode: ThemeMode) => {
@@ -65,14 +88,15 @@ export function Preferences() {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "oklch(0 0 0 / 0.25)" }} onClick={() => setPreferencesOpen(false)}>
-      <div
-        className="max-h-[80%] w-full max-w-lg overflow-y-auto rounded-lg border border-border-subtle p-5"
-        style={{ background: "var(--surface-raised)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={() => setPreferencesOpen(false)}
+      labelledBy="prefs-title"
+      panelClassName="max-h-[80%] w-full max-w-lg overflow-y-auto rounded-lg border border-border-subtle p-5"
+      panelStyle={{ background: "var(--surface-raised)" }}
+    >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[16px] font-semibold">{t("settings.title")}</h2>
+          <h2 id="prefs-title" className="text-[16px] font-semibold">{t("settings.title")}</h2>
           <button className="rounded p-1 hover:bg-sunken" onClick={() => setPreferencesOpen(false)} aria-label={t("common.close")}>
             <X size={16} />
           </button>
@@ -124,6 +148,30 @@ export function Preferences() {
           <Row label={t("settings.hudDuration")}>
             <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
           </Row>
+          {/* §7.10 keyboard shortcuts reference table */}
+          <table className="mt-3 w-full border-collapse text-[12px]">
+            <thead>
+              <tr style={{ color: "var(--text-tertiary)" }}>
+                <th className="py-1 text-left font-medium">{t("settings.scKey")}</th>
+                <th className="py-1 text-left font-medium">{t("settings.scAction")}</th>
+                <th className="py-1 text-left font-medium">{t("settings.scScope")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-border-subtle">
+                <td className="py-1.5 pr-2 font-mono" style={{ color: "var(--accent-oxide-strong)" }}>{formatHotkey((s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O")}</td>
+                <td className="py-1.5 pr-2" style={{ color: "var(--text-secondary)" }}>{t("settings.actHud")}</td>
+                <td className="py-1.5" style={{ color: "var(--text-tertiary)" }}>{t("settings.scopeGlobal")}</td>
+              </tr>
+              {SHORTCUT_ROWS.map((r) => (
+                <tr key={r.key} className="border-t border-border-subtle">
+                  <td className="py-1.5 pr-2 font-mono" style={{ color: "var(--text-secondary)" }}>{r.key}</td>
+                  <td className="py-1.5 pr-2" style={{ color: "var(--text-secondary)" }}>{t(r.actionKey)}</td>
+                  <td className="py-1.5" style={{ color: "var(--text-tertiary)" }}>{t(r.scopeKey)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
 
         <section className="mb-4">
@@ -215,7 +263,6 @@ export function Preferences() {
           <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>{t("settings.version")} 0.1.0</p>
           <p className="mt-1 text-[12px]" style={{ color: "var(--text-tertiary)" }}>{t("settings.livesInMenubar")}</p>
         </section>
-      </div>
-    </div>
+    </Modal>
   );
 }

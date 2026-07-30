@@ -32,6 +32,7 @@ import {
   MASK_WEEKDAYS,
   MASK_WEEKENDS,
 } from "../lib/colors";
+import { Modal } from "./Modal";
 
 function daysFromMask(mask: number): string {
   return WEEKDAY_KEYS.map((k, i) => ((mask >> i) & 1) ? k : null)
@@ -63,7 +64,6 @@ export function RoutineManager() {
   const [mask, setMask] = useState(MASK_DAILY);
   const [catId, setCatId] = useState<string>("");
 
-  if (!open) return null;
 
   const toggleDay = (i: number) => setMask((m) => m ^ (1 << i));
 
@@ -101,25 +101,23 @@ export function RoutineManager() {
     : allRoutines;
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex justify-end"
-      style={{ background: "oklch(0 0 0 / 0.25)" }}
-      onClick={() => setRoutineManagerOpen(false)}
+    <Modal
+      open={open}
+      onClose={() => setRoutineManagerOpen(false)}
+      variant="drawer-right"
+      labelledBy="routine-title"
+      panelClassName="flex w-[640px] max-w-full flex-col overflow-hidden border-l"
+      panelStyle={{
+        background: "var(--surface-canvas)",
+        borderColor: "var(--border-default)",
+      }}
     >
-      <div
-        className="flex w-[640px] max-w-full flex-col overflow-hidden border-l"
-        style={{
-          background: "var(--surface-canvas)",
-          borderColor: "var(--border-default)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Header */}
         <div
           className="flex items-center justify-between border-b px-4 py-3"
           style={{ borderColor: "var(--border-subtle)" }}
         >
-          <span className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
+          <span id="routine-title" className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
             {t("routine.title")}
           </span>
           <button
@@ -290,8 +288,7 @@ export function RoutineManager() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -99,6 +99,15 @@ export function useDeleteTask() {
   });
 }
 
+export function useSetTaskSkipped() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, skipped }: { id: string; skipped: boolean }) =>
+      api.setTaskSkipped(id, skipped),
+    onSuccess: () => inv(),
+  });
+}
+
 export function useUpdateTask() {
   const inv = useInvalidate();
   return useMutation({

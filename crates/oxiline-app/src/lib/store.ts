@@ -9,12 +9,14 @@ interface UiState {
   preferencesOpen: boolean;
   routineManagerOpen: boolean;
   onboardingOpen: boolean;
+  paletteDate: string | null;
   setDate: (d: string) => void;
   setView: (v: View) => void;
   setPaletteOpen: (b: boolean) => void;
   setPreferencesOpen: (b: boolean) => void;
   setRoutineManagerOpen: (b: boolean) => void;
   setOnboardingOpen: (b: boolean) => void;
+  setPaletteDate: (d: string | null) => void;
   shiftDate: (days: number) => void;
   goToToday: () => void;
 }
@@ -42,12 +44,14 @@ export const useUi = create<UiState>((set) => ({
   preferencesOpen: false,
   routineManagerOpen: false,
   onboardingOpen: false,
+  paletteDate: null,
   setDate: (d) => set({ date: d }),
   setView: (v) => set({ view: v }),
   setPaletteOpen: (b) => set({ paletteOpen: b }),
   setPreferencesOpen: (b) => set({ preferencesOpen: b }),
   setRoutineManagerOpen: (b) => set({ routineManagerOpen: b }),
   setOnboardingOpen: (b) => set({ onboardingOpen: b }),
+  setPaletteDate: (d) => set({ paletteDate: d }),
   shiftDate: (days) => set((s) => ({ date: shift(s.date, days) })),
   goToToday: () => set({ date: todayStr() }),
 }));

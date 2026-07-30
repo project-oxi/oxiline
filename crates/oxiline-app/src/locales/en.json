@@ -30,7 +30,8 @@
     "placeholder": "Add or search a task…",
     "hint": "Enter to add · @time to schedule",
     "addToList": "Add to backlog",
-    "noMatch": "No matches"
+    "noMatch": "No matches",
+    "title": "Quick add"
   },
   "routine": {
     "title": "Routines",
@@ -78,7 +79,26 @@
     "about": "About",
     "version": "Version",
     "livesInMenubar": "OxiLine keeps running in the menu bar even after you close the window.",
-    "categories": "Categories"
+    "categories": "Categories",
+    "scKey": "Key",
+    "scAction": "Action",
+    "scScope": "Scope",
+    "actHud": "Show floating HUD",
+    "actPalette": "Command palette / quick add",
+    "actNewTask": "New task (on viewed date)",
+    "actPrefs": "Open preferences",
+    "actToday": "Jump to today",
+    "actPrevNext": "Previous / next day",
+    "actTabs": "Switch Today / Week / Backlog",
+    "actToggle": "Toggle complete",
+    "actDelete": "Delete (skip if routine)",
+    "actClose": "Close palette / panel",
+    "scopeGlobal": "Global (outside app)",
+    "scopeApp": "In-app global",
+    "scopeMain": "Main window",
+    "scopeViews": "Day / Week views",
+    "scopeDay": "Day view",
+    "scopeList": "List / timeline"
   },
   "onboarding": {
     "welcome": "Welcome",
@@ -91,7 +111,7 @@
     "skip": "Skip",
     "done": "Get started"
   },
-  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h" },
+  "common": { "add": "Add", "close": "Close", "minutes": "min", "hour": "h", "delete": "Delete" },
   "week": {
     "title": "Week",
     "today": "Today",
@@ -114,5 +134,12 @@
     "deleteGroup": "Delete group",
     "noGroup": "No group",
     "unGrouped": "Ungrouped"
+  },
+  "a11y": {
+    "done": "done",
+    "undone": "undone",
+    "markedDone": "marked done",
+    "skipped": "skipped for today",
+    "deleted": "deleted"
   }
 }

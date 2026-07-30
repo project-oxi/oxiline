@@ -21,6 +21,7 @@ function useGlobalKeys() {
 
       if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        ui.setPaletteDate(null);
         ui.setPaletteOpen(!ui.paletteOpen);
         return;
       }
@@ -31,6 +32,7 @@ function useGlobalKeys() {
       }
       if (mod && e.key.toLowerCase() === "n") {
         e.preventDefault();
+        ui.setPaletteDate(ui.date);
         ui.setPaletteOpen(true);
         return;
       }

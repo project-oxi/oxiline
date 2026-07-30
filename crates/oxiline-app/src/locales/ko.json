@@ -30,7 +30,8 @@
     "placeholder": "할일 추가 또는 검색…",
     "hint": "Enter로 추가 · @시간 으로 예약",
     "addToList": "백로그에 추가",
-    "noMatch": "일치하는 항목이 없어요"
+    "noMatch": "일치하는 항목이 없어요",
+    "title": "빠른 추가"
   },
   "routine": {
     "title": "루틴 관리",
@@ -78,7 +79,26 @@
     "about": "정보",
     "version": "버전",
     "livesInMenubar": "창을 닫아도 OxiLine은 메뉴바에서 계속 실행됩니다.",
-    "categories": "카테고리"
+    "categories": "카테고리",
+    "scKey": "단축키",
+    "scAction": "동작",
+    "scScope": "범위",
+    "actHud": "플로팅 HUD 표시",
+    "actPalette": "커맨드 팔레트 / 빠른 추가",
+    "actNewTask": "새 할일 (현재 보는 날짜에)",
+    "actPrefs": "환경설정 열기",
+    "actToday": "오늘로 이동",
+    "actPrevNext": "이전 / 다음 날",
+    "actTabs": "오늘 / 주간 / 백로그 전환",
+    "actToggle": "완료 토글",
+    "actDelete": "삭제 (루틴이면 오늘만 건너뛰기)",
+    "actClose": "팔레트 / 패널 닫기",
+    "scopeGlobal": "전역 (앱 밖에서도)",
+    "scopeApp": "앱 내 전역",
+    "scopeMain": "메인 창",
+    "scopeViews": "Day / Week 뷰",
+    "scopeDay": "Day 뷰",
+    "scopeList": "리스트 / 타임라인"
   },
   "onboarding": {
     "welcome": "환영합니다",
@@ -91,7 +111,7 @@
     "skip": "건너뛰기",
     "done": "시작하기"
   },
-  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시" },
+  "common": { "add": "추가", "close": "닫기", "minutes": "분", "hour": "시", "delete": "삭제" },
   "week": {
     "title": "주간",
     "today": "오늘",
@@ -114,5 +134,12 @@
     "deleteGroup": "그룹 삭제",
     "noGroup": "그룹 없음",
     "unGrouped": "분류 안 됨"
+  },
+  "a11y": {
+    "done": "완료",
+    "undone": "완료 해제",
+    "markedDone": "완료로 표시",
+    "skipped": "오늘만 건너뜀",
+    "deleted": "삭제됨"
   }
 }

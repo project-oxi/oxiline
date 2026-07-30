@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Search, CornerDownLeft } from "lucide-react";
 import { useBacklog, useCreateTask, useSetTaskDone, useTimeline } from "../hooks";
 import { useUi, todayStr } from "../lib/store";
+import { Modal } from "./Modal";
 
 // Lightweight @time hint parser (§7.5): "@HH:MM" → today at that time;
 // "@내일 HH:MM"/"@tomorrow HH:MM" → tomorrow.
@@ -51,7 +52,7 @@ function shiftDay(dateStr: string, n: number): string {
 
 export function CommandPalette() {
   const { t } = useTranslation();
-  const { paletteOpen: open, setPaletteOpen } = useUi();
+  const { paletteOpen: open, setPaletteOpen, paletteDate } = useUi();
   const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
@@ -64,7 +65,6 @@ export function CommandPalette() {
     if (open) {
       setQ("");
       setSel(0);
-      setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);
 
@@ -78,7 +78,6 @@ export function CommandPalette() {
     return pool.filter((x) => x.title.toLowerCase().includes(lower)).slice(0, 6);
   }, [q, backlogQ.data, tlQ.data]);
 
-  if (!open) return null;
 
   const parsed = parseInput(q);
   const willAdd = parsed.title.length > 0;
@@ -96,7 +95,7 @@ export function CommandPalette() {
         done.mutate({ id: matches[sel].id, done: !matches[sel].is_done });
       } else if (willAdd) {
         create.mutate({
-          date: parsed.date,
+          date: parsed.date ?? paletteDate,
           title: parsed.title,
           categoryId: null,
           startMinute: parsed.startMinute,
@@ -105,27 +104,29 @@ export function CommandPalette() {
         });
       }
       setPaletteOpen(false);
-    } else if (e.key === "Escape") {
-      setPaletteOpen(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20" style={{ background: "oklch(0 0 0 / 0.25)" }} onClick={() => setPaletteOpen(false)}>
-      <div
-        className="w-full max-w-sm overflow-hidden rounded-lg border border-border-subtle"
-        style={{ background: "var(--surface-raised)", boxShadow: "var(--elevation-panel)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      open={open}
+      onClose={() => setPaletteOpen(false)}
+      variant="top"
+      ariaLabel={t("palette.title")}
+      panelClassName="w-full max-w-sm overflow-hidden rounded-lg border border-border-subtle"
+      panelStyle={{ background: "var(--surface-raised)", boxShadow: "var(--elevation-panel)" }}
+    >
         <div className="flex items-center gap-2 px-3 py-2.5">
           <Search size={15} style={{ color: "var(--text-tertiary)" }} />
           <input
             ref={inputRef}
+            role="combobox"
+            aria-expanded={matches.length > 0}
+            aria-controls="palette-list"
+            aria-autocomplete="list"
+            aria-activedescendant={matches.length > 0 ? `palette-opt-${sel}` : undefined}
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setSel(0);
-            }}
+            onChange={(e) => { setQ(e.target.value); setSel(0); }}
             onKeyDown={onKeyDown}
             placeholder={t("palette.placeholder")}
             className="w-full bg-transparent text-[14px] outline-none"
@@ -133,10 +134,13 @@ export function CommandPalette() {
         </div>
 
         {matches.length > 0 && (
-          <ul className="border-t border-border-subtle">
+          <ul id="palette-list" role="listbox" className="border-t border-border-subtle">
             {matches.map((m, i) => (
               <li
                 key={m.id}
+                role="option"
+                id={`palette-opt-${i}`}
+                aria-selected={i === sel}
                 onMouseEnter={() => setSel(i)}
                 className="flex items-center justify-between px-3 py-2 text-[13px]"
                 style={{ background: i === sel ? "var(--surface-sunken)" : "transparent" }}
@@ -158,7 +162,6 @@ export function CommandPalette() {
             </span>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

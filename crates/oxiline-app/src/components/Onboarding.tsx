@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useUi } from "../lib/store";
 import { api } from "../lib/api";
 import { changeLang, type Lang } from "../lib/i18n";
+import { Modal } from "./Modal";
 
 export function Onboarding() {
   const { t } = useTranslation();
@@ -10,7 +11,6 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   const [lang, setLang] = useState<Lang>("ko");
 
-  if (!open) return null;
 
   const finish = async () => {
     try {
@@ -51,10 +51,17 @@ export function Onboarding() {
   const cur = steps[step];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: "var(--surface-canvas)" }}>
-      <div className="w-full max-w-sm px-8 text-center">
+    <Modal
+      open={open}
+      onClose={() => {}}
+      variant="fullscreen"
+      dismissable={false}
+      backdropStyle={{ background: "var(--surface-canvas)" }}
+      panelClassName="w-full max-w-sm px-8 text-center"
+      labelledBy="onboarding-title"
+    >
         <div className="mx-auto mb-5 h-12 w-12 rounded-lg" style={{ background: "var(--accent-oxide)" }} />
-        <h1 className="text-[22px] font-bold">{cur.title}</h1>
+        <h1 id="onboarding-title" className="text-[22px] font-bold">{cur.title}</h1>
         <p className="mx-auto mt-2 max-w-xs text-[14px]" style={{ color: "var(--text-secondary)" }}>
           {cur.body}
         </p>
@@ -79,7 +86,6 @@ export function Onboarding() {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

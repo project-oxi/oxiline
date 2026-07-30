@@ -4,7 +4,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 import type { Category, TimelineItem } from "../types";
 import { categoryById, categoryColor, rangeLabel } from "../lib/colors";
-import { useSetTaskDone } from "../hooks";
+import { useSetTaskDone, useDeleteTask, useSetTaskSkipped } from "../hooks";
+import { announce } from "../lib/a11y";
 
 interface Props {
   item: TimelineItem;
@@ -19,6 +20,8 @@ interface Props {
 export function BlockView({ item, categories, left, columns, top, height, past }: Props) {
   const { t } = useTranslation();
   const done = useSetTaskDone();
+  const del = useDeleteTask();
+  const skip = useSetTaskSkipped();
   const cat = categoryById(categories, item.category_id);
   const color = categoryColor(cat?.color_hue ?? null);
 
@@ -48,10 +51,40 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     filter: past ? "saturate(0.4)" : undefined,
     cursor: "grab",
   };
+  // The dnd container is the single focusable unit (§7.10: Enter toggles
+  // done, Backspace/Delete skips a routine occurrence or deletes a manual task).
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      done.mutate({ id: item.id, done: !item.is_done });
+      announce(item.is_done ? t("a11y.undone") : t("a11y.markedDone"));
+    } else if (e.key === "Backspace" || e.key === "Delete") {
+      e.preventDefault();
+      if (item.origin_routine_block_id) {
+        skip.mutate({ id: item.id, skipped: true });
+        announce(t("a11y.skipped"));
+      } else {
+        del.mutate(item.id);
+        announce(t("a11y.deleted"));
+      }
+    }
+  };
 
   return (
-    <div ref={setNodeRef} style={style} className="absolute rounded-md border border-border-subtle bg-raised" title={item.title} {...attributes} {...listeners}>
-      <button
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="absolute rounded-md border border-border-subtle bg-raised"
+      title={item.title}
+      {...attributes}
+      {...listeners}
+      aria-label={`${item.title}${item.is_done ? `, ${t("a11y.done")}` : ""}`}
+      aria-describedby={undefined}
+      onKeyDown={onKeyDown}
+    >
+      <div
+        role="presentation"
+        tabIndex={-1}
         className="flex h-full w-full flex-col justify-start px-2 py-1 text-left"
         onClick={(e) => { e.stopPropagation(); done.mutate({ id: item.id, done: !item.is_done }); }}
         onPointerDown={(e) => e.stopPropagation()}
@@ -92,7 +125,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
             {t("common.minutes", { n: item.duration_minute })}
           </span>
         )}
-      </button>
+      </div>
     </div>
   );
 }
