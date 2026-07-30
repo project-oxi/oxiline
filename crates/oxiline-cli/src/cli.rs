@@ -74,6 +74,23 @@ pub enum Command {
         #[arg(long, value_name = "FROM:TO")]
         range: String,
     },
+    /// Completion report for a week or date range.
+    Report {
+        /// Current week (default).
+        #[arg(long)]
+        week: bool,
+        /// Last N days (e.g. --last 30).
+        #[arg(long, value_name = "N")]
+        last: Option<u32>,
+        /// Explicit inclusive range FROM:TO (YYYY-MM-DD).
+        #[arg(long, value_name = "FROM:TO")]
+        range: Option<String>,
+    },
+    /// Current consecutive-done streaks (all routines, or one by id/name).
+    Streak {
+        /// Routine id or name. Omit for all active routines.
+        target: Option<String>,
+    },
     /// Self-diagnostic: DB path, schema version, WAL, GUI process.
     Doctor,
 }

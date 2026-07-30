@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
 use oxiline_core::{
-    categories, routine_groups, routines, settings, tasks, timeline,
+    categories, reports, routine_groups, routines, settings, tasks, timeline,
 };
 use oxiline_core::{util, CoreError, Result};
 use serde_json::{json, Value};
@@ -439,6 +439,57 @@ fn run(opts: Cli) -> Result<()> {
             say(serde_json::to_string_pretty(&Value::Array(days)).unwrap_or_default());
         }
 
+        Command::Report { week: _, last, range } => {
+            let today = util::today_local();
+            let now = util::now_minute_local();
+            if let Some(r) = range {
+                let (from, to) = parse_range(&r)?;
+                let rep = reports::range_report(&conn, &from, &to, &today, now)?;
+                if json {
+                    say(output::json_pretty(&rep));
+                } else {
+                    say(output::range_report_text(l, &rep));
+                }
+            } else if let Some(n) = last {
+                let to = today.clone();
+                let from = util::add_days(&to, -((*n as i64) - 1)).unwrap_or_else(|| to.clone());
+                let rep = reports::range_report(&conn, &from, &to, &today, now)?;
+                if json {
+                    say(output::json_pretty(&rep));
+                } else {
+                    say(output::range_report_text(l, &rep));
+                }
+            } else {
+                let rep = reports::week_report(&conn, &today, now)?;
+                if json {
+                    say(output::json_pretty(&rep));
+                } else {
+                    say(output::week_report_text(l, &rep));
+                }
+            }
+        }
+        Command::Streak { target } => {
+            let today = util::today_local();
+            match target {
+                None => {
+                    let ss = reports::routine_streaks(&conn, &today)?;
+                    if json {
+                        say(output::json_pretty(&ss));
+                    } else {
+                        say(output::streak_list_text(l, &ss));
+                    }
+                }
+                Some(name) => {
+                    let id = resolve_routine_target(&conn, name)?;
+                    let s = reports::routine_streak(&conn, &id, &today)?;
+                    if json {
+                        say(output::json_pretty(&s));
+                    } else {
+                        say(output::streak_list_text(l, std::slice::from_ref(&s)));
+                    }
+                }
+            }
+        }
         Command::Doctor => {
             let ver = oxiline_core::db::schema_version(&conn)? as i64;
             let cats = categories::list(&conn)?;
@@ -538,6 +589,22 @@ fn resolve_category_opt(
     match id_or_name {
         None => Ok(None),
         Some(s) => Ok(Some(categories::resolve(conn, s)?.id)),
+    }
+}
+
+/// Resolve a routine by exact id, or a unique active-routine title match.
+fn resolve_routine_target(conn: &rusqlite::Connection, id_or_name: &str) -> Result<String> {
+    if routines::get(conn, id_or_name).is_ok() {
+        return Ok(id_or_name.into());
+    }
+    let matches: Vec<_> = routines::list(conn, true)?
+        .into_iter()
+        .filter(|b| b.title == id_or_name)
+        .collect();
+    match matches.len() {
+        1 => Ok(matches[0].id.clone()),
+        0 => Err(CoreError::NotFound(format!("routine '{id_or_name}'"))),
+        _ => Err(CoreError::InvalidArgument(format!("ambiguous routine '{id_or_name}'"))),
     }
 }
 

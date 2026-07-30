@@ -162,3 +162,84 @@ pub fn settings_text(map: &serde_json::Map<String, serde_json::Value>) -> String
     }
     out
 }
+
+// ---- report rendering -----------------------------------------------------
+
+use oxiline_core::model::{CategoryBreakdown, DayTotals, RangeReport, RoutineStreak, WeekReport};
+
+fn pct(r: Option<f64>) -> String {
+    match r {
+        Some(v) => format!("{}%", (v * 100.0).round() as i64),
+        None => "—".into(),
+    }
+}
+
+pub fn week_report_text(lang: L, r: &WeekReport) -> String {
+    let mut out = format!("{} ~ {} ({})\n", r.week_start, r.week_end, lang.report_this_week());
+    out.push_str(&totals_line(lang, &r.totals));
+    out.push_str(&format!(
+        "{} {}   {} {}\n\n",
+        lang.report_rate(),
+        pct(r.completion_rate),
+        lang.report_prev_week(),
+        pct(r.prev_completion_rate)
+    ));
+    out.push_str(&cat_block(lang, &r.categories));
+    out.push_str(&streak_block(lang, &r.streaks));
+    out
+}
+
+pub fn range_report_text(lang: L, r: &RangeReport) -> String {
+    let mut out = format!("{} ~ {}\n", r.from, r.to);
+    out.push_str(&format!("{} {}\n\n", lang.report_rate(), pct(r.completion_rate)));
+    out.push_str(&cat_block(lang, &r.categories));
+    out.push_str(&streak_block(lang, &r.streaks));
+    out
+}
+
+pub fn streak_list_text(lang: L, streaks: &[RoutineStreak]) -> String {
+    let mut out = String::new();
+    for s in streaks {
+        out.push_str(&format!("  {:<16} {}{}\n", s.title, s.current, lang.report_day()));
+    }
+    if out.is_empty() {
+        out = format!("  ({})\n", lang.report_no_routines());
+    }
+    out
+}
+
+fn totals_line(lang: L, t: &DayTotals) -> String {
+    format!(
+        "{} {} · {} {} · {} {} · {} {}\n",
+        lang.report_done(),
+        t.done,
+        lang.report_skipped(),
+        t.skipped,
+        lang.report_not_recorded(),
+        t.not_recorded,
+        lang.report_upcoming(),
+        t.upcoming
+    )
+}
+
+fn cat_block(lang: L, cats: &[CategoryBreakdown]) -> String {
+    let mut out = format!("{}\n", lang.report_categories());
+    for c in cats {
+        let denom = c.done + c.not_recorded;
+        out.push_str(&format!(
+            "  {:<8} {}/{}  {}\n",
+            c.category_name,
+            c.done,
+            denom,
+            pct(c.completion_rate)
+        ));
+    }
+    out
+}
+
+fn streak_block(lang: L, streaks: &[RoutineStreak]) -> String {
+    if streaks.is_empty() {
+        return String::new();
+    }
+    format!("\n{}\n{}", lang.report_streaks(), streak_list_text(lang, streaks))
+}
