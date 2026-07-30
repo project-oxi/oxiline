@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type View = "today" | "week" | "backlog";
+export type View = "today" | "week" | "backlog" | "report";
 
 interface UiState {
   date: string; // YYYY-MM-DD selected day

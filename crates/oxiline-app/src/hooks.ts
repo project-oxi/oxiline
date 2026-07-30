@@ -11,10 +11,15 @@ export const qk = {
   backlog: ["backlog"] as const,
   now: ["now"] as const,
   settings: ["settings"] as const,
+  weekReport: ["weekReport"] as const,
 };
 
 export function useCategories() {
   return useQuery({ queryKey: qk.categories, queryFn: api.listCategories });
+}
+
+export function useWeekReport() {
+  return useQuery({ queryKey: qk.weekReport, queryFn: api.getWeekReport });
 }
 
 export function useTimeline(date: string) {

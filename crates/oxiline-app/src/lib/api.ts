@@ -10,7 +10,7 @@ import type {
   RoutineGroup,
   Settings,
   Task,
-  TimelineItem,
+  RangeReport, RoutineStreak, TimelineItem, WeekReport,
 } from "../types";
 
 export const api = {
@@ -114,6 +114,12 @@ export const api = {
   deleteRoutineGroup: (id: string) => invoke<void>("delete_routine_group", { id }),
   setRoutineGroupActive: (id: string, active: boolean) =>
     invoke<RoutineGroup>("set_routine_group_active", { id, active }),
+  // reports
+  getWeekReport: () => invoke<WeekReport>("get_week_report"),
+  getRangeReport: (from: string, to: string) =>
+    invoke<RangeReport>("get_range_report", { from, to }),
+  getRoutineStreaks: () => invoke<RoutineStreak[]>("get_routine_streaks"),
+
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */

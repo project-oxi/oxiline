@@ -1,6 +1,6 @@
 {
   "app": { "name": "OxiLine", "tagline": "A day flows. OxiLine shows the flow." },
-  "nav": { "today": "Today", "week": "Week", "backlog": "Backlog" },
+  "nav": { "today": "Today", "week": "Week", "backlog": "Backlog", "report": "Report" },
   "weekdays": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
   "weekdayFull": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
   "dayPresets": { "daily": "Daily", "weekdays": "Weekdays", "weekends": "Weekends" },
@@ -141,5 +141,19 @@
     "markedDone": "marked done",
     "skipped": "skipped for today",
     "deleted": "deleted"
+  },
+  "report": {
+    "thisWeek": "This week",
+    "prevWeek": "Last week",
+    "rate": "Completion",
+    "done": "Done",
+    "skipped": "Skipped",
+    "notRecorded": "No check-in",
+    "upcoming": "Upcoming",
+    "categories": "Categories",
+    "streaks": "Streaks",
+    "days": "d",
+    "loading": "Loading…",
+    "empty": "No records yet"
   }
 }

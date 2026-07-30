@@ -38,6 +38,7 @@ export function Header() {
     { key: "today", label: t("nav.today") },
     { key: "week", label: t("nav.week") },
     { key: "backlog", label: t("nav.backlog") },
+    { key: "report", label: t("nav.report") },
   ];
 
   return (

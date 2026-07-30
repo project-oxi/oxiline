@@ -85,3 +85,49 @@ export interface NowContext {
 }
 
 export type Settings = Record<string, unknown>;
+
+// ---- reports (habit streak / weekly report) ----
+
+export interface CategoryBreakdown {
+  category_id: string | null;
+  category_name: string;
+  done: number;
+  skipped: number;
+  not_recorded: number;
+  completion_rate: number | null;
+}
+
+export interface DayTotals {
+  done: number;
+  skipped: number;
+  not_recorded: number;
+  upcoming: number;
+}
+
+export interface RoutineStreak {
+  routine_id: string;
+  title: string;
+  current: number;
+  last_done_date: string | null;
+}
+
+export interface WeekReport {
+  week_start: string;
+  week_end: string;
+  days: unknown[];
+  totals: DayTotals;
+  completion_rate: number | null;
+  prev_completion_rate: number | null;
+  categories: CategoryBreakdown[];
+  streaks: RoutineStreak[];
+}
+
+export interface RangeReport {
+  from: string;
+  to: string;
+  days: unknown[];
+  totals: DayTotals;
+  completion_rate: number | null;
+  categories: CategoryBreakdown[];
+  streaks: RoutineStreak[];
+}

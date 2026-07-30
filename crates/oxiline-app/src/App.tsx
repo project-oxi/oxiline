@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { DayTimeline } from "./components/DayTimeline";
 import { BacklogView } from "./components/BacklogView";
 import { WeekView } from "./components/WeekView";
+import { ReportView } from "./components/ReportView";
 import { RoutineManager } from "./components/RoutineManager";
 import { CommandPalette } from "./components/CommandPalette";
 import { Preferences } from "./components/Preferences";
@@ -56,6 +57,8 @@ function useGlobalKeys() {
         ui.setView("week");
       } else if (e.key === "3") {
         ui.setView("backlog");
+      } else if (e.key === "4") {
+        ui.setView("report");
       }
     };
     window.addEventListener("keydown", handler);
@@ -77,6 +80,7 @@ export default function App() {
           {view === "today" && <DayTimeline />}
           {view === "week" && <WeekView />}
           {view === "backlog" && <BacklogView />}
+          {view === "report" && <ReportView />}
         </div>
       </DndProvider>
 
