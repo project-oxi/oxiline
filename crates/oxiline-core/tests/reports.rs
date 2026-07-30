@@ -1,6 +1,6 @@
 //! Integration tests for oxiline-core reports (habit streak / weekly report).
-//! Mirrors tests/timeline.rs setup. created_at back-dating is done via a raw
-//! UPDATE here ONLY — never touches tests/timeline.rs (spec §2.1 scope note).
+//! Mirrors tests/timeline.rs setup. created_at back-dating uses a raw UPDATE
+//! helper in both test files — production code always stamps `now`.
 
 use oxiline_core::model::{DayBreakdown, RoutineStreak, WeekReport};
 
@@ -42,11 +42,11 @@ fn fresh_db() -> (NamedTempFile, rusqlite::Connection) {
     (f, conn)
 }
 
-/// Back-date a routine's created_at (tests/reports.rs ONLY — never touches
-/// tests/timeline.rs). `ts` is an ISO-8601 UTC string.
+/// Back-date a routine's created_at for fixture setup. `ts` is an ISO-8601
+/// UTC string. Test-only; production code always stamps `now`.
 fn backdate_created(conn: &rusqlite::Connection, id: &str, ts: &str) {
     conn.execute(
-        "UPDATE routine_blocks SET created_at = ?1 WHERE id = ?2",
+        "UPDATE routine_blocks SET created_at = ?1, updated_at = ?1 WHERE id = ?2",
         params![ts, id],
     )
     .unwrap();
@@ -74,11 +74,11 @@ fn scheduled_for_excludes_dates_before_created_at() {
 
     let block = routines::get(&conn, &b.id).unwrap();
     // Monday/Tuesday are BEFORE created_at → not scheduled.
-    assert!(!reports::scheduled_for(&block, "2026-07-27")); // Mon
-    assert!(!reports::scheduled_for(&block, "2026-07-28")); // Tue
+    assert!(!routines::scheduled_for(&block, "2026-07-27")); // Mon
+    assert!(!routines::scheduled_for(&block, "2026-07-28")); // Tue
     // Wednesday onward → scheduled (weekday matches, in range).
-    assert!(reports::scheduled_for(&block, "2026-07-29")); // Wed
-    assert!(reports::scheduled_for(&block, "2026-08-02")); // Sun
+    assert!(routines::scheduled_for(&block, "2026-07-29")); // Wed
+    assert!(routines::scheduled_for(&block, "2026-08-02")); // Sun
 }
 
 #[test]
@@ -101,11 +101,11 @@ fn scheduled_for_respects_effective_from_weekday_and_active() {
     .unwrap();
     backdate_created(&conn, &b.id, "2026-01-01T00:00:00Z");
     let block = routines::get(&conn, &b.id).unwrap();
-    assert!(!reports::scheduled_for(&block, "2026-07-27")); // Mon but before effective_from
-    assert!(reports::scheduled_for(&block, "2026-08-03")); // Mon, in range
-    assert!(!reports::scheduled_for(&block, "2026-08-04")); // Tue, wrong weekday
+    assert!(!routines::scheduled_for(&block, "2026-07-27")); // Mon but before effective_from
+    assert!(routines::scheduled_for(&block, "2026-08-03")); // Mon, in range
+    assert!(!routines::scheduled_for(&block, "2026-08-04")); // Tue, wrong weekday
     let inactive = routines::set_active(&conn, &b.id, false).unwrap();
-    assert!(!reports::scheduled_for(&inactive, "2026-08-03")); // inactive
+    assert!(!routines::scheduled_for(&inactive, "2026-08-03")); // inactive
 }
 
 fn add_dated_task(

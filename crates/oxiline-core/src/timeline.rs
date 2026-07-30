@@ -9,26 +9,7 @@ use std::collections::HashSet;
 use crate::error::Result;
 use crate::model::{NowContext, NowItem, Task, TimelineItem};
 use crate::{routines, tasks, util};
-use chrono::Datelike;
 use rusqlite::Connection;
-
-fn in_effective_range(
-    from: &Option<String>,
-    until: &Option<String>,
-    date: &str,
-) -> bool {
-    if let Some(f) = from {
-        if date < f {
-            return false;
-        }
-    }
-    if let Some(u) = until {
-        if date > u {
-            return false;
-        }
-    }
-    true
-}
 
 fn task_to_item(t: &Task) -> TimelineItem {
     TimelineItem {
@@ -68,19 +49,16 @@ pub fn get_timeline_for_date(
         items.push(task_to_item(t));
     }
 
-    // Virtual occurrences from active routine blocks.
-    let weekday = match util::parse_date(date) {
-        Ok(d) => d.weekday(),
-        Err(_) => return Ok(items),
-    };
+    // Virtual occurrences from active routine blocks. Uses the shared
+    // `routines::scheduled_for` predicate so the timeline and reports can
+    // never disagree on what counts as "scheduled on this date" — including
+    // the `created_at` bound that suppresses phantom pre-existence on past
+    // dates (§2.1).
     for b in routines::list(conn, true)? {
         if materialized.contains(&b.id) {
             continue;
         }
-        if !routines::mask_includes(b.weekday_mask, weekday) {
-            continue;
-        }
-        if !in_effective_range(&b.effective_from, &b.effective_until, date) {
+        if !routines::scheduled_for(&b, date) {
             continue;
         }
         items.push(TimelineItem {

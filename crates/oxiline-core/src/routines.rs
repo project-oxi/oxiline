@@ -3,6 +3,7 @@
 use crate::error::{CoreError, Result};
 use crate::model::RoutineBlock;
 use crate::util;
+use chrono::Datelike;
 use rusqlite::{params, Connection};
 
 pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<RoutineBlock> {
@@ -240,4 +241,58 @@ pub fn parse_days_spec(spec: &str) -> Result<u8> {
 pub fn mask_includes(mask: u8, weekday: chrono::Weekday) -> bool {
     let bit = util::weekday_mask_bit(weekday);
     (mask & (1 << bit)) != 0
+}
+
+// ---- scheduled-on-date predicate (§2.1) -----------------------------------
+
+/// Is routine block `b` scheduled on `date` (YYYY-MM-DD)?
+///
+/// Four conditions (spec §2.1): active, weekday matches, within effective
+/// range, and `date >= max(effective_from, created_at)`. This bound prevents
+/// phantom pre-existence occurrences in past-looking views (timeline WeekView,
+/// reports). Note: `created_at` is UTC but `date`/WeekView is local — a
+/// routine created near a UTC midnight boundary may be off by up to ~1 day
+/// locally; acceptable for a single-user desktop app.
+pub fn scheduled_for(block: &RoutineBlock, date: &str) -> bool {
+    if !block.is_active {
+        return false;
+    }
+    let d = match util::parse_date(date) {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+    if !mask_includes(block.weekday_mask, d.weekday()) {
+        return false;
+    }
+    if !in_effective_range(&block.effective_from, &block.effective_until, date) {
+        return false;
+    }
+    date >= bound_date(block).as_str()
+}
+
+/// `max(effective_from_date, created_at_date)` as a YYYY-MM-DD string.
+pub fn bound_date(block: &RoutineBlock) -> String {
+    let created_day = block
+        .created_at
+        .get(..10)
+        .unwrap_or(&block.created_at)
+        .to_string();
+    match &block.effective_from {
+        Some(f) if f.as_str() > created_day.as_str() => f.clone(),
+        _ => created_day,
+    }
+}
+
+fn in_effective_range(from: &Option<String>, until: &Option<String>, date: &str) -> bool {
+    if let Some(f) = from {
+        if date < f.as_str() {
+            return false;
+        }
+    }
+    if let Some(u) = until {
+        if date > u.as_str() {
+            return false;
+        }
+    }
+    true
 }

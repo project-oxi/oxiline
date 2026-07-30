@@ -7,6 +7,7 @@ use oxiline_core::{categories, routines, tasks, timeline};
 use oxiline_core::settings;
 use oxiline_core::util;
 use chrono::Datelike;
+use rusqlite::params;
 use tempfile::NamedTempFile;
 
 fn fresh_db() -> (NamedTempFile, rusqlite::Connection) {
@@ -24,7 +25,7 @@ const TUE: &str = "2026-07-28";
 const SUN: &str = "2026-08-02";
 
 fn add_routine(conn: &rusqlite::Connection, mask: u8) -> RoutineBlock {
-    routines::create(
+    let b = routines::create(
         conn,
         routines::NewRoutineBlock {
             title: "Block".into(),
@@ -37,7 +38,21 @@ fn add_routine(conn: &rusqlite::Connection, mask: u8) -> RoutineBlock {
             notes: None,
         },
     )
-    .unwrap()
+    .unwrap();
+    // Back-date so the created_at bound doesn't suppress virtual occurrences
+    // on the fixed test dates (MON 07-27 … SUN 08-02).
+    backdate_created(conn, &b.id, "2026-07-20T00:00:00Z");
+    routines::get(conn, &b.id).unwrap()
+}
+
+/// Back-date a routine's created_at for fixture setup. `ts` is an ISO-8601
+/// UTC string. Test-only; production code always stamps `now`.
+fn backdate_created(conn: &rusqlite::Connection, id: &str, ts: &str) {
+    conn.execute(
+        "UPDATE routine_blocks SET created_at = ?1, updated_at = ?1 WHERE id = ?2",
+        params![ts, id],
+    )
+    .unwrap();
 }
 
 #[test]
@@ -130,7 +145,7 @@ fn skip_hides_occurrence_from_timeline() {
 fn effective_period_bounds_visibility() {
     let (_f, conn) = fresh_db();
     // A routine only effective 2026-07-28 .. 2026-07-30.
-    routines::create(
+    let b = routines::create(
         &conn,
         routines::NewRoutineBlock {
             title: "Windowed".into(),
@@ -145,6 +160,7 @@ fn effective_period_bounds_visibility() {
     )
     .unwrap();
 
+    backdate_created(&conn, &b.id, "2026-07-20T00:00:00Z");
     // Before window.
     assert!(timeline::get_timeline_for_date(&conn, "2026-07-27").unwrap().is_empty());
     // In window (2026-07-28 Tue).
