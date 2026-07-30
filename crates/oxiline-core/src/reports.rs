@@ -227,3 +227,217 @@ fn build_cat_breakdown(
     v.sort_by(|a, b| a.category_name.cmp(&b.category_name));
     v
 }
+
+// ---- week / range aggregation ---------------------------------------------
+
+use crate::model::{DayTotals, RangeReport, WeekReport};
+use crate::settings;
+
+/// Iterate YYYY-MM-DD strings over an inclusive [from, to] range.
+fn each_day(from: &str, to: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = match util::parse_date(from) {
+        Ok(d) => d,
+        Err(_) => return out,
+    };
+    let end = match util::parse_date(to) {
+        Ok(d) => d,
+        Err(_) => return out,
+    };
+    while cur <= end {
+        out.push(util::fmt_date(cur));
+        cur += chrono::Duration::days(1);
+    }
+    out
+}
+
+fn totals_of(days: &[DayBreakdown]) -> DayTotals {
+    let mut t = DayTotals {
+        done: 0,
+        skipped: 0,
+        not_recorded: 0,
+        upcoming: 0,
+    };
+    for d in days {
+        t.done += d.done;
+        t.skipped += d.skipped;
+        t.not_recorded += d.not_recorded;
+        t.upcoming += d.upcoming;
+    }
+    t
+}
+
+pub fn range_report(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+    today: &str,
+    now_minute: u16,
+) -> Result<RangeReport> {
+    let days: Vec<DayBreakdown> = each_day(from, to)
+        .iter()
+        .map(|d| day_breakdown(conn, d, today, now_minute))
+        .collect::<Result<_>>()?;
+    let totals = totals_of(&days);
+    let categories = rollup_categories(&days);
+    let completion_rate = rate(totals.done, totals.not_recorded);
+    Ok(RangeReport {
+        from: from.into(),
+        to: to.into(),
+        completion_rate,
+        categories,
+        totals,
+        days,
+        streaks: routine_streaks(conn, today)?,
+    })
+}
+
+pub fn week_report(conn: &Connection, today: &str, now_minute: u16) -> Result<WeekReport> {
+    let ws = settings::snapshot(conn).week_starts_on;
+    let week_start = week_start_date(today, &ws);
+    let week_end = util::add_days(&week_start, 6).unwrap_or_else(|| week_start.clone());
+    let days: Vec<DayBreakdown> = each_day(&week_start, &week_end)
+        .iter()
+        .map(|d| day_breakdown(conn, d, today, now_minute))
+        .collect::<Result<_>>()?;
+    let totals = totals_of(&days);
+    let categories = rollup_categories(&days);
+    // Previous 7-day window rate.
+    let prev_from = util::add_days(&week_start, -7).unwrap_or_else(|| week_start.clone());
+    let prev_to = util::add_days(&week_start, -1).unwrap_or_else(|| week_start.clone());
+    let prev_days: Vec<DayBreakdown> = each_day(&prev_from, &prev_to)
+        .iter()
+        .map(|d| day_breakdown(conn, d, today, now_minute))
+        .collect::<Result<Vec<_>>>()?;
+    let prev_totals = totals_of(&prev_days);
+    let completion_rate = rate(totals.done, totals.not_recorded);
+    let prev_completion_rate = rate(prev_totals.done, prev_totals.not_recorded);
+    Ok(WeekReport {
+        week_start,
+        week_end,
+        days,
+        totals,
+        completion_rate,
+        prev_completion_rate,
+        categories,
+        streaks: routine_streaks(conn, today)?,
+    })
+}
+
+fn rollup_categories(days: &[DayBreakdown]) -> Vec<CategoryBreakdown> {
+    let mut map: std::collections::HashMap<Option<String>, (String, u32, u32, u32)> =
+        std::collections::HashMap::new();
+    for d in days {
+        for c in &d.categories {
+            let e = map
+                .entry(c.category_id.clone())
+                .or_insert((c.category_name.clone(), 0, 0, 0));
+            e.1 += c.done;
+            e.2 += c.skipped;
+            e.3 += c.not_recorded;
+        }
+    }
+    let mut v: Vec<CategoryBreakdown> = map
+        .into_iter()
+        .map(|(cid, (name, d, s, n))| CategoryBreakdown {
+            category_id: cid,
+            category_name: name,
+            done: d,
+            skipped: s,
+            not_recorded: n,
+            completion_rate: rate(d, n),
+        })
+        .collect();
+    v.sort_by(|a, b| a.category_name.cmp(&b.category_name));
+    v
+}
+
+/// Week-start date for `today` honoring `week_starts_on` ("mon" default, else "sun").
+fn week_start_date(today: &str, week_starts_on: &str) -> String {
+    let d = match util::parse_date(today) {
+        Ok(d) => d,
+        Err(_) => return today.into(),
+    };
+    let offset = if week_starts_on == "sun" {
+        d.weekday().num_days_from_sunday() as i64
+    } else {
+        d.weekday().num_days_from_monday() as i64
+    };
+    util::fmt_date(d - chrono::Duration::days(offset))
+}
+
+// ---- per-routine current streak (§2.4) ------------------------------------
+
+use crate::model::RoutineStreak;
+
+pub fn routine_streak(conn: &Connection, block_id: &str, today: &str) -> Result<RoutineStreak> {
+    let block = routines::get(conn, block_id)?;
+    let today_d = util::parse_date(today).unwrap_or_else(|_| util::parse_date("1970-01-01").unwrap());
+    let bound = util::parse_date(&bound_date(&block)).unwrap_or(today_d);
+
+    // Materialized states for this block in [bound, today]: date -> (done, skipped).
+    let mut stmt = conn.prepare(
+        "SELECT date, is_done, is_skipped FROM tasks
+         WHERE source_routine_block_id = ?1 AND date BETWEEN ?2 AND ?3",
+    )?;
+    let rows: std::collections::HashMap<String, (bool, bool)> = stmt
+        .query_map(
+            rusqlite::params![block_id, util::fmt_date(bound), util::fmt_date(today_d)],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    (r.get::<_, i64>(1)? != 0, r.get::<_, i64>(2)? != 0),
+                ))
+            },
+        )?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    // Scheduled dates bound..today, newest first.
+    let mut dates: Vec<chrono::NaiveDate> = Vec::new();
+    let mut cur = bound;
+    while cur <= today_d {
+        if routines::mask_includes(block.weekday_mask, cur.weekday()) {
+            dates.push(cur);
+        }
+        cur += chrono::Duration::days(1);
+    }
+    dates.sort_unstable_by(|a, b| b.cmp(a));
+
+    let mut current = 0u32;
+    let mut last_done: Option<String> = None;
+    for (i, d) in dates.iter().enumerate() {
+        let ds = util::fmt_date(*d);
+        let (is_done, is_skipped) = rows.get(&ds).copied().unwrap_or((false, false));
+        if is_skipped {
+            continue; // transparent — intentional rest
+        }
+        if is_done {
+            current += 1;
+            if last_done.is_none() {
+                last_done = Some(ds); // newest-first → first done is most recent
+            }
+            continue;
+        }
+        // not_recorded
+        if i == 0 && ds == today {
+            continue; // today isn't over yet — don't break the streak
+        }
+        break; // past gap → stop (no "failure" label)
+    }
+    Ok(RoutineStreak {
+        routine_id: block.id,
+        title: block.title,
+        current,
+        last_done_date: last_done,
+    })
+}
+
+pub fn routine_streaks(conn: &Connection, today: &str) -> Result<Vec<RoutineStreak>> {
+    let mut out = Vec::new();
+    for b in routines::list(conn, true)? {
+        out.push(routine_streak(conn, &b.id, today)?);
+    }
+    out.sort_by(|a, b| b.current.cmp(&a.current));
+    Ok(out)
+}

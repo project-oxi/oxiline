@@ -181,3 +181,81 @@ fn day_breakdown_timed_today_before_start_is_upcoming() {
     assert_eq!(bd.upcoming, 1);
     assert_eq!(bd.completion_rate, None); // denominator 0
 }
+
+#[test]
+fn range_report_excludes_future_days_from_rate() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30";
+    let d = add_dated_task(&conn, "2026-07-29", "done", Some(540));
+    tasks::set_done(&conn, &d.id, true).unwrap();
+    let r = reports::range_report(&conn, "2026-07-29", "2026-08-01", today, 540).unwrap();
+    assert_eq!(r.totals.done, 1);
+    assert_eq!(r.completion_rate, Some(1.0)); // future days only upcoming
+}
+
+#[test]
+fn week_report_uses_monday_start_and_prev_week_rate() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30"; // Thursday; Mon start = 2026-07-27
+    let r = reports::week_report(&conn, today, 540).unwrap();
+    assert_eq!(r.week_start, "2026-07-27");
+    assert_eq!(r.week_end, "2026-08-02");
+    assert_eq!(r.completion_rate, None); // empty DB
+    assert_eq!(r.prev_completion_rate, None);
+}
+
+fn daily_routine_backdated(
+    conn: &rusqlite::Connection,
+    created: &str,
+) -> oxiline_core::model::RoutineBlock {
+    let b = routines::create(
+        conn,
+        routines::NewRoutineBlock {
+            title: "R".into(),
+            start_minute: 540,
+            duration_minute: 30,
+            weekday_mask: 0b1111111,
+            category_id: None,
+            effective_from: None,
+            effective_until: None,
+            notes: None,
+        },
+    )
+    .unwrap();
+    backdate_created(conn, &b.id, created);
+    routines::get(conn, &b.id).unwrap()
+}
+
+fn done_occurrence(conn: &rusqlite::Connection, block_id: &str, date: &str) {
+    let t = tasks::materialize_occurrence(conn, block_id, date).unwrap();
+    tasks::set_done(conn, &t.id, true).unwrap();
+}
+fn skip_occurrence(conn: &rusqlite::Connection, block_id: &str, date: &str) {
+    let t = tasks::materialize_occurrence(conn, block_id, date).unwrap();
+    tasks::set_skipped(conn, &t.id, true).unwrap();
+}
+
+#[test]
+fn streak_counts_consecutive_done_and_survives_skip() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30"; // Thu
+    let b = daily_routine_backdated(&conn, "2026-07-20T00:00:00Z");
+    // Mon 27 done, Tue 28 skipped (transparent), Wed 29 done → streak 2.
+    done_occurrence(&conn, &b.id, "2026-07-27");
+    skip_occurrence(&conn, &b.id, "2026-07-28");
+    done_occurrence(&conn, &b.id, "2026-07-29");
+    let s = reports::routine_streak(&conn, &b.id, today).unwrap();
+    assert_eq!(s.current, 2);
+    assert_eq!(s.last_done_date.as_deref(), Some("2026-07-29"));
+}
+
+#[test]
+fn streak_breaks_at_past_not_recorded_but_not_at_today_undone() {
+    let (_f, conn) = fresh_db();
+    let today = "2026-07-30"; // Thu
+    let b = daily_routine_backdated(&conn, "2026-07-20T00:00:00Z");
+    done_occurrence(&conn, &b.id, "2026-07-29"); // Wed done
+    // Tue 28 not recorded (gap) → streak stops at 1 even though today is undone.
+    let s = reports::routine_streak(&conn, &b.id, today).unwrap();
+    assert_eq!(s.current, 1);
+}
