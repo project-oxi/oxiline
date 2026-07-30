@@ -15,6 +15,7 @@ pub mod routine_groups;
 pub mod settings;
 pub mod tasks;
 pub mod timeline;
+pub mod reports;
 
 pub use db::open_and_migrate;
 pub use error::{CoreError, ErrorCode, Result};
