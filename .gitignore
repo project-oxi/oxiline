@@ -28,3 +28,6 @@ oxiline.toml
 # Agent tooling scratch (managed skills, session state) — not project content
 .agent/
 *.tsbuildinfo
+
+# Brainstorming visual companion (mockups are ephemeral)
+.superpowers/
