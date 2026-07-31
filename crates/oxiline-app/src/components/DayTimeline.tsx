@@ -292,9 +292,9 @@ export function DayTimeline() {
                 onAdd={(minute) => setAdding({ minute })}
                 onHover={setHover}
               />
-
-              <NowLine pxPerMin={pxPerMin} dayStartMin={dayStartMin} spineX={SPINE_X} />
             </div>
+
+            <NowLine pxPerMin={pxPerMin} dayStartMin={dayStartMin} spineX={SPINE_X} />
           </div>
         </div>
 
