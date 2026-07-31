@@ -34,10 +34,11 @@ export function Header() {
   const wdKo = ["일", "월", "화", "수", "목", "금", "토"][titleDt.getDay()];
 
   return (
-    <div data-tauri-drag-region className="shrink-0 px-4 pt-9 pb-2">
-      {/* Row 1: chevrons + big date title + icons */}
-      <div className="flex items-center justify-between gap-2 pb-2.5">
-        <div className="flex items-center gap-1">
+    <div className="shrink-0 select-none px-4 pb-2">
+      {/* Titlebar strip — overlaps native traffic lights (Overlay style).
+          The strip is the window drag region; interactive buttons are drag-free islands. */}
+      <div data-tauri-drag-region className="flex items-center justify-between gap-2 py-1.5 pl-[56px]">
+        <div data-tauri-drag-region className="flex items-center gap-1">
           <button
             className="rounded p-1 opacity-40 transition hover:bg-surface-sunken hover:opacity-100"
             onClick={() => shiftDate(-1)}
@@ -50,7 +51,7 @@ export function Header() {
             className="flex items-baseline gap-1.5 rounded px-1 hover:bg-surface-sunken"
             title={t("nav.today")}
           >
-            <span className="text-[18px] font-semibold text-interactive-primary">
+            <span className="max-[379px]:hidden text-[18px] font-semibold text-interactive-primary">
               {yy}
             </span>
             <span className="text-[21px] font-bold tracking-tight font-display text-text">
@@ -71,7 +72,7 @@ export function Header() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div data-tauri-drag-region className="flex items-center gap-1">
           <button
             className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setRoutineManagerOpen(true)}
