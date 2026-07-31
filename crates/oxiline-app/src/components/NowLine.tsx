@@ -4,6 +4,7 @@ import { minuteToHHMM } from "../lib/colors";
 interface Props {
   pxPerMin: number;
   dayStartMin: number;
+  spineX: number;
 }
 
 function nowMinute(): number {
@@ -13,7 +14,7 @@ function nowMinute(): number {
 
 /** The "Now Line" — imperatively slid via requestAnimationFrame so the React
  *  tree is never re-rendered each frame (`04-architecture.md` §4.7). */
-export function NowLine({ pxPerMin, dayStartMin }: Props) {
+export function NowLine({ pxPerMin, dayStartMin, spineX }: Props) {
   const lineRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
@@ -46,19 +47,25 @@ export function NowLine({ pxPerMin, dayStartMin }: Props) {
   return (
     <div
       ref={lineRef}
-      className="pointer-events-none absolute left-0 right-0 z-20"
-      style={{ top: 0, willChange: "transform" }}
+      className="pointer-events-none absolute z-20"
+      style={{ top: 0, left: spineX, right: 0, willChange: "transform" }}
     >
       <div className="relative h-0">
         <div
-          className="absolute left-0 right-0"
-          style={{ height: 2, background: "var(--accent-oxide-strong)" }}
+          className="absolute"
+          style={{
+            left: 6,
+            right: 0,
+            height: 1.5,
+            background:
+              "linear-gradient(90deg, var(--accent-oxide-strong), transparent)",
+          }}
         />
         <div
           ref={dotRef}
           className="absolute"
           style={{
-            left: 0,
+            left: -5,
             top: -5,
             width: 10,
             height: 10,
@@ -70,8 +77,8 @@ export function NowLine({ pxPerMin, dayStartMin }: Props) {
         />
         <span
           ref={labelRef}
-          className="absolute font-mono text-[11px]"
-          style={{ left: 14, top: -8, color: "var(--accent-oxide-strong)" }}
+          className="absolute font-mono text-[10px]"
+          style={{ left: 10, top: -7, color: "var(--accent-oxide-strong)" }}
         />
       </div>
       <style>{`@keyframes oxiline-pulse { 0%,100%{opacity:.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }`}</style>

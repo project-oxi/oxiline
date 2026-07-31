@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Check } from "lucide-react";
 import { useTimeline, useCategories, useCreateTask, useSettings } from "../hooks";
 import { useUi } from "../lib/store";
 import { useDroppable } from "@dnd-kit/core";
 import { BlockView } from "./BlockView";
 import { NowLine } from "./NowLine";
-import { formatDuration, minuteToHHMM } from "../lib/colors";
+import { OxideBar } from "./OxideBar";
+import { formatDuration, minuteToHHMM, categoryById, categoryColor } from "../lib/colors";
 import type { TimelineItem } from "../types";
 
 interface Lane {
@@ -64,10 +66,9 @@ function snap(m: number): number {
   return Math.max(0, Math.min(1440 - SLOT, Math.round(m / SLOT) * SLOT));
 }
 
-/** Width of the fixed time-label gutter (matches the w-14 label). Blocks live in
- *  a content lane to the right of this so they never overlap the hour labels. */
-const GUTTER_PX = 56;
-const LANE_GAP = 10;
+const GUTTER_PX = 44;
+const SPINE_X = 54;
+const LANE_GAP = 12;
 
 export function DayTimeline() {
   const { t, i18n } = useTranslation();
@@ -84,7 +85,7 @@ export function DayTimeline() {
   const dayEnd = num(settingsQ.data?.day_end_hour, 26);
   const dayStartMin = dayStart * 60;
   const totalMin = (dayEnd - dayStart) * 60;
-  const pxPerMin = 56 / 60;
+  const pxPerMin = 64 / 60;
   const heightPx = totalMin * pxPerMin;
   const lang = i18n.language?.startsWith("en") ? "en" : "ko";
 
@@ -103,154 +104,209 @@ export function DayTimeline() {
   const warn = num(settingsQ.data?.workload_warning_minutes, 600);
   const tight = warn > 0 && workloadMin > warn;
 
-  const laneLeft = GUTTER_PX + LANE_GAP;
-
+  const laneLeft = SPINE_X + LANE_GAP;
   return (
-    <div className="flex h-full flex-col">
-      <div className="relative flex-1 overflow-y-auto px-2 pb-6">
-        <div className="relative" style={{ height: heightPx }}>
-          {/* hour rail — labels in the gutter, gridlines span the lane */}
-          {hours.map((h) => {
-            const top = (h * 60 - dayStartMin) * pxPerMin;
-            const label = `${String(h % 24).padStart(2, "0")}:00`;
-            return (
-              <div
-                key={h}
-                className="pointer-events-none absolute left-0 right-0 z-0"
-                style={{ top }}
-              >
-                <div className="flex items-center">
-                  <span
-                    className="w-14 shrink-0 pr-2 text-right font-mono text-[11px]"
-                    style={{ color: "var(--text-tertiary)" }}
-                  >
-                    {label}
-                  </span>
-                  <div
-                    className="h-px flex-1"
-                    style={{ background: "var(--border-subtle)" }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+    <div className="flex h-full flex-col px-3 pb-3">
+      <div
+        className="flex flex-1 flex-col overflow-hidden rounded-2xl"
+        style={{ background: "var(--surface-raised)", boxShadow: "var(--elevation-panel)" }}
+      >
+        {/* oxide handle — day minimap as card grabber */}
+        <div className="px-3 pt-2.5 pb-1.5">
+          <OxideBar
+            items={items}
+            categories={catsQ.data ?? []}
+            dayStartMin={dayStartMin}
+            totalMin={totalMin}
+            compact
+            onClickMinute={(m) => setAdding({ minute: snap(m) })}
+          />
+        </div>
 
-          {/* content lane — right of the time gutter, so blocks never cover labels */}
-          <div className="absolute bottom-0 right-0 top-0" style={{ left: laneLeft }}>
-            {/* hover slot hint — shows where a click would land (Amie-style) */}
-            {hover != null && !adding && (
-              <div
-                className="pointer-events-none absolute left-0 right-0 z-[1] flex items-center rounded-md"
-                style={{
-                  top: (hover - dayStartMin) * pxPerMin,
-                  height: SLOT * pxPerMin,
-                  background: "color-mix(in oklch, var(--accent-oxide-subtle) 70%, transparent)",
-                }}
-              >
-                <span
-                  className="ml-1 font-mono text-[11px] font-medium"
-                  style={{ color: "var(--accent-oxide-strong)" }}
-                >
-                  + {minuteToHHMM(hover)}
-                </span>
-              </div>
-            )}
+        <div className="relative flex-1 overflow-y-auto px-2 pb-6">
+          <div className="relative" style={{ height: heightPx }}>
+            {/* spine line */}
+            <div
+              className="pointer-events-none absolute"
+              style={{ left: SPINE_X - 1, top: 0, bottom: 0, width: 2, background: "var(--border-subtle)" }}
+            />
 
-            {/* blocks */}
-            {laid.map(({ item, col, columns }) => {
-              const start = item.start_minute!;
-              const dur = item.duration_minute!;
-              const top = (start - dayStartMin) * pxPerMin;
-              const height = dur * pxPerMin;
-              const past = start + dur <= nowMin();
+            {/* quiet time labels — no gridlines */}
+            {hours.map((h) => {
+              const top = (h * 60 - dayStartMin) * pxPerMin;
+              const label = `${String(h % 24).padStart(2, "0")}:00`;
               return (
-                <BlockView
-                  key={item.id}
-                  item={item}
-                  categories={catsQ.data ?? []}
-                  left={col}
-                  columns={columns}
-                  top={top}
-                  height={height}
-                  past={past}
-                />
+                <span
+                  key={h}
+                  className="pointer-events-none absolute font-mono text-[10px]"
+                  style={{
+                    left: 0,
+                    width: GUTTER_PX,
+                    top,
+                    textAlign: "right",
+                    paddingRight: 8,
+                    color: "var(--text-tertiary)",
+                    transform: "translateY(-5px)",
+                  }}
+                >
+                  {label}
+                </span>
               );
             })}
 
-            {/* quick-add composer — snapped to a slot, discrete card w/ time chip */}
-            {adding && (
-              <div
-                className="absolute left-0 right-0 z-30 flex items-center gap-2 rounded-lg border px-2 py-1.5"
-                style={{
-                  top: (adding.minute - dayStartMin) * pxPerMin,
-                  borderColor: "var(--accent-oxide)",
-                  background: "var(--surface-raised)",
-                  boxShadow: "var(--elevation-panel)",
-                }}
-              >
-                <span
-                  className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium"
+            {/* spine nodes — one per block, colored by category */}
+            {laid.map(({ item }) => {
+              const start = item.start_minute!;
+              const dur = item.duration_minute!;
+              const nodeTop = (start - dayStartMin) * pxPerMin;
+              const cat = categoryById(catsQ.data ?? [], item.category_id);
+              const nodeColor = categoryColor(cat?.color_hue ?? null);
+              const isPastUndone = !item.is_done && start + dur <= nowMin();
+              const fill = item.is_done
+                ? "var(--signal-success)"
+                : isPastUndone
+                  ? "var(--surface-raised)"
+                  : nodeColor;
+              const ring = item.is_done
+                ? "var(--signal-success)"
+                : isPastUndone
+                  ? "var(--signal-rust)"
+                  : "var(--surface-raised)";
+              return (
+                <div
+                  key={`node-${item.id}`}
+                  className="pointer-events-none absolute z-10 flex items-center justify-center rounded-full"
                   style={{
-                    background: "var(--accent-oxide-subtle)",
-                    color: "var(--accent-oxide-strong)",
+                    left: SPINE_X - 7,
+                    top: nodeTop - 7,
+                    width: 14,
+                    height: 14,
+                    background: fill,
+                    border: `2px solid ${ring}`,
                   }}
                 >
-                  {minuteToHHMM(adding.minute)}
-                </span>
-                <input
-                  autoFocus
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder={t("palette.placeholder")}
-                  className="flex-1 bg-transparent text-[13px] outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && draft.trim()) {
-                      create.mutate({
-                        date,
-                        title: draft.trim(),
-                        categoryId: null,
-                        startMinute: adding.minute,
-                        durationMinute: 30,
-                        notes: null,
-                      });
+                  {item.is_done && <Check size={9} color="white" strokeWidth={3} />}
+                </div>
+              );
+            })}
+
+            {/* content lane — right of the spine */}
+            <div className="absolute bottom-0 right-0 top-0" style={{ left: laneLeft }}>
+              {/* hover slot hint */}
+              {hover != null && !adding && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 z-[1] flex items-center rounded-md"
+                  style={{
+                    top: (hover - dayStartMin) * pxPerMin,
+                    height: SLOT * pxPerMin,
+                    background: "color-mix(in oklch, var(--accent-oxide-subtle) 70%, transparent)",
+                  }}
+                >
+                  <span
+                    className="ml-1 font-mono text-[11px] font-medium"
+                    style={{ color: "var(--accent-oxide-strong)" }}
+                  >
+                    + {minuteToHHMM(hover)}
+                  </span>
+                </div>
+              )}
+
+              {/* blocks */}
+              {laid.map(({ item, col, columns }) => {
+                const start = item.start_minute!;
+                const dur = item.duration_minute!;
+                const top = (start - dayStartMin) * pxPerMin;
+                const height = dur * pxPerMin;
+                const past = start + dur <= nowMin();
+                return (
+                  <BlockView
+                    key={item.id}
+                    item={item}
+                    categories={catsQ.data ?? []}
+                    left={col}
+                    columns={columns}
+                    top={top}
+                    height={height}
+                    past={past}
+                  />
+                );
+              })}
+
+              {/* quick-add composer */}
+              {adding && (
+                <div
+                  className="absolute left-0 right-0 z-30 flex items-center gap-2 rounded-lg border px-2 py-1.5"
+                  style={{
+                    top: (adding.minute - dayStartMin) * pxPerMin,
+                    borderColor: "var(--accent-oxide)",
+                    background: "var(--surface-raised)",
+                    boxShadow: "var(--elevation-panel)",
+                  }}
+                >
+                  <span
+                    className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium"
+                    style={{
+                      background: "var(--accent-oxide-subtle)",
+                      color: "var(--accent-oxide-strong)",
+                    }}
+                  >
+                    {minuteToHHMM(adding.minute)}
+                  </span>
+                  <input
+                    autoFocus
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={t("palette.placeholder")}
+                    className="flex-1 bg-transparent text-[13px] outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && draft.trim()) {
+                        create.mutate({
+                          date,
+                          title: draft.trim(),
+                          categoryId: null,
+                          startMinute: adding.minute,
+                          durationMinute: 30,
+                          notes: null,
+                        });
+                        setAdding(null);
+                        setDraft("");
+                      }
+                      if (e.key === "Escape") {
+                        setAdding(null);
+                        setDraft("");
+                      }
+                    }}
+                    onBlur={() => {
                       setAdding(null);
                       setDraft("");
-                    }
-                    if (e.key === "Escape") {
-                      setAdding(null);
-                      setDraft("");
-                    }
-                  }}
-                  onBlur={() => {
-                    setAdding(null);
-                    setDraft("");
-                  }}
-                />
-              </div>
-            )}
+                    }}
+                  />
+                </div>
+              )}
 
-            <DropZone
-              dayStartMin={dayStartMin}
-              pxPerMin={pxPerMin}
-              date={date}
-              heightPx={heightPx}
-              onAdd={(minute) => setAdding({ minute })}
-              onHover={setHover}
-            />
+              <DropZone
+                dayStartMin={dayStartMin}
+                pxPerMin={pxPerMin}
+                date={date}
+                heightPx={heightPx}
+                onAdd={(minute) => setAdding({ minute })}
+                onHover={setHover}
+              />
 
-            <NowLine pxPerMin={pxPerMin} dayStartMin={dayStartMin} />
+              <NowLine pxPerMin={pxPerMin} dayStartMin={dayStartMin} spineX={SPINE_X} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* workload inline (Sunsama-quiet, §7.1) */}
-      <div
-        className="flex items-center justify-center gap-1.5 border-t border-border-subtle px-3 py-1.5 text-[12px]"
-        style={{ color: tight ? "var(--signal-rust)" : "var(--text-secondary)" }}
-      >
-        <span>{t("timeline.plannedDur", { dur: formatDuration(workloadMin, lang as "ko" | "en") })}</span>
-        <span style={{ color: "var(--text-tertiary)" }}>·</span>
-        <span>{tight ? t("timeline.workloadTight") : t("timeline.workloadEasy")}</span>
+        {/* workload footer */}
+        <div
+          className="flex items-center justify-center gap-1.5 border-t border-border-subtle px-3 py-1.5 text-[12px]"
+          style={{ color: tight ? "var(--signal-rust)" : "var(--text-secondary)" }}
+        >
+          <span>{t("timeline.plannedDur", { dur: formatDuration(workloadMin, lang as "ko" | "en") })}</span>
+          <span style={{ color: "var(--text-tertiary)" }}>·</span>
+          <span>{tight ? t("timeline.workloadTight") : t("timeline.workloadEasy")}</span>
+        </div>
       </div>
     </div>
   );
