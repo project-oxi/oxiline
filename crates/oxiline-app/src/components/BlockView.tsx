@@ -39,19 +39,22 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     height: Math.max(height, 22),
     left: `calc(${leftPct}% + ${leftPct > 0 ? 4 : 0}px)`,
     width: `calc(${widthPct}% - 4px)`,
-    borderLeft: `4px ${item.is_virtual ? 'dashed' : 'solid'} ${accent}`,
-    opacity: isDragging ? 0.5 : item.is_virtual && !item.is_done ? 0.92 : 1,
-    boxShadow: past && !item.is_done
-      ? "inset 3px 0 0 var(--signal-rust), var(--elevation-card)"
-      : "var(--elevation-card)",
+    background: item.is_done
+      ? "color-mix(in oklch, var(--signal-success) 6%, var(--surface-raised))"
+      : `color-mix(in oklch, ${accent} 8%, var(--surface-raised))`,
+    opacity: isDragging
+      ? 0.5
+      : item.is_virtual && !item.is_done
+        ? 0.92
+        : past && !item.is_done
+          ? 0.55
+          : 1,
     transform: CSS.Translate.toString(transform),
     zIndex: isDragging ? 999 : 2,
     transition: isDragging
       ? undefined
-      : `opacity var(--motion-sweep) var(--ease-standard),
-          filter var(--motion-sweep) var(--ease-standard),
-          margin-top var(--motion-base) var(--ease-standard)`,
-    filter: past ? "saturate(0.4)" : undefined,
+      : `transform var(--motion-base) var(--ease-standard),
+          box-shadow var(--motion-base) var(--ease-standard)`,
     cursor: "grab",
   };
   // The dnd container is the single focusable unit (§7.10: Enter toggles
@@ -77,7 +80,11 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     <div
       ref={setNodeRef}
       style={style}
-      className={`absolute overflow-hidden rounded-lg border border-border-subtle bg-raised${past ? '' : ' hover:-mt-0.5'}`}
+      className={`absolute overflow-hidden rounded-lg ${
+        isDragging
+          ? "shadow-[var(--elevation-panel)]"
+          : "shadow-[var(--elevation-card)] hover:shadow-[var(--elevation-panel)]"
+      }`}
       title={item.title}
       {...attributes}
       {...listeners}
@@ -95,7 +102,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
           <span
             className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
             style={{
-              borderColor: item.is_done ? "var(--signal-success)" : "var(--border-default)",
+              borderColor: item.is_done ? "var(--signal-success)" : accent,
               background: item.is_done ? "var(--signal-success)" : "transparent",
             }}
           >
