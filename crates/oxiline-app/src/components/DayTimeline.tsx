@@ -7,8 +7,8 @@ import { useDroppable } from "@dnd-kit/core";
 import { BlockView } from "./BlockView";
 import { NowLine } from "./NowLine";
 import { OxideBar } from "./OxideBar";
-import { formatDuration, minuteToHHMM, categoryById, categoryColor } from "../lib/colors";
-import { clampDuration, snapMinute } from "../lib/timeline-math";
+import { formatDuration, minuteToHHMM, categoryById, categoryColor, rangeLabel } from "../lib/colors";
+import { clampDuration, snapMinute, groupClusters, partitionCluster } from "../lib/timeline-math";
 import type { TimelineItem } from "../types";
 
 interface Lane {
@@ -82,6 +82,7 @@ export function DayTimeline() {
   const [creating, setCreating] = useState<{ startMin: number; curMin: number } | null>(null);
   const [draft, setDraft] = useState("");
   const [hover, setHover] = useState<number | null>(null);
+  const [overflowOpen, setOverflowOpen] = useState<string | null>(null);
 
   const dayStart = num(settingsQ.data?.day_start_hour, 5);
   const dayEnd = num(settingsQ.data?.day_end_hour, 26);
@@ -93,6 +94,22 @@ export function DayTimeline() {
 
   const items = tlQ.data ?? [];
   const laid = useMemo(() => layout(items), [items]);
+  // Overlap soft-cap (spec §4, T2): cap = item-count (cluster.length > 3).
+  // capOverride forces the visible items into a 3-column equal-width layout so
+  // they don't render at layout()'s raw columns (e.g. 4) with a phantom gap.
+  const timed = items.filter((i) => i.start_minute != null && i.duration_minute != null);
+  const { overflowIds, capOverride } = useMemo(() => {
+    const ids = new Set<string>();
+    const override = new Map<string, { col: number; columns: number }>();
+    for (const cluster of groupClusters(timed)) {
+      if (cluster.length > 3) {
+        const { visible, overflow } = partitionCluster(cluster, 3);
+        overflow.forEach((it) => ids.add(it.id));
+        visible.forEach((it, idx) => override.set(it.id, { col: idx, columns: 3 }));
+      }
+    }
+    return { overflowIds: ids, capOverride: override };
+  }, [items, timed]);
 
   const hours = useMemo(() => {
     const arr: number[] = [];
@@ -215,6 +232,10 @@ export function DayTimeline() {
 
               {/* blocks */}
               {laid.map(({ item, col, columns }) => {
+                if (overflowIds.has(item.id)) return null;
+                const ov = capOverride.get(item.id);
+                const effCol = ov?.col ?? col;
+                const effColumns = ov?.columns ?? columns;
                 const start = item.start_minute!;
                 const dur = item.duration_minute!;
                 const top = (start - dayStartMin) * pxPerMin;
@@ -225,8 +246,8 @@ export function DayTimeline() {
                     key={item.id}
                     item={item}
                     categories={catsQ.data ?? []}
-                    left={col}
-                    columns={columns}
+                    left={effCol}
+                    columns={effColumns}
                     top={top}
                     height={height}
                     past={past}
@@ -235,6 +256,55 @@ export function DayTimeline() {
                   />
                 );
               })}
+
+              {/* overflow chips — right-edge badge for capped clusters (>3 items) */}
+              {groupClusters(timed)
+                .filter((c) => c.length > 3)
+                .map((cluster) => {
+                  const { overflow } = partitionCluster(cluster, 3);
+                  const start = Math.min(...cluster.map((i) => i.start_minute!));
+                  const top = (start - dayStartMin) * pxPerMin;
+                  const chipId = `overflow:${start}`;
+                  const moreLabel = t("timeline.more", {
+                    n: overflow.length,
+                    defaultValue: "더 보기",
+                  });
+                  return (
+                    <div
+                      key={chipId}
+                      className="pointer-events-auto absolute right-0 z-[4]"
+                      style={{ top }}
+                    >
+                      <button
+                        onClick={() =>
+                          setOverflowOpen((id) => (id === chipId ? null : chipId))
+                        }
+                        className="rounded-full border border-border bg-surface-raised px-2 py-0.5 text-[11px] font-medium shadow-sm"
+                        style={{ color: "var(--color-text-muted)" }}
+                      >
+                        +{overflow.length} {moreLabel}
+                      </button>
+                      {overflowOpen === chipId && (
+                        <div className="absolute right-0 top-6 z-30 w-56 rounded-lg border border-border bg-surface-raised p-1 shadow-lg">
+                          <p className="px-2 py-1 text-[11px] font-semibold uppercase text-text-subtle">
+                            {t("timeline.overlapTitle", { defaultValue: "겹친 일정" })}
+                          </p>
+                          {overflow.map((it) => (
+                            <div
+                              key={it.id}
+                              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-surface-sunken"
+                            >
+                              <span className="truncate text-[12px]">{it.title}</span>
+                              <span className="shrink-0 font-mono text-[10px] text-text-subtle">
+                                {rangeLabel(it.start_minute, it.duration_minute)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
               {/* drag-to-create rubber band */}
               {creating && (
