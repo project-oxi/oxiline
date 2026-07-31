@@ -11,7 +11,9 @@
     "remaining": "{{n}} min left",
     "workloadEasy": "comfortable",
     "workloadTight": "tight",
-    "plannedDur": "{{dur}} planned today"
+    "plannedDur": "{{dur}} planned today",
+    "more": "more",
+    "overlapTitle": "Other items at this time"
   },
   "backlog": {
     "title": "Backlog",
@@ -140,7 +142,8 @@
     "undone": "undone",
     "markedDone": "marked done",
     "skipped": "skipped for today",
-    "deleted": "deleted"
+    "deleted": "deleted",
+    "resized": "Duration set to {{n}} minutes"
   },
   "report": {
     "thisWeek": "This week",

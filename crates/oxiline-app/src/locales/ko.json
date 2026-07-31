@@ -11,7 +11,9 @@
     "remaining": "{{n}}분 남음",
     "workloadEasy": "여유 있음",
     "workloadTight": "빠듯해요",
-    "plannedDur": "오늘 계획 {{dur}}"
+    "plannedDur": "오늘 계획 {{dur}}",
+    "more": "더 보기",
+    "overlapTitle": "이 시간의 다른 일정"
   },
   "backlog": {
     "title": "백로그",
@@ -140,7 +142,8 @@
     "undone": "완료 해제",
     "markedDone": "완료로 표시",
     "skipped": "오늘만 건너뜀",
-    "deleted": "삭제됨"
+    "deleted": "삭제됨",
+    "resized": "길이를 {{n}}분으로 바꿨어요"
   },
   "report": {
     "thisWeek": "이번 주",
