@@ -175,12 +175,30 @@
   --duration-slow: 350ms;
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Timeline surface — UI-redesign 2026-07-31 (spec §3.1) */
+  --shadow-card:        var(--shadow-sm);
+  --shadow-block-rest:  none;
+  --shadow-block-hover: var(--shadow-md);
+  --shadow-block-drag:  var(--shadow-lg);
+
+  --color-block-bg:      oklch(96.5% 0.005 95);
+  --color-block-border:  oklch(90% 0.007 95);
+
+  --tl-rail-width:   3px;
+  --tl-spine-width:  1px;
+  --tl-tick-color:   oklch(0% 0 0 / 0.06);
 }
 .dark {
   --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.30);
   --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.40), 0 1px 2px oklch(0% 0 0 / 0.30);
   --shadow-md: 0 4px 8px oklch(0% 0 0 / 0.45), 0 2px 4px oklch(0% 0 0 / 0.35);
   --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.50), 0 4px 8px oklch(0% 0 0 / 0.40);
+
+  /* Timeline tokens — dark parity (UI-redesign) */
+  --color-block-bg:     oklch(24% 0.016 265);
+  --color-block-border: oklch(33% 0.015 265);
+  --tl-tick-color:      oklch(100% 0 0 / 0.05);
 }
 
 /* ---- Tailwind utility exposure (@theme inline, §2.1) -------------------- */
@@ -204,6 +222,10 @@
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
   --color-focus-ring: var(--color-focus-ring);
+
+  /* Block surface (UI-redesign) */
+  --color-block-bg: var(--color-block-bg);
+  --color-block-border: var(--color-block-border);
 
   /* Hue labels */
   --color-hue-red: var(--color-hue-red);
@@ -271,6 +293,14 @@ body {
   /* Smooth theme crossfade (§8). */
   transition: background-color var(--duration-base) var(--ease-in-out),
     color var(--duration-base) var(--ease-in-out);
+}
+
+/* Floating HUD overlay (hud.html): transparent canvas so the rounded card
+   floats over the desktop and its drop shadow isn't clipped to a square. The
+   main window keeps its opaque --color-surface body fill. */
+.hud-window,
+.hud-window #root {
+  background: transparent;
 }
 
 /* Draggable titlebar region for the Overlay title bar. */
