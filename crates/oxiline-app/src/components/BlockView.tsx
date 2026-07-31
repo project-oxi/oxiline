@@ -2,11 +2,13 @@ import { Check } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
+import { useRef, useState } from "react";
 import type { Category, TimelineItem } from "../types";
 import { categoryById, categoryColor, rangeLabel } from "../lib/colors";
-import { useSetTaskDone, useDeleteTask, useSetTaskSkipped } from "../hooks";
+import { useSetTaskDone, useDeleteTask, useSetTaskSkipped, useUpdateTask } from "../hooks";
+import { api } from "../lib/api";
+import { snapMinute, clampDuration } from "../lib/timeline-math";
 import { announce } from "../lib/a11y";
-
 interface Props {
   item: TimelineItem;
   categories: Category[];
@@ -15,13 +17,46 @@ interface Props {
   top: number;
   height: number;
   past: boolean;
+  dayEndMin: number;
+  pxPerMin: number;
 }
 
-export function BlockView({ item, categories, left, columns, top, height, past }: Props) {
+export function BlockView({ item, categories, left, columns, top, height, past, dayEndMin, pxPerMin }: Props) {
   const { t } = useTranslation();
   const done = useSetTaskDone();
   const del = useDeleteTask();
   const skip = useSetTaskSkipped();
+  const upd = useUpdateTask();
+  const [previewDur, setPreviewDur] = useState<number | null>(null);
+  const drag = useRef<{ startY: number; startDur: number } | null>(null);
+
+  async function commitDuration(dur: number) {
+    let id = item.id;
+    if (item.is_virtual) id = await api.materializeIfVirtual(item.id);
+    upd.mutate({ id, durationMinute: dur });
+  }
+
+  function onResizeDown(e: React.PointerEvent) {
+    e.stopPropagation(); // dnd-kit 이동 드래그 발화 방지
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    drag.current = { startY: e.clientY, startDur: item.duration_minute ?? 30 };
+  }
+  function onResizeMove(e: React.PointerEvent) {
+    if (!drag.current) return;
+    const deltaMin = (e.clientY - drag.current.startY) / pxPerMin;
+    const start = item.start_minute!;
+    const rawEnd = start + drag.current.startDur + deltaMin;
+    const dur = clampDuration(start, snapMinute(rawEnd, 15) - start, dayEndMin, 15);
+    setPreviewDur(dur);
+  }
+  function onResizeUp(e: React.PointerEvent) {
+    if (!drag.current) return;
+    (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    const dur = previewDur ?? drag.current.startDur;
+    drag.current = null;
+    setPreviewDur(null);
+    commitDuration(dur);
+  }
   const cat = categoryById(categories, item.category_id);
   const color = categoryColor(cat?.color_hue ?? null);
 
@@ -34,9 +69,14 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     data: { kind: "block", item: { id: item.id, start_minute: item.start_minute } },
   });
 
+  const effDur = previewDur ?? item.duration_minute ?? 0;
+  const effHeight = Math.max(effDur * pxPerMin, 22);
+
   const style: React.CSSProperties = {
+
+
     top,
-    height: Math.max(height, 22),
+    height: effHeight,
     left: `calc(${leftPct}% + ${leftPct > 0 ? 4 : 0}px)`,
     width: `calc(${widthPct}% - 4px)`,
     background: item.is_done
@@ -73,6 +113,13 @@ export function BlockView({ item, categories, left, columns, top, height, past }
         del.mutate(item.id);
         announce(t("a11y.deleted"));
       }
+    } else if (e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      e.preventDefault();
+      const step = e.key === "ArrowUp" ? -15 : 15;
+      const start = item.start_minute!;
+      const dur = clampDuration(start, (item.duration_minute ?? 30) + step, dayEndMin, 15);
+      commitDuration(dur);
+      announce(t("a11y.resized", { n: dur }));
     }
   };
 
@@ -123,17 +170,28 @@ export function BlockView({ item, categories, left, columns, top, height, past }
             className="mt-0.5 font-mono text-[11px] leading-tight"
             style={{ color: "var(--color-text-subtle)" }}
           >
-            {rangeLabel(item.start_minute, item.duration_minute)}
+            {rangeLabel(item.start_minute, previewDur ?? item.duration_minute)}
           </span>
         )}
-        {height > 64 && item.duration_minute != null && (
+        {height > 64 && effDur != null && effDur > 0 && (
           <span
             className="mt-0.5 font-mono text-[11px]"
             style={{ color: "var(--color-text-subtle)" }}
           >
-            {t("common.minutes", { n: item.duration_minute })}
+            {t("common.minutes", { n: effDur })}
           </span>
         )}
+      </div>
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        onPointerDown={onResizeDown}
+        onPointerMove={onResizeMove}
+        onPointerUp={onResizeUp}
+        className="absolute bottom-0 left-0 right-0 flex h-2 cursor-ns-resize items-end justify-center pb-0.5 opacity-40 hover:opacity-100"
+        style={{ touchAction: "none" }}
+      >
+        <span className="h-[2px] w-6 rounded-full" style={{ background: "var(--color-text-subtle)" }} />
       </div>
     </div>
   );

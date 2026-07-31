@@ -228,6 +228,8 @@ export function DayTimeline() {
                     top={top}
                     height={height}
                     past={past}
+                    dayEndMin={dayEnd * 60}
+                    pxPerMin={pxPerMin}
                   />
                 );
               })}
