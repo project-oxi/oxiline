@@ -11,13 +11,18 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Cross-platform gate: runs everywhere. Validates the Rust core + CLI which
+  # are pure-Rust and have no platform-specific deps. Tauri app is excluded
+  # here so this job is green on linux runners.
+  # ─────────────────────────────────────────────────────────────────────────────
   rust-core:
     name: Rust core + CLI
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (1.85, edition 2024)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.85
@@ -34,10 +39,52 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy (deny warnings)
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: |
+          cargo clippy -p oxiline-core -p oxiline-cli --all-targets --locked -- -D warnings
 
       - name: Build
-        run: cargo build --workspace --locked
+        run: cargo build -p oxiline-core -p oxiline-cli --locked
 
       - name: Test
-        run: cargo test --workspace --locked
+        run: cargo test -p oxiline-core -p oxiline-cli --locked
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # macOS-only gate: builds the Tauri v2 app (uses macOS-only git deps
+  # `tauri-nspanel` branch and `macos-private-api` feature).
+  # ─────────────────────────────────────────────────────────────────────────────
+  app-macos:
+    name: Tauri app (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (1.85, edition 2024)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.85
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            crates/oxiline-app/src-tauri
+
+      - name: Install frontend deps
+        working-directory: crates/oxiline-app
+        run: bun install --frozen-lockfile
+
+      - name: Frontend typecheck + build
+        working-directory: crates/oxiline-app
+        run: bun run build
+
+      - name: Rust clippy (app)
+        run: cargo clippy -p oxiline-app --all-targets --locked -- -D warnings
+
+      - name: Build Tauri app
+        run: cargo build -p oxiline-app --locked
