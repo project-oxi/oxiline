@@ -175,6 +175,7 @@ export function DayTimeline() {
 
             {/* spine nodes — one per block, colored by category */}
             {laid.map(({ item }) => {
+              if (overflowIds.has(item.id)) return null;
               const start = item.start_minute!;
               const dur = item.duration_minute!;
               const nodeTop = (start - dayStartMin) * pxPerMin;
