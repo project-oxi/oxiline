@@ -89,11 +89,12 @@ pub fn get_now_context(conn: &Connection, now_minute: u16) -> Result<NowContext>
 
     let mut current: Option<&TimelineItem> = None;
     for it in items.iter().filter(|i| !i.is_skipped) {
-        if let (Some(s), Some(d)) = (it.start_minute, it.duration_minute) {
-            if now_minute >= s && now_minute < s + d {
-                current = Some(it);
-                break;
-            }
+        if let (Some(s), Some(d)) = (it.start_minute, it.duration_minute)
+            && now_minute >= s
+            && now_minute < s + d
+        {
+            current = Some(it);
+            break;
         }
     }
 
@@ -115,18 +116,18 @@ pub fn get_now_context(conn: &Connection, now_minute: u16) -> Result<NowContext>
     };
 
     let mut current_item = current.map(to_now);
-    if let (Some(ci), Some(src)) = (&mut current_item, current) {
-        if let (Some(s), Some(d)) = (src.start_minute, src.duration_minute) {
-            let end = (s as i64) + (d as i64);
-            ci.remaining_minute = Some(end - now_minute as i64);
-        }
+    if let (Some(ci), Some(src)) = (&mut current_item, current)
+        && let (Some(s), Some(d)) = (src.start_minute, src.duration_minute)
+    {
+        let end = (s as i64) + (d as i64);
+        ci.remaining_minute = Some(end - now_minute as i64);
     }
 
     let mut next_item = next.map(to_now);
-    if let (Some(ni), Some(src)) = (&mut next_item, next) {
-        if let Some(s) = src.start_minute {
-            ni.starts_in_minute = Some(s as i64 - now_minute as i64);
-        }
+    if let (Some(ni), Some(src)) = (&mut next_item, next)
+        && let Some(s) = src.start_minute
+    {
+        ni.starts_in_minute = Some(s as i64 - now_minute as i64);
     }
 
     Ok(NowContext {

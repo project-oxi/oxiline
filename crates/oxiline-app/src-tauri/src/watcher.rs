@@ -47,7 +47,8 @@ pub fn spawn(app: AppHandle) {
         };
 
         // Watch the DB file and its WAL sibling.
-        for mut p in [db_path.clone()] {
+        {
+            let mut p = db_path.clone();
             let _ = watcher.watch(&p, RecursiveMode::NonRecursive);
             p.set_extension("db-wal");
             if p.exists() {

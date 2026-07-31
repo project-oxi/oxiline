@@ -5,7 +5,7 @@
 
 use crate::error::Result;
 use crate::model::RoutineGroup;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<RoutineGroup> {
     Ok(RoutineGroup {
@@ -51,9 +51,11 @@ pub fn create(conn: &Connection, input: NewRoutineGroup) -> Result<RoutineGroup>
     let id = uuid::Uuid::new_v7(uuid::Timestamp::now(uuid::NoContext)).to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let sort_order: i64 = conn
-        .query_row("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM routine_groups", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM routine_groups",
+            [],
+            |r| r.get(0),
+        )
         .unwrap_or(0);
     conn.execute(
         "INSERT INTO routine_groups (id, name, icon, is_active, sort_order, created_at, updated_at)

@@ -6,7 +6,7 @@
 
 use crate::error::{CoreError, Result};
 use rusqlite::Connection;
-use rusqlite_migration::{Migrations, M};
+use rusqlite_migration::{M, Migrations};
 
 /// The initial migration, embedded at compile time.
 const V1_INIT: &str = include_str!("../migrations/V1__init.sql");
@@ -31,12 +31,10 @@ fn apply_pragmas(conn: &Connection) -> Result<()> {
 /// PRAGMAs are applied before migrations so WAL is active during the initial
 /// create.
 pub fn open_and_migrate(path: &std::path::Path) -> Result<Connection> {
-    let mut conn = Connection::open(path)
-        .map_err(|e| CoreError::Internal(format!("open db: {e}")))?;
+    let mut conn =
+        Connection::open(path).map_err(|e| CoreError::Internal(format!("open db: {e}")))?;
     apply_pragmas(&conn)?;
-    migrations()
-        .to_latest(&mut conn)
-        .map_err(CoreError::from)?;
+    migrations().to_latest(&mut conn).map_err(CoreError::from)?;
     Ok(conn)
 }
 

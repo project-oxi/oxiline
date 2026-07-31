@@ -4,7 +4,7 @@ use crate::error::{CoreError, Result};
 use crate::model::{Task, TaskSource};
 use crate::routines;
 use crate::util;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Task> {
     let source_str: String = row.get("source")?;
@@ -13,9 +13,7 @@ pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Task> {
         date: row.get("date")?,
         title: row.get("title")?,
         category_id: row.get("category_id")?,
-        start_minute: row
-            .get::<_, Option<i64>>("start_minute")?
-            .map(|v| v as u16),
+        start_minute: row.get::<_, Option<i64>>("start_minute")?.map(|v| v as u16),
         duration_minute: row
             .get::<_, Option<i64>>("duration_minute")?
             .map(|v| v as u16),
@@ -32,12 +30,8 @@ pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Task> {
 }
 
 pub fn get(conn: &Connection, id: &str) -> Result<Task> {
-    conn.query_row(
-        "SELECT * FROM tasks WHERE id = ?",
-        params![id],
-        row_from,
-    )
-    .map_err(CoreError::from)
+    conn.query_row("SELECT * FROM tasks WHERE id = ?", params![id], row_from)
+        .map_err(CoreError::from)
 }
 
 /// Tasks for a specific date (manual + already-materialized routine rows).
@@ -55,9 +49,8 @@ pub fn list_by_date(conn: &Connection, date: &str) -> Result<Vec<Task>> {
 
 /// Backlog tasks (`date IS NULL`).
 pub fn list_backlog(conn: &Connection) -> Result<Vec<Task>> {
-    let mut stmt = conn.prepare(
-        "SELECT * FROM tasks WHERE date IS NULL ORDER BY sort_order, created_at",
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT * FROM tasks WHERE date IS NULL ORDER BY sort_order, created_at")?;
     let rows = stmt.query_map([], row_from)?;
     let mut out = Vec::new();
     for r in rows {
@@ -90,19 +83,19 @@ pub struct NewTask {
 }
 
 pub fn create(conn: &Connection, input: NewTask) -> Result<Task> {
-    if let Some(m) = input.start_minute {
-        if m > 1439 {
-            return Err(CoreError::InvalidArgument(
-                "start_minute must be 0..=1439".into(),
-            ));
-        }
+    if let Some(m) = input.start_minute
+        && m > 1439
+    {
+        return Err(CoreError::InvalidArgument(
+            "start_minute must be 0..=1439".into(),
+        ));
     }
-    if let Some(d) = input.duration_minute {
-        if !(1..=1440).contains(&d) {
-            return Err(CoreError::InvalidArgument(
-                "duration_minute must be 1..=1440".into(),
-            ));
-        }
+    if let Some(d) = input.duration_minute
+        && !(1..=1440).contains(&d)
+    {
+        return Err(CoreError::InvalidArgument(
+            "duration_minute must be 1..=1440".into(),
+        ));
     }
     let id = util::new_id();
     let now = util::now_iso();
@@ -174,19 +167,19 @@ pub fn update(conn: &Connection, id: &str, upd: TaskUpdate) -> Result<Task> {
         Some(v) => v,
         None => existing.notes,
     };
-    if let Some(m) = start_minute {
-        if m > 1439 {
-            return Err(CoreError::InvalidArgument(
-                "start_minute must be 0..=1439".into(),
-            ));
-        }
+    if let Some(m) = start_minute
+        && m > 1439
+    {
+        return Err(CoreError::InvalidArgument(
+            "start_minute must be 0..=1439".into(),
+        ));
     }
-    if let Some(d) = duration_minute {
-        if !(1..=1440).contains(&d) {
-            return Err(CoreError::InvalidArgument(
-                "duration_minute must be 1..=1440".into(),
-            ));
-        }
+    if let Some(d) = duration_minute
+        && !(1..=1440).contains(&d)
+    {
+        return Err(CoreError::InvalidArgument(
+            "duration_minute must be 1..=1440".into(),
+        ));
     }
     let now = util::now_iso();
     conn.execute(
@@ -267,11 +260,7 @@ pub fn materialize_if_virtual(conn: &Connection, id: &str) -> Result<String> {
 /// row already exists for `(block_id, date)` it is returned unchanged (the
 /// unique index guarantees at most one). Every occurrence interaction funnels
 /// through this single function (`03-data-model.md` §3.7).
-pub fn materialize_occurrence(
-    conn: &Connection,
-    block_id: &str,
-    date: &str,
-) -> Result<Task> {
+pub fn materialize_occurrence(conn: &Connection, block_id: &str, date: &str) -> Result<Task> {
     // Already materialized?
     if let Ok(existing) = conn.query_row(
         "SELECT * FROM tasks WHERE source_routine_block_id = ? AND date = ?",

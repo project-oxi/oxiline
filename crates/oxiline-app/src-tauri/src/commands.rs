@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 //! Tauri commands — thin typed wrappers over `oxiline-core`.
 //!
 //! Every command derives `#[specta::specta]` so `tauri-specta` emits matching
@@ -5,8 +7,7 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task,
-    TimelineItem, WeekReport,
+    Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task, TimelineItem, WeekReport,
 };
 use oxiline_core::{categories, reports, routines, settings, tasks, timeline, util};
 use serde_json::Value;
@@ -59,7 +60,9 @@ pub fn delete_category(state: State<AppState>, id: String) -> Result<(), String>
 
 #[tauri::command]
 #[specta::specta]
-pub fn list_routine_groups(state: State<AppState>) -> Result<Vec<oxiline_core::model::RoutineGroup>, String> {
+pub fn list_routine_groups(
+    state: State<AppState>,
+) -> Result<Vec<oxiline_core::model::RoutineGroup>, String> {
     oxiline_core::routine_groups::list(&state.conn()).map_err(map_err)
 }
 
@@ -272,22 +275,14 @@ pub fn update_task(
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_task_done(
-    state: State<AppState>,
-    id: String,
-    done: bool,
-) -> Result<Task, String> {
+pub fn set_task_done(state: State<AppState>, id: String, done: bool) -> Result<Task, String> {
     let real = tasks::materialize_if_virtual(&state.conn(), &id).map_err(map_err)?;
     tasks::set_done(&state.conn(), &real, done).map_err(map_err)
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_task_skipped(
-    state: State<AppState>,
-    id: String,
-    skipped: bool,
-) -> Result<Task, String> {
+pub fn set_task_skipped(state: State<AppState>, id: String, skipped: bool) -> Result<Task, String> {
     let real = tasks::materialize_if_virtual(&state.conn(), &id).map_err(map_err)?;
     tasks::set_skipped(&state.conn(), &real, skipped).map_err(map_err)
 }
@@ -315,7 +310,9 @@ pub fn delete_task(state: State<AppState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_settings(state: State<AppState>) -> Result<oxiline_core::model::SettingsSnapshot, String> {
+pub fn get_settings(
+    state: State<AppState>,
+) -> Result<oxiline_core::model::SettingsSnapshot, String> {
     Ok(settings::snapshot(&state.conn()))
 }
 
@@ -355,9 +352,7 @@ pub fn is_onboarding_done(state: State<AppState>) -> Result<bool, String> {
 /// Request macOS notification permission. Returns true if granted.
 #[tauri::command]
 #[specta::specta]
-pub async fn request_notification_permission(
-    app: tauri::AppHandle,
-) -> Result<bool, String> {
+pub async fn request_notification_permission(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_notification::PermissionState;
     match app.notification().request_permission() {
         Ok(PermissionState::Granted) => Ok(true),
@@ -370,9 +365,7 @@ pub async fn request_notification_permission(
 /// Check whether notification permission has been granted.
 #[tauri::command]
 #[specta::specta]
-pub fn is_notification_permission_granted(
-    app: tauri::AppHandle,
-) -> Result<bool, String> {
+pub fn is_notification_permission_granted(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_notification::PermissionState;
     match app.notification().permission_state() {
         Ok(PermissionState::Granted) => Ok(true),
@@ -419,8 +412,14 @@ pub fn get_range_report(
     to: String,
 ) -> Result<RangeReport, String> {
     let conn = state.conn();
-    reports::range_report(&conn, &from, &to, &util::today_local(), util::now_minute_local())
-        .map_err(map_err)
+    reports::range_report(
+        &conn,
+        &from,
+        &to,
+        &util::today_local(),
+        util::now_minute_local(),
+    )
+    .map_err(map_err)
 }
 
 #[tauri::command]

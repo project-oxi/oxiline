@@ -160,36 +160,69 @@ impl L {
         }
     }
     pub fn report_this_week(&self) -> &'static str {
-        match self.0 { Lang::Ko => "이번 주", Lang::En => "this week" }
+        match self.0 {
+            Lang::Ko => "이번 주",
+            Lang::En => "this week",
+        }
     }
     pub fn report_prev_week(&self) -> &'static str {
-        match self.0 { Lang::Ko => "저번 주", Lang::En => "last week" }
+        match self.0 {
+            Lang::Ko => "저번 주",
+            Lang::En => "last week",
+        }
     }
     pub fn report_rate(&self) -> &'static str {
-        match self.0 { Lang::Ko => "완료율", Lang::En => "completion" }
+        match self.0 {
+            Lang::Ko => "완료율",
+            Lang::En => "completion",
+        }
     }
     pub fn report_done(&self) -> &'static str {
-        match self.0 { Lang::Ko => "완료", Lang::En => "done" }
+        match self.0 {
+            Lang::Ko => "완료",
+            Lang::En => "done",
+        }
     }
     pub fn report_skipped(&self) -> &'static str {
-        match self.0 { Lang::Ko => "건너뜀", Lang::En => "skipped" }
+        match self.0 {
+            Lang::Ko => "건너뜀",
+            Lang::En => "skipped",
+        }
     }
     pub fn report_not_recorded(&self) -> &'static str {
-        match self.0 { Lang::Ko => "체크인 없음", Lang::En => "no check-in" }
+        match self.0 {
+            Lang::Ko => "체크인 없음",
+            Lang::En => "no check-in",
+        }
     }
     pub fn report_upcoming(&self) -> &'static str {
-        match self.0 { Lang::Ko => "예정", Lang::En => "upcoming" }
+        match self.0 {
+            Lang::Ko => "예정",
+            Lang::En => "upcoming",
+        }
     }
     pub fn report_categories(&self) -> &'static str {
-        match self.0 { Lang::Ko => "카테고리", Lang::En => "categories" }
+        match self.0 {
+            Lang::Ko => "카테고리",
+            Lang::En => "categories",
+        }
     }
     pub fn report_streaks(&self) -> &'static str {
-        match self.0 { Lang::Ko => "루틴 연속", Lang::En => "streaks" }
+        match self.0 {
+            Lang::Ko => "루틴 연속",
+            Lang::En => "streaks",
+        }
     }
     pub fn report_day(&self) -> &'static str {
-        match self.0 { Lang::Ko => "일", Lang::En => "d" }
+        match self.0 {
+            Lang::Ko => "일",
+            Lang::En => "d",
+        }
     }
     pub fn report_no_routines(&self) -> &'static str {
-        match self.0 { Lang::Ko => "활성 루틴 없음", Lang::En => "no active routines" }
+        match self.0 {
+            Lang::Ko => "활성 루틴 없음",
+            Lang::En => "no active routines",
+        }
     }
 }

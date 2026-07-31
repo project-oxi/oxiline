@@ -175,7 +175,11 @@ pub enum RoutineAction {
         at: Option<String>,
         #[arg(long, value_name = "MIN", default_value_t = 30)]
         duration: u16,
-        #[arg(long, value_name = "mon,tue,…|weekdays|weekends|daily", default_value = "daily")]
+        #[arg(
+            long,
+            value_name = "mon,tue,…|weekdays|weekends|daily",
+            default_value = "daily"
+        )]
         days: String,
         #[arg(long, value_name = "DATE")]
         from: Option<String>,
@@ -256,18 +260,17 @@ pub enum GroupAction {
     /// Delete a group.
     Rm { id: String },
     /// Toggle a group active/inactive.
-    Toggle { id: String, on: Option<bool>, off: Option<bool> },
+    Toggle {
+        id: String,
+        on: Option<bool>,
+        off: Option<bool>,
+    },
 }
 
 #[derive(Subcommand)]
 pub enum SettingsAction {
     /// Get a setting (omit key for all).
-    Get {
-        key: Option<String>,
-    },
+    Get { key: Option<String> },
     /// Set a setting.
-    Set {
-        key: String,
-        value: String,
-    },
+    Set { key: String, value: String },
 }

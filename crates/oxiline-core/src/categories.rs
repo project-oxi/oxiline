@@ -3,7 +3,7 @@
 use crate::error::{CoreError, Result};
 use crate::model::Category;
 use crate::util;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Category> {
     Ok(Category {
@@ -19,8 +19,7 @@ pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Category> {
 }
 
 pub fn list(conn: &Connection) -> Result<Vec<Category>> {
-    let mut stmt =
-        conn.prepare("SELECT * FROM categories ORDER BY sort_order, name")?;
+    let mut stmt = conn.prepare("SELECT * FROM categories ORDER BY sort_order, name")?;
     let rows = stmt.query_map([], row_from)?;
     let mut out = Vec::new();
     for r in rows {
@@ -30,13 +29,16 @@ pub fn list(conn: &Connection) -> Result<Vec<Category>> {
 }
 
 pub fn get(conn: &Connection, id: &str) -> Result<Category> {
-    conn.query_row("SELECT * FROM categories WHERE id = ?", params![id], row_from)
-        .map_err(CoreError::from)
+    conn.query_row(
+        "SELECT * FROM categories WHERE id = ?",
+        params![id],
+        row_from,
+    )
+    .map_err(CoreError::from)
 }
 
 pub fn get_by_name(conn: &Connection, name: &str) -> Result<Vec<Category>> {
-    let mut stmt =
-        conn.prepare("SELECT * FROM categories WHERE lower(name) = lower(?)")?;
+    let mut stmt = conn.prepare("SELECT * FROM categories WHERE lower(name) = lower(?)")?;
     let rows = stmt.query_map(params![name], row_from)?;
     let mut out = Vec::new();
     for r in rows {
@@ -58,10 +60,10 @@ pub fn resolve(conn: &Connection, id_or_name: &str) -> Result<Category> {
         "other" => Some("cat_other"),
         _ => None,
     };
-    if let Some(id) = alias_id {
-        if let Ok(c) = get(conn, id) {
-            return Ok(c);
-        }
+    if let Some(id) = alias_id
+        && let Ok(c) = get(conn, id)
+    {
+        return Ok(c);
     }
     // Then try exact id match.
     if let Ok(c) = get(conn, id_or_name) {
@@ -90,9 +92,11 @@ pub fn create(conn: &Connection, input: NewCategory) -> Result<Category> {
     let id = util::new_id();
     let now = util::now_iso();
     let next_order: i64 = conn
-        .query_row("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories",
+            [],
+            |r| r.get(0),
+        )
         .unwrap_or(0);
     conn.execute(
         "INSERT INTO categories (id, name, color_hue, icon, sort_order, is_builtin, created_at, updated_at)

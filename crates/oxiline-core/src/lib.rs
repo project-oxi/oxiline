@@ -9,13 +9,13 @@ pub mod db;
 pub mod error;
 pub mod model;
 pub mod paths;
-pub mod util;
-pub mod routines;
+pub mod reports;
 pub mod routine_groups;
+pub mod routines;
 pub mod settings;
 pub mod tasks;
 pub mod timeline;
-pub mod reports;
+pub mod util;
 
 pub use db::open_and_migrate;
 pub use error::{CoreError, ErrorCode, Result};

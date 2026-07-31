@@ -21,8 +21,7 @@ pub fn spawn_scheduler(app: AppHandle) {
     std::thread::Builder::new()
         .name("oxiline-notifier".into())
         .spawn(move || {
-            let last_notified: Arc<Mutex<HashSet<String>>> =
-                Arc::new(Mutex::new(HashSet::new()));
+            let last_notified: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
             let mut last_now_minute: i64 = -1;
 
             loop {
@@ -30,11 +29,8 @@ pub fn spawn_scheduler(app: AppHandle) {
 
                 let state = app.state::<AppState>();
                 let conn = state.conn();
-                let enabled = oxiline_core::settings::get_bool(
-                    &conn,
-                    "notifications_enabled",
-                    false,
-                );
+                let enabled =
+                    oxiline_core::settings::get_bool(&conn, "notifications_enabled", false);
                 if !enabled {
                     continue;
                 }
@@ -43,20 +39,14 @@ pub fn spawn_scheduler(app: AppHandle) {
 
                 // Sleep/wake detection: if wall time jumped significantly,
                 // drop the dedup set so stale items can be re-notified.
-                if last_now_minute >= 0
-                    && (now_minute - last_now_minute).abs() > SLEEP_GAP_MINUTES
+                if last_now_minute >= 0 && (now_minute - last_now_minute).abs() > SLEEP_GAP_MINUTES
                 {
                     last_notified.lock().clear();
                 }
                 last_now_minute = now_minute;
 
-                let lead = oxiline_core::settings::get_i64(
-                    &conn,
-                    "notification_lead_minutes",
-                    5,
-                );
-                let Ok(ctx) =
-                    oxiline_core::timeline::get_now_context(&conn, now_minute as u16)
+                let lead = oxiline_core::settings::get_i64(&conn, "notification_lead_minutes", 5);
+                let Ok(ctx) = oxiline_core::timeline::get_now_context(&conn, now_minute as u16)
                 else {
                     continue;
                 };
@@ -66,7 +56,7 @@ pub fn spawn_scheduler(app: AppHandle) {
                 let Some(starts_in) = next.starts_in_minute else {
                     continue;
                 };
-                if (starts_in as i64) > lead {
+                if starts_in > lead {
                     continue;
                 }
                 if last_notified.lock().contains(&next.id) {
@@ -74,11 +64,7 @@ pub fn spawn_scheduler(app: AppHandle) {
                 }
 
                 let body = {
-                    let locale = oxiline_core::settings::get_string(
-                        &conn,
-                        "locale",
-                        "system",
-                    );
+                    let locale = oxiline_core::settings::get_string(&conn, "locale", "system");
                     if locale.starts_with("en") {
                         format!("Starts in {} min", starts_in)
                     } else {

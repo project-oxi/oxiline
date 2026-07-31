@@ -33,7 +33,10 @@ impl AppState {
             .max_size(8)
             .build(manager)
             .expect("failed to build DB pool");
-        Self { pool, db_path: path }
+        Self {
+            pool,
+            db_path: path,
+        }
     }
 
     /// Borrow a pooled connection. Panics only if the pool is exhausted, which

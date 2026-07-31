@@ -79,9 +79,7 @@ pub fn init_panel(app: &AppHandle) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
         use tauri::Manager;
-        use tauri_nspanel::{
-            CollectionBehavior, PanelLevel, StyleMask, WebviewWindowExt,
-        };
+        use tauri_nspanel::{CollectionBehavior, PanelLevel, StyleMask, WebviewWindowExt};
 
         let Some(win) = app.get_webview_window("hud") else {
             return Ok(());
@@ -90,8 +88,7 @@ pub fn init_panel(app: &AppHandle) -> tauri::Result<()> {
 
         // HUD window style: borderless + non-activating so the panel
         // never takes focus from the foreground app.
-        panel
-            .set_style_mask(StyleMask::empty().borderless().nonactivating_panel().into());
+        panel.set_style_mask(StyleMask::empty().borderless().nonactivating_panel().into());
         // Floating level — above normal windows, below modal.
         panel.set_level(PanelLevel::Floating.value());
         // Don't hide when the app deactivates.
@@ -113,10 +110,9 @@ pub fn init_panel(app: &AppHandle) -> tauri::Result<()> {
     }
 }
 
-/// Custom NSPanel subclass for the HUD.
-///
-/// Config: never becomes key (no focus steal), floats above other windows,
-/// stays visible when the app deactivates.
+// Custom NSPanel subclass for the HUD.
+// Config: never becomes key (no focus steal), floats above other windows,
+// stays visible when the app deactivates.
 #[cfg(target_os = "macos")]
 tauri_nspanel::tauri_panel! {
     panel!(HudPanel {

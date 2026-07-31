@@ -1,8 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{
-    Category, NowContext, NowItem, RoutineBlock, Task, TimelineItem,
-};
+use oxiline_core::model::{Category, NowContext, NowItem, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -15,7 +13,11 @@ pub fn minute_range(start: Option<u16>, dur: Option<u16>) -> String {
     match (start, dur) {
         (Some(s), Some(d)) => {
             let end = (s as u32 + d as u32).min(1440);
-            format!("{}-{}", util::minute_to_hhmm(s), util::minute_to_hhmm(end as u16))
+            format!(
+                "{}-{}",
+                util::minute_to_hhmm(s),
+                util::minute_to_hhmm(end as u16)
+            )
         }
         (Some(s), None) => util::minute_to_hhmm(s),
         _ => "-".into(),
@@ -41,7 +43,11 @@ pub fn timeline_text(lang: L, date: &str, items: &[TimelineItem]) -> String {
             '●'
         };
         let range = minute_range(it.start_minute, it.duration_minute);
-        let virt = if it.is_virtual { " (루틴/가상)" } else { "" };
+        let virt = if it.is_virtual {
+            " (루틴/가상)"
+        } else {
+            ""
+        };
         out.push_str(&line(mark, &it.title, &range, virt));
         out.push('\n');
     }
@@ -77,10 +83,7 @@ pub fn task_text(task: &Task) -> String {
 
 pub fn now_text(lang: L, ctx: &NowContext) -> String {
     let fmt_now = |n: &NowItem, label: &str| -> String {
-        let time = n
-            .start_minute
-            .map(util::minute_to_hhmm)
-            .unwrap_or_default();
+        let time = n.start_minute.map(util::minute_to_hhmm).unwrap_or_default();
         format!("  {label} · {} ({})", n.title, time)
     };
     let mut out = String::new();
@@ -148,7 +151,10 @@ pub fn category_list_text(cats: &[Category]) -> String {
     let mut out = String::new();
     for c in cats {
         let builtin = if c.is_builtin { " (builtin)" } else { "" };
-        out.push_str(&format!("● {}  hue={:<6} id: {}{builtin}\n", c.name, c.color_hue, c.id));
+        out.push_str(&format!(
+            "● {}  hue={:<6} id: {}{builtin}\n",
+            c.name, c.color_hue, c.id
+        ));
     }
     out
 }
@@ -175,7 +181,12 @@ fn pct(r: Option<f64>) -> String {
 }
 
 pub fn week_report_text(lang: L, r: &WeekReport) -> String {
-    let mut out = format!("{} ~ {} ({})\n", r.week_start, r.week_end, lang.report_this_week());
+    let mut out = format!(
+        "{} ~ {} ({})\n",
+        r.week_start,
+        r.week_end,
+        lang.report_this_week()
+    );
     out.push_str(&totals_line(lang, &r.totals));
     out.push_str(&format!(
         "{} {}   {} {}\n\n",
@@ -191,7 +202,11 @@ pub fn week_report_text(lang: L, r: &WeekReport) -> String {
 
 pub fn range_report_text(lang: L, r: &RangeReport) -> String {
     let mut out = format!("{} ~ {}\n", r.from, r.to);
-    out.push_str(&format!("{} {}\n\n", lang.report_rate(), pct(r.completion_rate)));
+    out.push_str(&format!(
+        "{} {}\n\n",
+        lang.report_rate(),
+        pct(r.completion_rate)
+    ));
     out.push_str(&cat_block(lang, &r.categories));
     out.push_str(&streak_block(lang, &r.streaks));
     out
@@ -200,7 +215,12 @@ pub fn range_report_text(lang: L, r: &RangeReport) -> String {
 pub fn streak_list_text(lang: L, streaks: &[RoutineStreak]) -> String {
     let mut out = String::new();
     for s in streaks {
-        out.push_str(&format!("  {:<16} {}{}\n", s.title, s.current, lang.report_day()));
+        out.push_str(&format!(
+            "  {:<16} {}{}\n",
+            s.title,
+            s.current,
+            lang.report_day()
+        ));
     }
     if out.is_empty() {
         out = format!("  ({})\n", lang.report_no_routines());
@@ -241,5 +261,9 @@ fn streak_block(lang: L, streaks: &[RoutineStreak]) -> String {
     if streaks.is_empty() {
         return String::new();
     }
-    format!("\n{}\n{}", lang.report_streaks(), streak_list_text(lang, streaks))
+    format!(
+        "\n{}\n{}",
+        lang.report_streaks(),
+        streak_list_text(lang, streaks)
+    )
 }

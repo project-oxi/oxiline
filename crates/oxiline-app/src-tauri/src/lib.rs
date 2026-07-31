@@ -10,7 +10,7 @@ mod watcher;
 
 use tauri::{Listener, Manager, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
-use tauri_specta::{collect_commands, Builder as SpectaBuilder};
+use tauri_specta::{Builder as SpectaBuilder, collect_commands};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -99,9 +99,11 @@ pub fn run() {
 
             // 60-second tray progress refresh timer.
             let h = app.handle().clone();
-            std::thread::spawn(move || loop {
-                std::thread::sleep(std::time::Duration::from_secs(60));
-                crate::tray::refresh(&h);
+            std::thread::spawn(move || {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(60));
+                    crate::tray::refresh(&h);
+                }
             });
 
             watcher::spawn(app.handle().clone());
@@ -116,11 +118,11 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Closing the main window hides it; the process keeps running in the
             // menu bar (§4.3). Only the tray "종료" truly quits.
-            if window.label() == "main" {
-                if let WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = window.hide();
-                }
+            if window.label() == "main"
+                && let WindowEvent::CloseRequested { api, .. } = event
+            {
+                api.prevent_close();
+                let _ = window.hide();
             }
         })
         .run(tauri::generate_context!())

@@ -155,7 +155,10 @@ fn day_breakdown_classifies_three_buckets_and_excludes_skipped_from_rate() {
     backdate_created(&conn, &b.id, "2026-01-01T00:00:00Z");
 
     let bd = reports::day_breakdown(&conn, past, today, 800).unwrap();
-    assert_eq!((bd.done, bd.skipped, bd.not_recorded, bd.upcoming), (1, 1, 1, 0));
+    assert_eq!(
+        (bd.done, bd.skipped, bd.not_recorded, bd.upcoming),
+        (1, 1, 1, 0)
+    );
     // rate = done/(done+not_recorded) = 1/2; skipped excluded.
     assert_eq!(bd.completion_rate, Some(0.5));
 }

@@ -4,7 +4,7 @@ use crate::error::{CoreError, Result};
 use crate::model::RoutineBlock;
 use crate::util;
 use chrono::Datelike;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<RoutineBlock> {
     Ok(RoutineBlock {
@@ -139,7 +139,7 @@ pub fn update(conn: &Connection, id: &str, upd: RoutineUpdate) -> Result<Routine
         Some(0) => {
             return Err(CoreError::InvalidArgument(
                 "weekday_mask must select at least one day".into(),
-            ))
+            ));
         }
         Some(v) => v,
         None => existing.weekday_mask,
@@ -221,11 +221,7 @@ pub fn parse_days_spec(spec: &str) -> Result<u8> {
             "fri" | "fr" | "f" => 4,
             "sat" | "sa" => 5,
             "sun" | "su" => 6,
-            other => {
-                return Err(CoreError::InvalidArgument(format!(
-                    "unknown day '{other}'"
-                )))
-            }
+            other => return Err(CoreError::InvalidArgument(format!("unknown day '{other}'"))),
         };
         mask |= 1 << bit;
     }
@@ -284,15 +280,15 @@ pub fn bound_date(block: &RoutineBlock) -> String {
 }
 
 fn in_effective_range(from: &Option<String>, until: &Option<String>, date: &str) -> bool {
-    if let Some(f) = from {
-        if date < f.as_str() {
-            return false;
-        }
+    if let Some(f) = from
+        && date < f.as_str()
+    {
+        return false;
     }
-    if let Some(u) = until {
-        if date > u.as_str() {
-            return false;
-        }
+    if let Some(u) = until
+        && date > u.as_str()
+    {
+        return false;
     }
     true
 }

@@ -1,6 +1,6 @@
 //! Menu-bar tray icon + menu (`07-ui-screens-and-flows.md` §7.7, §4.3).
 
-use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, MenuEvent};
+use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
@@ -20,8 +20,14 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let quick = MenuItem::with_id(app, "quick", "빠른 추가…", true, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let prefs = MenuItem::with_id(app, "prefs", "환경설정…", true, None::<&str>)?;
-    let autostart =
-        CheckMenuItem::with_id(app, "autostart", "로그인 시 자동 실행", true, autostart_enabled(app), None::<&str>)?;
+    let autostart = CheckMenuItem::with_id(
+        app,
+        "autostart",
+        "로그인 시 자동 실행",
+        true,
+        autostart_enabled(app),
+        None::<&str>,
+    )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "OxiLine 종료", true, None::<&str>)?;
 
@@ -182,4 +188,3 @@ fn render_progress_icon(progress: f32) -> tauri::image::Image<'static> {
     let rgba = img.into_raw();
     tauri::image::Image::new_owned(rgba, SIZE, SIZE)
 }
-

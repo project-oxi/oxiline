@@ -39,5 +39,8 @@ pub fn db_path() -> PathBuf {
 /// Default path for the per-instance lock / single-instance marker (reserved).
 #[allow(dead_code)]
 pub fn data_dir() -> PathBuf {
-    db_path().parent().map(|p| p.to_path_buf()).unwrap_or_default()
+    db_path()
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_default()
 }

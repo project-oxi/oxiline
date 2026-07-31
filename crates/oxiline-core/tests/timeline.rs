@@ -2,11 +2,11 @@
 //! Covers the Phase 0 acceptance criteria (08-roadmap.md): weekday-mask
 //! boundaries, effective periods, materialize de-dup, merge behaviour.
 
+use chrono::Datelike;
 use oxiline_core::model::{RoutineBlock, TaskSource};
-use oxiline_core::{categories, routines, tasks, timeline};
 use oxiline_core::settings;
 use oxiline_core::util;
-use chrono::Datelike;
+use oxiline_core::{categories, routines, tasks, timeline};
 use rusqlite::params;
 use tempfile::NamedTempFile;
 
@@ -162,11 +162,24 @@ fn effective_period_bounds_visibility() {
 
     backdate_created(&conn, &b.id, "2026-07-20T00:00:00Z");
     // Before window.
-    assert!(timeline::get_timeline_for_date(&conn, "2026-07-27").unwrap().is_empty());
+    assert!(
+        timeline::get_timeline_for_date(&conn, "2026-07-27")
+            .unwrap()
+            .is_empty()
+    );
     // In window (2026-07-28 Tue).
-    assert_eq!(timeline::get_timeline_for_date(&conn, "2026-07-28").unwrap().len(), 1);
+    assert_eq!(
+        timeline::get_timeline_for_date(&conn, "2026-07-28")
+            .unwrap()
+            .len(),
+        1
+    );
     // After window.
-    assert!(timeline::get_timeline_for_date(&conn, "2026-07-31").unwrap().is_empty());
+    assert!(
+        timeline::get_timeline_for_date(&conn, "2026-07-31")
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]

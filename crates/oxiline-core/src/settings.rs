@@ -1,7 +1,7 @@
 //! Settings key-value store (`03-data-model.md` §3.8). Values are JSON-encoded.
 
 use crate::error::{CoreError, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use serde_json::Value;
 
 pub fn get_raw(conn: &Connection, key: &str) -> Result<Value> {
@@ -26,17 +26,15 @@ pub fn get_all(conn: &Connection) -> Result<serde_json::Map<String, Value>> {
     let mut map = serde_json::Map::new();
     for r in rows {
         let (k, v) = r?;
-        let val: Value =
-            serde_json::from_str(&v).unwrap_or(Value::String(v));
+        let val: Value = serde_json::from_str(&v).unwrap_or(Value::String(v));
         map.insert(k, val);
     }
     Ok(map)
 }
 
 pub fn set(conn: &Connection, key: &str, value: &Value) -> Result<()> {
-    let encoded = serde_json::to_string(value).unwrap_or_else(|_| {
-        serde_json::to_string(&Value::String(value.to_string())).unwrap()
-    });
+    let encoded = serde_json::to_string(value)
+        .unwrap_or_else(|_| serde_json::to_string(&Value::String(value.to_string())).unwrap());
     let now = crate::util::now_iso();
     conn.execute(
         "INSERT INTO settings (key, value, updated_at) VALUES (?1, ?2, ?3)
@@ -60,10 +58,7 @@ pub fn set_from_str(conn: &Connection, key: &str, raw: &str) -> Result<()> {
     } else {
         // Strip surrounding quotes if the caller already quoted it.
         let trimmed = raw.trim();
-        if trimmed.len() >= 2
-            && trimmed.starts_with('"')
-            && trimmed.ends_with('"')
-        {
+        if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
             Value::String(trimmed[1..trimmed.len() - 1].to_string())
         } else {
             Value::String(raw.to_string())
@@ -102,10 +97,7 @@ pub fn ensure_defaults(conn: &Connection) -> Result<()> {
     let known = [
         ("locale", Value::String("system".into())),
         ("theme", Value::String("system".into())),
-        (
-            "global_hotkey",
-            Value::String("CmdOrCtrl+Shift+O".into()),
-        ),
+        ("global_hotkey", Value::String("CmdOrCtrl+Shift+O".into())),
         ("hud_duration_ms", Value::from(2000)),
         ("day_start_hour", Value::from(5)),
         ("day_end_hour", Value::from(26)),
