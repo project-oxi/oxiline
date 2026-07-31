@@ -39,7 +39,7 @@ export function Header() {
       <div className="flex items-center justify-between gap-2 pb-2.5">
         <div className="flex items-center gap-1">
           <button
-            className="rounded p-1 opacity-40 transition hover:bg-sunken hover:opacity-100"
+            className="rounded p-1 opacity-40 transition hover:bg-surface-sunken hover:opacity-100"
             onClick={() => shiftDate(-1)}
             aria-label="prev day"
           >
@@ -47,23 +47,23 @@ export function Header() {
           </button>
           <button
             onClick={goToToday}
-            className="flex items-baseline gap-1.5 rounded px-1 hover:bg-sunken"
+            className="flex items-baseline gap-1.5 rounded px-1 hover:bg-surface-sunken"
             title={t("nav.today")}
           >
-            <span className="text-[18px] font-semibold" style={{ color: "var(--accent-oxide-strong)" }}>
+            <span className="text-[18px] font-semibold text-interactive-primary">
               {yy}
             </span>
-            <span className="text-[21px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+            <span className="text-[21px] font-bold tracking-tight font-display text-text">
               {lang === "ko"
                 ? `${mm}월 ${dd}일`
                 : titleDt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
-            <span className="text-[16px] font-medium" style={{ color: "var(--text-tertiary)" }}>
+            <span className="text-[16px] font-medium text-text-subtle">
               {lang === "ko" ? wdKo : titleDt.toLocaleDateString("en-US", { weekday: "short" })}
             </span>
           </button>
           <button
-            className="rounded p-1 opacity-40 transition hover:bg-sunken hover:opacity-100"
+            className="rounded p-1 opacity-40 transition hover:bg-surface-sunken hover:opacity-100"
             onClick={() => shiftDate(1)}
             aria-label="next day"
           >
@@ -73,7 +73,7 @@ export function Header() {
 
         <div className="flex items-center gap-1">
           <button
-            className="rounded p-1.5 hover:bg-sunken"
+            className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setRoutineManagerOpen(true)}
             aria-label={t("routine.title")}
             title={t("routine.title")}
@@ -81,7 +81,7 @@ export function Header() {
             <Layers size={16} />
           </button>
           <button
-            className="rounded p-1.5 hover:bg-sunken"
+            className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setPaletteOpen(true)}
             aria-label="⌘K"
             title="⌘K"
@@ -89,7 +89,7 @@ export function Header() {
             <Search size={16} />
           </button>
           <button
-            className="rounded p-1.5 hover:bg-sunken"
+            className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setPreferencesOpen(true)}
             aria-label={t("settings.title")}
             title={t("settings.title")}
@@ -124,20 +124,23 @@ export function Header() {
                 setDate(dStr);
                 setView("today");
               }}
-              className="flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition hover:bg-sunken"
+              className="flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition hover:bg-surface-sunken"
             >
               <span
-                className="text-[10px] font-semibold"
-                style={{ color: isToday ? "var(--accent-oxide-strong)" : "var(--text-tertiary)" }}
+                className={`text-[10px] font-semibold ${isToday ? "text-interactive-primary" : "text-text-subtle"}`}
               >
                 {wdLabel}
               </span>
               <span
                 className="flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold transition"
                 style={{
-                  background: isToday ? "var(--accent-oxide)" : "transparent",
-                  color: isToday ? "white" : "var(--text-secondary)",
-                  boxShadow: isToday ? "0 2px 8px color-mix(in oklch, var(--accent-oxide) 35%, transparent)" : undefined,
+                  background: isToday ? "var(--color-interactive-primary)" : "transparent",
+                  color: isToday
+                    ? "var(--color-interactive-primary-foreground)"
+                    : "var(--color-text-muted)",
+                  boxShadow: isToday
+                    ? "0 2px 8px color-mix(in oklch, var(--color-interactive-primary) 35%, transparent)"
+                    : undefined,
                 }}
               >
                 {dayNum}
@@ -153,16 +156,16 @@ export function Header() {
       </div>
 
       {/* Row 3: segmented tabs */}
-      <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: "var(--surface-sunken)" }}>
+      <div className="flex gap-0.5 rounded-lg bg-surface-sunken p-0.5">
         {tabs.map((tb) => (
           <button
             key={tb.key}
             onClick={() => setView(tb.key)}
             className="flex-1 rounded-md px-3 py-1.5 text-[13px] font-semibold transition"
             style={{
-              background: view === tb.key ? "var(--surface-raised)" : "transparent",
-              color: view === tb.key ? "var(--text-primary)" : "var(--text-secondary)",
-              boxShadow: view === tb.key ? "var(--elevation-card)" : undefined,
+              background: view === tb.key ? "var(--color-surface-raised)" : "transparent",
+              color: view === tb.key ? "var(--color-text)" : "var(--color-text-muted)",
+              boxShadow: view === tb.key ? "var(--shadow-sm)" : undefined,
             }}
           >
             {tb.label}

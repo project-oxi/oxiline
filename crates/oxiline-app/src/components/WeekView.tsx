@@ -39,19 +39,19 @@ function MiniDay({
     <button
       onClick={() => onJump(date)}
       className={`flex min-w-0 flex-1 flex-col gap-1 p-2 text-left transition-shadow${
-        isToday ? " bg-sunken" : ""
-      }${isLast ? "" : " border-r border-border-subtle"}`}
+        isToday ? " bg-surface-sunken" : ""
+      }${isLast ? "" : " border-r border-border"}`}
     >
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <span className="font-mono text-[11px] text-text-subtle">
           {weekdayLabel(date, locale)}
         </span>
-        <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+        <span className="text-[11px] text-text-muted">
           {monthDay(date, locale)}
         </span>
       </div>
       {items.length === 0 ? (
-        <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+        <span className="text-[10px] text-text-subtle">
           {t("week.empty")}
         </span>
       ) : (
@@ -64,10 +64,10 @@ function MiniDay({
                 key={it.id}
                 className="truncate rounded-sm px-1 py-[1px] text-[10px]"
                 style={{
-                  background: it.is_done ? "var(--signal-success-subtle)" : col,
-                  color: "var(--text-primary)",
+                  background: it.is_done ? "var(--color-status-success-subtle)" : col,
+                  color: "var(--color-text)",
                   textDecoration: it.is_done ? "line-through" : "none",
-                  borderLeft: `2px solid ${it.is_done ? "var(--signal-success)" : col}`,
+                  borderLeft: `2px solid ${it.is_done ? "var(--color-status-success)" : col}`,
                 }}
                 title={it.title}
               >
@@ -79,13 +79,13 @@ function MiniDay({
             );
           })}
           {items.length > 5 && (
-            <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+            <span className="text-[10px] text-text-subtle">
               +{items.length - 5}
             </span>
           )}
         </div>
       )}
-      <span className="mt-auto font-mono text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+      <span className="mt-auto font-mono text-[10px] text-text-subtle">
         {t("week.workload", { n: total })}
       </span>
     </button>
@@ -108,9 +108,9 @@ export function WeekView() {
   return (
     <div className="flex h-full flex-col">
       <div
-        className="border-b border-border-subtle px-3 py-2 text-[12px]"
-        style={{ color: "var(--text-secondary)" }}
+        className="border-b border-border px-3 py-2 text-[12px] text-text-muted"
       >
+
         {t("week.title")}
       </div>
       <div className="flex flex-1 overflow-hidden">

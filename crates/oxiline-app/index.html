@@ -4,18 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OxiLine</title>
-    <!-- Pretendard Variable: UI/body text (KO/Latin) -->
+    <!-- FOUC prevention: apply .dark before CSS loads (DESIGN.md §8.2).
+         Source of truth is the DB setting; localStorage `oxi-theme` mirrors the
+         resolved mode so reloads don't flash. `system` (or unset) → matchMedia. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("oxi-theme");
+          var d =
+            t === "dark" ||
+            (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", d);
+        } catch (_) {}
+      })();
+    </script>
+    <!-- SUIT Variable: UI/body (Korean-first, Latin matched) — DESIGN.md §4.2 -->
     <link
       rel="stylesheet"
       as="style"
       crossorigin
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+      href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css"
     />
-    <!-- JetBrains Mono Variable: time/numbers -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <!-- SUITE Variable: display/headline (≥20px) — DESIGN.md §4.2 -->
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800&display=swap"
       rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/sun-typeface/SUITE@2/fonts/variable/woff2/SUITE-Variable.css"
+    />
+    <!-- Geist Mono Variable: time/numbers/code — DESIGN.md §4.2 (Fontsource) -->
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/fontsource/fonts/geist-mono:vf@latest/index.css"
     />
   </head>
   <body>

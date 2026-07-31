@@ -58,7 +58,7 @@ export function NowLine({ pxPerMin, dayStartMin, spineX }: Props) {
             right: 0,
             height: 1.5,
             background:
-              "linear-gradient(90deg, var(--accent-oxide-strong), transparent)",
+              "linear-gradient(90deg, var(--color-interactive-primary), transparent)",
           }}
         />
         <div
@@ -70,15 +70,16 @@ export function NowLine({ pxPerMin, dayStartMin, spineX }: Props) {
             width: 10,
             height: 10,
             borderRadius: 999,
-            background: "var(--accent-oxide)",
-            boxShadow: "0 0 0 4px var(--accent-oxide-subtle)",
-            animation: "oxiline-pulse 2s var(--ease-standard) infinite",
+            background: "var(--color-interactive-primary)",
+            boxShadow:
+              "0 0 0 4px color-mix(in oklch, var(--color-interactive-primary) 22%, transparent)",
+            animation: "oxiline-pulse 2s var(--ease-out) infinite",
           }}
         />
         <span
           ref={labelRef}
           className="absolute font-mono text-[10px]"
-          style={{ left: 10, top: -7, color: "var(--accent-oxide-strong)" }}
+          style={{ left: 10, top: -7, color: "var(--color-interactive-primary)" }}
         />
       </div>
       <style>{`@keyframes oxiline-pulse { 0%,100%{opacity:.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }`}</style>

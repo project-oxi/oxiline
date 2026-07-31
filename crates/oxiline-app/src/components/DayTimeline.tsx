@@ -109,7 +109,7 @@ export function DayTimeline() {
     <div className="flex h-full flex-col px-3 pb-3">
       <div
         className="flex flex-1 flex-col overflow-hidden rounded-2xl"
-        style={{ background: "var(--surface-raised)", boxShadow: "var(--elevation-panel)" }}
+        style={{ background: "var(--color-surface-raised)", boxShadow: "var(--shadow-lg)" }}
       >
         {/* oxide handle — day minimap as card grabber */}
         <div className="px-3 pt-2.5 pb-1.5">
@@ -128,7 +128,7 @@ export function DayTimeline() {
             {/* spine line */}
             <div
               className="pointer-events-none absolute"
-              style={{ left: SPINE_X - 1, top: 0, bottom: 0, width: 2, background: "var(--border-subtle)" }}
+              style={{ left: SPINE_X - 1, top: 0, bottom: 0, width: 2, background: "var(--color-border)" }}
             />
 
             {/* quiet time labels — no gridlines */}
@@ -145,7 +145,7 @@ export function DayTimeline() {
                     top,
                     textAlign: "right",
                     paddingRight: 8,
-                    color: "var(--text-tertiary)",
+                    color: "var(--color-text-subtle)",
                     transform: "translateY(-5px)",
                   }}
                 >
@@ -163,15 +163,15 @@ export function DayTimeline() {
               const nodeColor = categoryColor(cat?.color_hue ?? null);
               const isPastUndone = !item.is_done && start + dur <= nowMin();
               const fill = item.is_done
-                ? "var(--signal-success)"
+                ? "var(--color-status-success)"
                 : isPastUndone
-                  ? "var(--surface-raised)"
+                  ? "var(--color-surface-raised)"
                   : nodeColor;
               const ring = item.is_done
-                ? "var(--signal-success)"
+                ? "var(--color-status-success)"
                 : isPastUndone
-                  ? "var(--signal-rust)"
-                  : "var(--surface-raised)";
+                  ? "var(--color-status-error)"
+                  : "var(--color-surface-raised)";
               return (
                 <div
                   key={`node-${item.id}`}
@@ -199,12 +199,12 @@ export function DayTimeline() {
                   style={{
                     top: (hover - dayStartMin) * pxPerMin,
                     height: SLOT * pxPerMin,
-                    background: "color-mix(in oklch, var(--accent-oxide-subtle) 70%, transparent)",
+                    background: "color-mix(in oklch, var(--color-interactive-primary) 14%, transparent)",
                   }}
                 >
                   <span
                     className="ml-1 font-mono text-[11px] font-medium"
-                    style={{ color: "var(--accent-oxide-strong)" }}
+                    style={{ color: "var(--color-interactive-primary)" }}
                   >
                     + {minuteToHHMM(hover)}
                   </span>
@@ -238,16 +238,16 @@ export function DayTimeline() {
                   className="absolute left-0 right-0 z-30 flex items-center gap-2 rounded-lg border px-2 py-1.5"
                   style={{
                     top: (adding.minute - dayStartMin) * pxPerMin,
-                    borderColor: "var(--accent-oxide)",
-                    background: "var(--surface-raised)",
-                    boxShadow: "var(--elevation-panel)",
+                    borderColor: "var(--color-interactive-primary)",
+                    background: "var(--color-surface-raised)",
+                    boxShadow: "var(--shadow-lg)",
                   }}
                 >
                   <span
                     className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium"
                     style={{
-                      background: "var(--accent-oxide-subtle)",
-                      color: "var(--accent-oxide-strong)",
+                      background: "var(--color-interactive-primary-subtle)",
+                      color: "var(--color-interactive-primary)",
                     }}
                   >
                     {minuteToHHMM(adding.minute)}
@@ -300,11 +300,11 @@ export function DayTimeline() {
 
         {/* workload footer */}
         <div
-          className="flex items-center justify-center gap-1.5 border-t border-border-subtle px-3 py-1.5 text-[12px]"
-          style={{ color: tight ? "var(--signal-rust)" : "var(--text-secondary)" }}
+          className="flex items-center justify-center gap-1.5 border-t border-border px-3 py-1.5 text-[12px]"
+          style={{ color: tight ? "var(--color-status-error)" : "var(--color-text-muted)" }}
         >
           <span>{t("timeline.plannedDur", { dur: formatDuration(workloadMin, lang as "ko" | "en") })}</span>
-          <span style={{ color: "var(--text-tertiary)" }}>·</span>
+          <span style={{ color: "var(--color-text-subtle)" }}>·</span>
           <span>{tight ? t("timeline.workloadTight") : t("timeline.workloadEasy")}</span>
         </div>
       </div>
@@ -353,8 +353,8 @@ function DropZone({
         top: 0,
         height: heightPx,
         zIndex: 1,
-        background: isOver ? "var(--accent-oxide-subtle)" : undefined,
-        transition: "background var(--motion-sweep) var(--ease-standard)",
+        background: isOver ? "var(--color-interactive-primary-subtle)" : undefined,
+        transition: "background var(--duration-slow) var(--ease-out)",
       }}
       onMouseMove={(e) => onHover(snap(minuteAt(e)))}
       onMouseLeave={() => onHover(null)}

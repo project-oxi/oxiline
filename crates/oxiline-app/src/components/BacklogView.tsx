@@ -20,7 +20,7 @@ export function BacklogView() {
   if (items.length === 0) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
-        <p className="text-[13px]" style={{ color: "var(--text-tertiary)" }}>
+        <p className="text-[13px] text-text-subtle">
           {t("backlog.empty")}
         </p>
       </div>
@@ -29,7 +29,7 @@ export function BacklogView() {
 
   return (
     <div className="flex-1 overflow-y-auto px-3 py-2">
-      <p className="mb-2 px-1 text-[12px] font-medium" style={{ color: "var(--text-secondary)" }}>
+      <p className="mb-2 px-1 text-[12px] font-medium text-text-muted">
         {t("backlog.title")} ({items.length})
       </p>
       <ul className="space-y-1.5">
@@ -89,7 +89,7 @@ function DraggableBacklogRow({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className="group flex items-center gap-2.5 rounded-lg border border-border-subtle bg-raised px-2.5 py-2 outline-none transition-shadow focus-within:[box-shadow:var(--elevation-card)]"
+      className="group flex items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-2.5 py-2 outline-none transition-shadow focus-within:shadow-sm"
       style={{
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.5 : 1,
@@ -104,14 +104,14 @@ function DraggableBacklogRow({
         className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
         style={{
           background: cat ? dotColor : "transparent",
-          border: cat ? "none" : "2px solid var(--border-default)",
+          border: cat ? "none" : "2px solid var(--color-border-strong)",
         }}
       />
       <span
         className="min-w-0 flex-1 truncate text-[13px]"
         style={{
           textDecoration: item.is_done ? "line-through" : "none",
-          color: item.is_done ? "var(--text-secondary)" : "var(--text-primary)",
+          color: item.is_done ? "var(--color-text-muted)" : "var(--color-text)",
         }}
       >
         {item.title}
@@ -130,7 +130,7 @@ function DraggableBacklogRow({
           });
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="cursor-pointer rounded p-1 text-[var(--accent-oxide)] opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-sunken"
+        className="cursor-pointer rounded p-1 text-interactive-primary opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-surface-sunken"
         title={t("backlog.scheduleToday")}
       >
         <CalendarPlus size={14} />
@@ -143,8 +143,8 @@ function DraggableBacklogRow({
           del.mutate(item.id);
         }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="cursor-pointer rounded p-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-sunken"
-        style={{ color: "var(--text-tertiary)" }}
+        className="cursor-pointer rounded p-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-surface-sunken"
+        style={{ color: "var(--color-text-subtle)" }}
         title={t("common.delete")}
       >
         <Trash2 size={14} />
@@ -152,7 +152,7 @@ function DraggableBacklogRow({
       <GripVertical
         size={14}
         className="shrink-0 opacity-20 group-hover:opacity-40"
-        style={{ color: "var(--text-tertiary)" }}
+        style={{ color: "var(--color-text-subtle)" }}
       />
     </li>
   );

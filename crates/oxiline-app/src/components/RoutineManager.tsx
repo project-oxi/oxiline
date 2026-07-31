@@ -106,42 +106,42 @@ export function RoutineManager() {
       onClose={() => setRoutineManagerOpen(false)}
       variant="drawer-right"
       labelledBy="routine-title"
-      panelClassName="flex w-[640px] max-w-full flex-col overflow-hidden border-l"
+      panelClassName="flex w-[640px] max-w-full flex-col overflow-hidden border-l border-border-strong bg-surface"
       panelStyle={{
-        background: "var(--surface-canvas)",
-        borderColor: "var(--border-default)",
+        background: "var(--color-surface)",
+        borderColor: "var(--color-border-strong)",
       }}
     >
         {/* Header */}
         <div
-          className="flex items-center justify-between border-b px-4 py-3"
-          style={{ borderColor: "var(--border-subtle)" }}
+          className="flex items-center justify-between border-b border-border px-4 py-3"
+          style={{ borderColor: "var(--color-border)" }}
         >
-          <span id="routine-title" className="text-[14px] font-semibold" style={{ color: "var(--text-primary)" }}>
+          <span id="routine-title" className="text-[14px] font-semibold text-text">
             {t("routine.title")}
           </span>
           <button
             aria-label={t("common.close")}
             onClick={() => setRoutineManagerOpen(false)}
-            className="rounded p-1 hover:bg-border-subtle"
+            className="rounded p-1 hover:bg-surface-sunken"
           >
-            <X size={16} style={{ color: "var(--text-secondary)" }} />
+            <X size={16} className="text-text-muted" />
           </button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
           {/* Group sidebar */}
           <div
-            className="flex w-36 shrink-0 flex-col border-r"
-            style={{ borderColor: "var(--border-subtle)" }}
+            className="flex w-36 shrink-0 flex-col border-r border-border"
+            style={{ borderColor: "var(--color-border)" }}
           >
             <div className="flex-1 overflow-y-auto p-2">
               <button
                 onClick={() => setSelectedGroup(null)}
                 className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-[12px]"
                 style={{
-                  background: selectedGroup === null ? "var(--accent-oxide-subtle)" : "transparent",
-                  color: "var(--text-primary)",
+                  background: selectedGroup === null ? "var(--color-interactive-primary-subtle)" : "transparent",
+                  color: "var(--color-text)",
                 }}
                 aria-label={t("routineGroup.noGroup")}
               >
@@ -154,8 +154,8 @@ export function RoutineManager() {
                   onClick={() => setSelectedGroup(g.id)}
                   className="flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-[12px]"
                   style={{
-                    background: selectedGroup === g.id ? "var(--accent-oxide-subtle)" : "transparent",
-                    color: "var(--text-primary)",
+                    background: selectedGroup === g.id ? "var(--color-interactive-primary-subtle)" : "transparent",
+                    color: "var(--color-text)",
                     opacity: g.is_active ? 1 : 0.5,
                   }}
                   aria-label={g.name}
@@ -167,7 +167,7 @@ export function RoutineManager() {
                       e.stopPropagation();
                       setGroupActive.mutate({ id: g.id, active: !g.is_active });
                     }}
-                    className="rounded p-0.5 hover:bg-border-subtle"
+                    className="rounded p-0.5 hover:bg-surface-sunken"
                     aria-label={g.is_active ? t("routine.pause") : t("routine.resume")}
                   >
                     {g.is_active ? <Pause size={10} /> : <Play size={10} />}
@@ -175,14 +175,14 @@ export function RoutineManager() {
                 </button>
               ))}
             </div>
-            <div className="border-t p-2" style={{ borderColor: "var(--border-subtle)" }}>
+            <div className="border-t border-border p-2" style={{ borderColor: "var(--color-border)" }}>
               <div className="flex gap-1">
                 <input
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder={t("routineGroup.addGroup")}
-                  className="min-w-0 flex-1 rounded border bg-transparent px-2 py-1 text-[11px]"
-                  style={{ borderColor: "var(--border-default)" }}
+                  className="min-w-0 flex-1 rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]"
+                  style={{ borderColor: "var(--color-border-strong)" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newGroupName.trim()) {
                       createGroup.mutate({ name: newGroupName.trim(), icon: null });
@@ -198,10 +198,10 @@ export function RoutineManager() {
                       setNewGroupName("");
                     }
                   }}
-                  className="rounded p-1 hover:bg-border-subtle"
+                  className="rounded p-1 hover:bg-surface-sunken"
                   aria-label={t("routineGroup.addGroup")}
                 >
-                  <Plus size={14} style={{ color: "var(--accent-oxide)" }} />
+                  <Plus size={14} className="text-interactive-primary" />
                 </button>
               </div>
             </div>
@@ -214,8 +214,7 @@ export function RoutineManager() {
               {!adding && (
                 <button
                   onClick={() => setAdding(true)}
-                  className="mb-3 flex items-center gap-1.5 rounded px-2 py-1.5 text-[12px]"
-                  style={{ color: "var(--accent-oxide)" }}
+                  className="mb-3 flex items-center gap-1.5 rounded px-2 py-1.5 text-[12px] text-interactive-primary"
                   aria-label={t("routine.add")}
                 >
                   <Plus size={14} />
@@ -250,37 +249,37 @@ export function RoutineManager() {
                 ) : (
                   <div
                     key={r.id}
-                    className="group mb-1 flex items-center gap-2 rounded-md px-2 py-2 hover:bg-sunken"
+                    className="group mb-1 flex items-center gap-2 rounded-md px-2 py-2 hover:bg-surface-sunken"
                     onClick={() => {
                       setEditingId(r.id);
                       setAdding(false);
                     }}
                   >
-                    <GripVertical size={14} className="shrink-0 opacity-0 group-hover:opacity-40" style={{ color: "var(--text-tertiary)" }} />
+                    <GripVertical size={14} className="shrink-0 opacity-0 group-hover:opacity-40 text-text-subtle" />
                     <span
                       className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{
                         background: categoryColor(categoryById(catsQ.data ?? [], r.category_id)?.color_hue ?? null),
                       }}
                     />
-                    <span className="flex-1 truncate text-[13px]" style={{ color: "var(--text-primary)" }}>
+                    <span className="flex-1 truncate text-[13px] text-text">
                       {r.title}
                     </span>
-                    <span className="font-mono text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                    <span className="font-mono text-[11px] text-text-subtle">
                       {minuteToHHMM(r.start_minute)}
                     </span>
-                    <span className="font-mono text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                    <span className="font-mono text-[11px] text-text-subtle">
                       {r.duration_minute}분
                     </span>
-                    <span className="hidden text-[11px] group-hover:inline" style={{ color: "var(--text-tertiary)" }}>
+                    <span className="hidden text-[11px] text-text-subtle group-hover:inline">
                       {daysFromMask(r.weekday_mask)}
                     </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); del.mutate(r.id); }}
-                      className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-border-subtle"
+                      className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-surface-sunken"
                       aria-label={t("routine.delete")}
                     >
-                      <Trash2 size={14} style={{ color: "var(--signal-rust)" }} />
+                      <Trash2 size={14} className="text-status-error" />
                     </button>
                   </div>
                 ),
@@ -307,7 +306,7 @@ function RoutineFormInline({
   t: (k: string) => string;
 }) {
   return (
-    <div className="mb-3 rounded-md border p-3" style={{ borderColor: "var(--accent-oxide)", background: "var(--surface-raised)" }}>
+    <div className="mb-3 rounded-md border p-3" style={{ borderColor: "var(--color-interactive-primary)", background: "var(--color-surface-raised)" }}>
       <input
         autoFocus
         value={title}
@@ -318,24 +317,24 @@ function RoutineFormInline({
         aria-label={t("routine.name")}
       />
       <div className="mb-2 flex gap-2">
-        <label className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <label className="text-[11px] text-text-subtle">
           {t("routine.at")}
-          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--border-default)" }} />
+          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
         </label>
-        <label className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <label className="text-[11px] text-text-subtle">
           {t("routine.duration")}
-          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--border-default)" }} />
+          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
         </label>
       </div>
-      <div className="mb-2 flex gap-1 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+      <div className="mb-2 flex gap-1 text-[11px] text-text-subtle">
         {t("routine.days")}:
         {WEEKDAY_KEYS.map((k, i) => (
           <button key={k}
             onClick={() => toggleDay(i)}
             className="rounded px-1 py-0.5"
             style={{
-              background: (mask >> i) & 1 ? "var(--accent-oxide)" : "var(--surface-subtle)",
-              color: (mask >> i) & 1 ? "var(--text-on-accent)" : "var(--text-secondary)",
+              background: (mask >> i) & 1 ? "var(--color-interactive-primary)" : "var(--color-surface-muted)",
+              color: (mask >> i) & 1 ? "var(--color-interactive-primary-foreground)" : "var(--color-text-muted)",
             }}
           >
             {t(`weekdays.${k}` as keyof typeof t)}
@@ -344,14 +343,14 @@ function RoutineFormInline({
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}
-          className="rounded border bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--border-default)" }}
+          className="rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }}
           aria-label={t("routine.category")}
         >
           <option value="">{t("routine.category")}</option>
           {cats.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
         </select>
-        <button onClick={onSubmit} className="ml-auto rounded px-3 py-1 text-[12px]" style={{ background: "var(--accent-oxide)", color: "var(--text-on-accent)" }}>{t("task.save")}</button>
-        <button onClick={onCancel} className="rounded px-3 py-1 text-[12px]" style={{ color: "var(--text-secondary)" }}>{t("task.cancel")}</button>
+        <button onClick={onSubmit} className="ml-auto rounded bg-interactive-primary px-3 py-1 text-[12px] text-interactive-primary-foreground">{t("task.save")}</button>
+        <button onClick={onCancel} className="rounded px-3 py-1 text-[12px] text-text-muted">{t("task.cancel")}</button>
       </div>
     </div>
   );
@@ -397,7 +396,7 @@ function RoutineEditInline({
   };
 
   return (
-    <div className="mb-1 rounded-md border p-3" style={{ borderColor: "var(--accent-oxide)", background: "var(--surface-raised)" }}>
+    <div className="mb-1 rounded-md border p-3" style={{ borderColor: "var(--color-interactive-primary)", background: "var(--color-surface-raised)" }}>
       <input
         autoFocus
         value={title}
@@ -407,24 +406,24 @@ function RoutineEditInline({
         aria-label={t("routine.name")}
       />
       <div className="mb-2 flex gap-2">
-        <label className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <label className="text-[11px] text-text-subtle">
           {t("routine.at")}
-          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--border-default)" }} />
+          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
         </label>
-        <label className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <label className="text-[11px] text-text-subtle">
           {t("routine.duration")}
-          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--border-default)" }} />
+          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
         </label>
       </div>
-      <div className="mb-2 flex gap-1 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+      <div className="mb-2 flex gap-1 text-[11px] text-text-subtle">
         {t("routine.days")}:
         {WEEKDAY_KEYS.map((k, i) => (
           <button key={k}
             onClick={() => toggleDay(i)}
             className="rounded px-1 py-0.5"
             style={{
-              background: (mask >> i) & 1 ? "var(--accent-oxide)" : "var(--surface-subtle)",
-              color: (mask >> i) & 1 ? "var(--text-on-accent)" : "var(--text-secondary)",
+              background: (mask >> i) & 1 ? "var(--color-interactive-primary)" : "var(--color-surface-muted)",
+              color: (mask >> i) & 1 ? "var(--color-interactive-primary-foreground)" : "var(--color-text-muted)",
             }}
           >
             {t(`weekdays.${k}` as keyof typeof t)}
@@ -433,14 +432,14 @@ function RoutineEditInline({
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}
-          className="rounded border bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--border-default)" }}
+          className="rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }}
           aria-label={t("routine.category")}
         >
           <option value="">{t("routine.category")}</option>
           {cats.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
         </select>
-        <button onClick={save} className="ml-auto rounded px-3 py-1 text-[12px]" style={{ background: "var(--accent-oxide)", color: "var(--text-on-accent)" }}>{t("task.save")}</button>
-        <button onClick={onCancel} className="rounded px-3 py-1 text-[12px]" style={{ color: "var(--text-secondary)" }}>{t("task.cancel")}</button>
+        <button onClick={save} className="ml-auto rounded bg-interactive-primary px-3 py-1 text-[12px] text-interactive-primary-foreground">{t("task.save")}</button>
+        <button onClick={onCancel} className="rounded px-3 py-1 text-[12px] text-text-muted">{t("task.cancel")}</button>
       </div>
     </div>
   );

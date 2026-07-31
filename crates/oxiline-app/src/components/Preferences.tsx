@@ -7,12 +7,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUi } from "../lib/store";
 import { applyTheme, setThemeMode, type ThemeMode } from "../lib/theme";
 import { changeLang, type Lang } from "../lib/i18n";
+import { categoryColor } from "../lib/colors";
 import { Modal } from "./Modal";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-[13px]" style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <span className="text-[13px] text-text-muted">{label}</span>
       {children}
     </div>
   );
@@ -23,7 +24,7 @@ function Select<T extends string>(props: { value: T; options: { v: T; label: str
     <select
       value={props.value}
       onChange={(e) => props.onChange(e.target.value as T)}
-      className="rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]"
+      className="rounded border border-border bg-transparent px-2 py-1 text-[12px]"
     >
       {props.options.map((o) => (
         <option key={o.v} value={o.v}>{o.label}</option>
@@ -92,18 +93,17 @@ export function Preferences() {
       open={open}
       onClose={() => setPreferencesOpen(false)}
       labelledBy="prefs-title"
-      panelClassName="max-h-[80%] w-full max-w-lg overflow-y-auto rounded-lg border border-border-subtle p-5"
-      panelStyle={{ background: "var(--surface-raised)" }}
+      panelClassName="max-h-[80%] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-surface-raised p-5"
     >
         <div className="mb-3 flex items-center justify-between">
           <h2 id="prefs-title" className="text-[16px] font-semibold">{t("settings.title")}</h2>
-          <button className="rounded p-1 hover:bg-sunken" onClick={() => setPreferencesOpen(false)} aria-label={t("common.close")}>
+          <button className="rounded p-1 hover:bg-surface-sunken" onClick={() => setPreferencesOpen(false)} aria-label={t("common.close")}>
             <X size={16} />
           </button>
         </div>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.general")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.general")}</h3>
           <Row label={t("settings.language")}>
             <Select value={((s.locale as string) === "en" ? "en" : "ko")} onChange={changeLanguage} options={[{ v: "ko", label: "한국어" }, { v: "en", label: "English" }]} />
           </Row>
@@ -124,50 +124,50 @@ export function Preferences() {
         </section>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.timeline")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.timeline")}</h3>
           <Row label={t("settings.dayStart")}>
-            <input type="number" defaultValue={(s.day_start_hour as number) ?? 5} className="w-16 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_start_hour", value: e.target.value })} />
+            <input type="number" defaultValue={(s.day_start_hour as number) ?? 5} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_start_hour", value: e.target.value })} />
           </Row>
           <Row label={t("settings.dayEnd")}>
-            <input type="number" defaultValue={(s.day_end_hour as number) ?? 26} className="w-16 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_end_hour", value: e.target.value })} />
+            <input type="number" defaultValue={(s.day_end_hour as number) ?? 26} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_end_hour", value: e.target.value })} />
           </Row>
           <Row label={t("settings.workloadWarning")}>
-            <input type="number" defaultValue={(s.workload_warning_minutes as number) ?? 600} className="w-20 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "workload_warning_minutes", value: e.target.value })} />
+            <input type="number" defaultValue={(s.workload_warning_minutes as number) ?? 600} className="w-20 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "workload_warning_minutes", value: e.target.value })} />
           </Row>
         </section>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.shortcut")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.shortcut")}</h3>
           <Row label={t("settings.globalHotkey")}>
             <input
               defaultValue={(s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O"}
-              className="w-44 rounded border border-border-subtle bg-transparent px-2 py-1 font-mono text-[12px]"
+              className="w-44 rounded border border-border bg-transparent px-2 py-1 font-mono text-[12px]"
               onBlur={(e) => setSetting.mutate({ key: "global_hotkey", value: e.target.value })}
             />
           </Row>
           <Row label={t("settings.hudDuration")}>
-            <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
+            <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
           </Row>
           {/* §7.10 keyboard shortcuts reference table */}
           <table className="mt-3 w-full border-collapse text-[12px]">
             <thead>
-              <tr style={{ color: "var(--text-tertiary)" }}>
+              <tr className="text-text-subtle">
                 <th className="py-1 text-left font-medium">{t("settings.scKey")}</th>
                 <th className="py-1 text-left font-medium">{t("settings.scAction")}</th>
                 <th className="py-1 text-left font-medium">{t("settings.scScope")}</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-t border-border-subtle">
-                <td className="py-1.5 pr-2 font-mono" style={{ color: "var(--accent-oxide-strong)" }}>{formatHotkey((s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O")}</td>
-                <td className="py-1.5 pr-2" style={{ color: "var(--text-secondary)" }}>{t("settings.actHud")}</td>
-                <td className="py-1.5" style={{ color: "var(--text-tertiary)" }}>{t("settings.scopeGlobal")}</td>
+              <tr className="border-t border-border">
+                <td className="py-1.5 pr-2 font-mono text-interactive-primary">{formatHotkey((s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O")}</td>
+                <td className="py-1.5 pr-2 text-text-muted">{t("settings.actHud")}</td>
+                <td className="py-1.5 text-text-subtle">{t("settings.scopeGlobal")}</td>
               </tr>
               {SHORTCUT_ROWS.map((r) => (
-                <tr key={r.key} className="border-t border-border-subtle">
-                  <td className="py-1.5 pr-2 font-mono" style={{ color: "var(--text-secondary)" }}>{r.key}</td>
-                  <td className="py-1.5 pr-2" style={{ color: "var(--text-secondary)" }}>{t(r.actionKey)}</td>
-                  <td className="py-1.5" style={{ color: "var(--text-tertiary)" }}>{t(r.scopeKey)}</td>
+                <tr key={r.key} className="border-t border-border">
+                  <td className="py-1.5 pr-2 font-mono text-text-muted">{r.key}</td>
+                  <td className="py-1.5 pr-2 text-text-muted">{t(r.actionKey)}</td>
+                  <td className="py-1.5 text-text-subtle">{t(r.scopeKey)}</td>
                 </tr>
               ))}
             </tbody>
@@ -175,7 +175,7 @@ export function Preferences() {
         </section>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("notifications.section")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("notifications.section")}</h3>
           <Row label={t("notifications.enable")}>
             <input
               type="checkbox"
@@ -185,7 +185,7 @@ export function Preferences() {
               }
             />
           </Row>
-          <div className="py-1 text-[12px]" style={{ color: "var(--text-tertiary)" }}>{t("notifications.enableHelp")}</div>
+          <div className="py-1 text-[12px] text-text-subtle">{t("notifications.enableHelp")}</div>
           <Row label={t("notifications.leadMinutes")}>
             <input
               type="range"
@@ -201,20 +201,19 @@ export function Preferences() {
           </Row>
           <div className="flex items-center gap-2 py-1">
             {permQ.data ? (
-              <span className="text-[12px]" style={{ color: "var(--signal-verdant)" }}>{t("notifications.granted")}</span>
+              <span className="text-[12px] text-status-success">{t("notifications.granted")}</span>
             ) : (
               <>
-                <span className="text-[12px]" style={{ color: "var(--signal-rust)" }}>{t("notifications.denied")}</span>
+                <span className="text-[12px] text-status-error">{t("notifications.denied")}</span>
                 <button
                   className="rounded px-2 py-1 text-[12px]"
-                  style={{ background: "var(--accent-oxide)", color: "var(--text-on-accent)" }}
+                  style={{ background: "var(--color-interactive-primary)", color: "var(--color-interactive-primary-foreground)" }}
                   onClick={() => requestPerm.mutate()}
                 >
                   {t("notifications.requestPermission")}
                 </button>
                 <button
-                  className="rounded px-2 py-1 text-[12px]"
-                  style={{ background: "var(--surface-subtle)" }}
+                  className="rounded bg-surface-muted px-2 py-1 text-[12px]"
                   onClick={() => api.openNotificationSettings()}
                 >
                   {t("notifications.openSystemSettings")}
@@ -225,14 +224,14 @@ export function Preferences() {
         </section>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.categories")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.categories")}</h3>
           <ul className="mb-2 space-y-1">
             {(catsQ.data ?? []).map((c) => (
               <li key={c.id} className="flex items-center gap-2 py-1">
-                <span className="h-3 w-3 rounded-full" style={{ background: `oklch(0.62 0.09 ${c.color_hue})` }} />
+                <span className="h-3 w-3 rounded-full" style={{ background: categoryColor(c.color_hue) }} />
                 <span className="flex-1 text-[13px]">{c.name}</span>
                 {!c.is_builtin && (
-                  <button className="text-[11px] hover:underline" style={{ color: "var(--signal-rust)" }} onClick={() => delCat.mutate(c.id)}>{t("routine.delete")}</button>
+                  <button className="text-[11px] text-status-error hover:underline" onClick={() => delCat.mutate(c.id)}>{t("routine.delete")}</button>
                 )}
               </li>
             ))}
@@ -240,10 +239,9 @@ export function Preferences() {
           <div className="flex items-center gap-2">
             <input type="color" value={`hsl(${catHue}, 70%, 50%)`} onChange={() => {}} className="h-7 w-7" />
             <input type="range" min={0} max={360} value={catHue} onChange={(e) => setCatHue(Number(e.target.value))} className="flex-1" />
-            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("routine.name")} className="w-28 rounded border border-border-subtle bg-transparent px-2 py-1 text-[12px]" />
+            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("routine.name")} className="w-28 rounded border border-border bg-transparent px-2 py-1 text-[12px]" />
             <button
-              className="rounded px-2 py-1 text-[12px] text-white"
-              style={{ background: "var(--accent-oxide)" }}
+              className="rounded bg-interactive-primary px-2 py-1 text-[12px] text-interactive-primary-foreground"
               onClick={() => { if (catName.trim()) { createCat.mutate({ name: catName.trim(), hue: catHue, icon: null }); setCatName(""); } }}
             >
               {t("common.add")}
@@ -252,16 +250,16 @@ export function Preferences() {
         </section>
 
         <section className="mb-4">
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.data")}</h3>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.data")}</h3>
           <Row label={t("settings.dbPath")}>
-            <code className="max-w-[60%] truncate text-[11px]" style={{ color: "var(--text-tertiary)" }}>{String(s.__dbPath ?? "")}</code>
+            <code className="max-w-[60%] truncate text-[11px] text-text-subtle">{String(s.__dbPath ?? "")}</code>
           </Row>
         </section>
 
         <section>
-          <h3 className="mb-1 text-[12px] font-semibold uppercase" style={{ color: "var(--text-tertiary)" }}>{t("settings.about")}</h3>
-          <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>{t("settings.version")} 0.1.0</p>
-          <p className="mt-1 text-[12px]" style={{ color: "var(--text-tertiary)" }}>{t("settings.livesInMenubar")}</p>
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.about")}</h3>
+          <p className="text-[12px] text-text-muted">{t("settings.version")} 0.1.0</p>
+          <p className="mt-1 text-[12px] text-text-subtle">{t("settings.livesInMenubar")}</p>
         </section>
     </Modal>
   );

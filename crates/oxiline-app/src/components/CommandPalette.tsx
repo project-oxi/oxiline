@@ -113,11 +113,11 @@ export function CommandPalette() {
       onClose={() => setPaletteOpen(false)}
       variant="top"
       ariaLabel={t("palette.title")}
-      panelClassName="w-full max-w-sm overflow-hidden rounded-lg border border-border-subtle"
-      panelStyle={{ background: "var(--surface-raised)", boxShadow: "var(--elevation-panel)" }}
+      panelClassName="w-full max-w-sm overflow-hidden rounded-lg border border-border"
+      panelStyle={{ background: "var(--color-surface-raised)", boxShadow: "var(--shadow-lg)" }}
     >
         <div className="flex items-center gap-2 px-3 py-2.5">
-          <Search size={15} style={{ color: "var(--text-tertiary)" }} />
+          <Search size={15} style={{ color: "var(--color-text-subtle)" }} />
           <input
             ref={inputRef}
             role="combobox"
@@ -134,7 +134,7 @@ export function CommandPalette() {
         </div>
 
         {matches.length > 0 && (
-          <ul id="palette-list" role="listbox" className="border-t border-border-subtle">
+          <ul id="palette-list" role="listbox" className="border-t border-border">
             {matches.map((m, i) => (
               <li
                 key={m.id}
@@ -143,21 +143,21 @@ export function CommandPalette() {
                 aria-selected={i === sel}
                 onMouseEnter={() => setSel(i)}
                 className="flex items-center justify-between px-3 py-2 text-[13px]"
-                style={{ background: i === sel ? "var(--surface-sunken)" : "transparent" }}
+                style={{ background: i === sel ? "var(--color-surface-sunken)" : "transparent" }}
               >
                 <span className="truncate" style={{ textDecoration: m.is_done ? "line-through" : "none", opacity: m.is_done ? 0.6 : 1 }}>
                   {m.title}
                 </span>
-                {i === sel && <CornerDownLeft size={13} style={{ color: "var(--text-tertiary)" }} />}
+                {i === sel && <CornerDownLeft size={13} style={{ color: "var(--color-text-subtle)" }} />}
               </li>
             ))}
           </ul>
         )}
 
-        <div className="flex items-center justify-between border-t border-border-subtle px-3 py-1.5 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+        <div className="flex items-center justify-between border-t border-border px-3 py-1.5 text-[11px]" style={{ color: "var(--color-text-subtle)" }}>
           <span>{t("palette.hint")}</span>
           {willAdd && (
-            <span style={{ color: "var(--accent-oxide-strong)" }}>
+            <span style={{ color: "var(--color-interactive-primary)" }}>
               {parsed.date ? `${parsed.date}${parsed.startMinute != null ? ` ${String(Math.floor(parsed.startMinute / 60)).padStart(2, "0")}:${String(parsed.startMinute % 60).padStart(2, "0")}` : ""}` : t("palette.addToList")}
             </span>
           )}

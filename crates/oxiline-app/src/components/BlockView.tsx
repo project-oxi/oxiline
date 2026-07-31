@@ -27,7 +27,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
 
   const widthPct = 100 / columns;
   const leftPct = left * widthPct;
-  const accent = item.is_done ? "var(--signal-success)" : color;
+  const accent = item.is_done ? "var(--color-status-success)" : color;
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `block:${item.id}`,
@@ -40,8 +40,8 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     left: `calc(${leftPct}% + ${leftPct > 0 ? 4 : 0}px)`,
     width: `calc(${widthPct}% - 4px)`,
     background: item.is_done
-      ? "color-mix(in oklch, var(--signal-success) 6%, var(--surface-raised))"
-      : `color-mix(in oklch, ${accent} 8%, var(--surface-raised))`,
+      ? "color-mix(in oklch, var(--color-status-success) 6%, var(--color-surface-raised))"
+      : `color-mix(in oklch, ${accent} 8%, var(--color-surface-raised))`,
     opacity: isDragging
       ? 0.5
       : item.is_virtual && !item.is_done
@@ -53,8 +53,8 @@ export function BlockView({ item, categories, left, columns, top, height, past }
     zIndex: isDragging ? 999 : 2,
     transition: isDragging
       ? undefined
-      : `transform var(--motion-base) var(--ease-standard),
-          box-shadow var(--motion-base) var(--ease-standard)`,
+      : `transform var(--duration-base) var(--ease-out),
+          box-shadow var(--duration-base) var(--ease-out)`,
     cursor: "grab",
   };
   // The dnd container is the single focusable unit (§7.10: Enter toggles
@@ -82,8 +82,8 @@ export function BlockView({ item, categories, left, columns, top, height, past }
       style={style}
       className={`absolute overflow-hidden rounded-lg ${
         isDragging
-          ? "shadow-[var(--elevation-panel)]"
-          : "shadow-[var(--elevation-card)] hover:shadow-[var(--elevation-panel)]"
+          ? "shadow-lg"
+          : "shadow-sm hover:shadow-lg"
       }`}
       title={item.title}
       {...attributes}
@@ -102,8 +102,8 @@ export function BlockView({ item, categories, left, columns, top, height, past }
           <span
             className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
             style={{
-              borderColor: item.is_done ? "var(--signal-success)" : accent,
-              background: item.is_done ? "var(--signal-success)" : "transparent",
+              borderColor: item.is_done ? "var(--color-status-success)" : accent,
+              background: item.is_done ? "var(--color-status-success)" : "transparent",
             }}
           >
             {item.is_done && <Check size={11} color="white" />}
@@ -112,7 +112,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
             className="truncate text-[13px] font-medium"
             style={{
               textDecoration: item.is_done ? "line-through" : "none",
-              color: item.is_done ? "var(--text-secondary)" : "var(--text-primary)",
+              color: item.is_done ? "var(--color-text-muted)" : "var(--color-text)",
             }}
           >
             {item.title}
@@ -121,7 +121,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
         {height > 44 && (
           <span
             className="mt-0.5 font-mono text-[11px] leading-tight"
-            style={{ color: "var(--text-tertiary)" }}
+            style={{ color: "var(--color-text-subtle)" }}
           >
             {rangeLabel(item.start_minute, item.duration_minute)}
           </span>
@@ -129,7 +129,7 @@ export function BlockView({ item, categories, left, columns, top, height, past }
         {height > 64 && item.duration_minute != null && (
           <span
             className="mt-0.5 font-mono text-[11px]"
-            style={{ color: "var(--text-tertiary)" }}
+            style={{ color: "var(--color-text-subtle)" }}
           >
             {t("common.minutes", { n: item.duration_minute })}
           </span>

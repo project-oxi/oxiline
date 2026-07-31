@@ -21,7 +21,7 @@ async function boot() {
   const theme = (settings.theme as string | undefined) ?? "system";
   await initI18n(locale);
   applyTheme(theme as "light" | "dark" | "system");
-  sessionStorage.setItem("oxiline-theme", theme as string);
+  localStorage.setItem("oxi-theme", theme as string);
   watchSystemTheme();
 
   // Onboarding gate (only under Tauri).

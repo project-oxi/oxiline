@@ -1,33 +1,38 @@
 import type { Category } from "../types";
 
-// Category color: fixed L/C with variable hue (06-design-system.md §6.2).
-// Light: L=0.62 C=0.09 / Dark: L=0.74 C=0.11; "other" is achromatic (C=0).
-const LIGHT = "0.62 0.09";
-const DARK = "0.74 0.11";
+// Oxi label palette (DESIGN.md §3.2): six canonical hues share L≈0.70–0.75,
+// C≈0.12–0.15 so any label has equal visual weight. Categories use an arbitrary
+// hue with the canonical L/C; dark mode raises L only (+0.05, never C/H).
+// A hue of null/NaN/<0 is the achromatic sentinel (C=0) — used by builtin "other".
+const LIGHT = "0.72 0.14";
+const DARK = "0.77 0.13";
 const LIGHT_ACHROME = "0.62 0";
-const DARK_ACHROME = "0.74 0";
+const DARK_ACHROME = "0.72 0";
 
-function isDark(): boolean {
-  return document.documentElement.getAttribute("data-theme") === "dark";
-}
+/** The six canonical label hues (DESIGN.md §3.2), available to the picker. */
+export const CATEGORY_HUES = {
+  red: 25,
+  amber: 75,
+  green: 145,
+  teal: 195,
+  blue: 250,
+  purple: 310,
+} as const;
 
 /** Foreground/category fill color for a hue. */
 export function categoryColor(hue: number | null): string {
-  const dark = isDark();
-  if (hue === null || Number.isNaN(hue)) {
+  const dark = document.documentElement.classList.contains("dark");
+  if (hue == null || Number.isNaN(hue) || hue < 0)
     return `oklch(${dark ? DARK_ACHROME : LIGHT_ACHROME} 0)`;
-  }
   return `oklch(${dark ? DARK : LIGHT} ${hue})`;
 }
 
 /** Low-saturation variant for small spaces (oxide bar / HUD). */
 export function categoryColorMuted(hue: number | null): string {
-  const dark = isDark();
-  if (hue === null || Number.isNaN(hue)) {
+  const dark = document.documentElement.classList.contains("dark");
+  if (hue == null || Number.isNaN(hue) || hue < 0)
     return `oklch(${dark ? DARK_ACHROME : LIGHT_ACHROME} 0)`;
-  }
-  const lc = dark ? "0.74 0.088" : "0.62 0.072";
-  return `oklch(${lc} ${hue})`;
+  return `oklch(${dark ? "0.77 0.10" : "0.72 0.11"} ${hue})`;
 }
 
 export function categoryById(

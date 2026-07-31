@@ -73,7 +73,7 @@ export default function App() {
   const view = useUi((s) => s.view);
 
   return (
-    <div className="flex h-screen flex-col" style={{ background: "var(--surface-canvas)" }}>
+    <div className="flex h-screen flex-col bg-surface">
       <Header />
       <DndProvider>
         <div className="flex flex-1 flex-col overflow-hidden">

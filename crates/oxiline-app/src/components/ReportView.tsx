@@ -22,19 +22,19 @@ export function ReportView() {
   };
   if (isLoading || !report) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "var(--text-tertiary)" }}>
+      <div className="flex flex-1 items-center justify-center text-sm text-text-subtle">
         {t("report.loading")}
       </div>
     );
   }
   const tot = report.totals;
   return (
-    <div className="flex-1 overflow-auto p-4" style={{ color: "var(--text-primary)" }}>
+    <div className="flex-1 overflow-auto p-4 text-text">
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-medium">
           {fmt(report.week_start)} – {fmt(report.week_end)}
         </h2>
-        <span className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+        <span className="text-sm text-text-subtle">
           {t("report.thisWeek")}
         </span>
       </div>
@@ -42,7 +42,7 @@ export function ReportView() {
       {/* overall rate bar — fill density only, oxide accent, no verdict hue */}
       <div className="mt-3">
         <RateBar rate={report.completion_rate} />
-        <div className="mt-1 text-sm" style={{ color: "var(--text-tertiary)" }}>
+        <div className="mt-1 text-sm text-text-subtle">
           {t("report.rate")} {pct(report.completion_rate)}
           <span className="ml-3">
             {t("report.prevWeek")} {pct(report.prev_completion_rate)}
@@ -52,10 +52,10 @@ export function ReportView() {
 
       {/* three neutral buckets — no green/red */}
       <div className="mt-3 flex gap-5 text-sm">
-        <Bucket n={tot.done} label={t("report.done")} color="var(--text-primary)" />
-        <Bucket n={tot.skipped} label={t("report.skipped")} color="var(--text-secondary)" />
-        <Bucket n={tot.not_recorded} label={t("report.notRecorded")} color="var(--text-tertiary)" />
-        <Bucket n={tot.upcoming} label={t("report.upcoming")} color="var(--text-tertiary)" />
+        <Bucket n={tot.done} label={t("report.done")} color="var(--color-text)" />
+        <Bucket n={tot.skipped} label={t("report.skipped")} color="var(--color-text-muted)" />
+        <Bucket n={tot.not_recorded} label={t("report.notRecorded")} color="var(--color-text-subtle)" />
+        <Bucket n={tot.upcoming} label={t("report.upcoming")} color="var(--color-text-subtle)" />
       </div>
 
       <Section title={t("report.categories")}>
@@ -80,7 +80,7 @@ export function ReportView() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-5">
-      <h3 className="mb-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+        <h3 className="mb-1 text-sm text-text-muted">
         {title}
       </h3>
       {children}
@@ -89,7 +89,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="text-sm" style={{ color: "var(--text-tertiary)" }}>{text}</div>;
+  return <div className="text-sm text-text-subtle">{text}</div>;
 }
 
 function RateBar({ rate }: { rate: number | null }) {
@@ -97,11 +97,11 @@ function RateBar({ rate }: { rate: number | null }) {
   return (
     <div
       className="overflow-hidden rounded-full"
-      style={{ height: 8, background: "var(--surface-sunken)" }}
+      style={{ height: 8, background: "var(--color-surface-sunken)" }}
     >
       <div
         className="h-full transition-all"
-        style={{ width: `${w}%`, background: "var(--accent-oxide)" }}
+        style={{ width: `${w}%`, background: "var(--color-interactive-primary)" }}
       />
     </div>
   );
@@ -111,7 +111,7 @@ function Bucket({ n, label, color }: { n: number; label: string; color: string }
   return (
     <span style={{ color }}>
       <span className="tabular-nums">{n}</span>{" "}
-      <span style={{ color: "var(--text-tertiary)" }}>{label}</span>
+      <span style={{ color: "var(--color-text-subtle)" }}>{label}</span>
     </span>
   );
 }
@@ -123,15 +123,15 @@ function CatRow({ c }: { c: CategoryBreakdown }) {
     <div className="py-1">
       <div className="flex justify-between text-sm">
         <span>{c.category_name || "—"}</span>
-        <span className="tabular-nums" style={{ color: "var(--text-tertiary)" }}>
+        <span className="tabular-nums text-text-subtle">
           {c.done}/{denom} · {pct(c.completion_rate)}
         </span>
       </div>
       <div
         className="mt-0.5 overflow-hidden rounded-full"
-        style={{ height: 6, background: "var(--surface-sunken)" }}
+        style={{ height: 6, background: "var(--color-surface-sunken)" }}
       >
-        <div className="h-full" style={{ width: `${w}%`, background: "var(--accent-oxide)" }} />
+        <div className="h-full" style={{ width: `${w}%`, background: "var(--color-interactive-primary)" }} />
       </div>
     </div>
   );
@@ -141,7 +141,7 @@ function StreakRow({ s, unit }: { s: RoutineStreak; unit: string }) {
   return (
     <div className="flex justify-between py-0.5 text-sm">
       <span>{s.title}</span>
-      <span className="tabular-nums" style={{ color: "var(--text-tertiary)" }}>
+      <span className="tabular-nums text-text-subtle">
         {s.current}
         {unit}
       </span>

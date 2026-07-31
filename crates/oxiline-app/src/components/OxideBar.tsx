@@ -35,7 +35,7 @@ export function OxideBar({ items, categories, dayStartMin, totalMin, onClickMinu
   return (
     <div
       className="relative w-full overflow-hidden rounded-full"
-      style={{ height: compact ? 6 : 8, background: "var(--surface-sunken)" }}
+      style={{ height: compact ? 6 : 8, background: "var(--color-surface-sunken)" }}
       onClick={(e) => {
         if (!onClickMinute) return;
         const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -63,8 +63,9 @@ export function OxideBar({ items, categories, dayStartMin, totalMin, onClickMinu
           width: compact ? 6 : 8,
           height: compact ? 6 : 8,
           borderRadius: 999,
-          background: "var(--accent-oxide)",
-          boxShadow: "0 0 0 3px var(--accent-oxide-subtle)",
+          background: "var(--color-interactive-primary)",
+          boxShadow:
+            "0 0 0 3px color-mix(in oklch, var(--color-interactive-primary) 22%, transparent)",
         }}
       />
     </div>
