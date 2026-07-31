@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { useTimeline, useCategories, useCreateTask, useSettings } from "../hooks";
@@ -8,6 +8,7 @@ import { BlockView } from "./BlockView";
 import { NowLine } from "./NowLine";
 import { OxideBar } from "./OxideBar";
 import { formatDuration, minuteToHHMM, categoryById, categoryColor } from "../lib/colors";
+import { clampDuration, snapMinute } from "../lib/timeline-math";
 import type { TimelineItem } from "../types";
 
 interface Lane {
@@ -77,7 +78,8 @@ export function DayTimeline() {
   const catsQ = useCategories();
   const tlQ = useTimeline(date);
   const create = useCreateTask();
-  const [adding, setAdding] = useState<{ minute: number } | null>(null);
+  const [adding, setAdding] = useState<{ minute: number; durationMinute: number } | null>(null);
+  const [creating, setCreating] = useState<{ startMin: number; curMin: number } | null>(null);
   const [draft, setDraft] = useState("");
   const [hover, setHover] = useState<number | null>(null);
 
@@ -119,7 +121,7 @@ export function DayTimeline() {
             dayStartMin={dayStartMin}
             totalMin={totalMin}
             compact
-            onClickMinute={(m) => setAdding({ minute: snap(m) })}
+            onClickMinute={(m) => setAdding({ minute: snap(m), durationMinute: 30 })}
           />
         </div>
 
@@ -234,6 +236,27 @@ export function DayTimeline() {
                 );
               })}
 
+              {/* drag-to-create rubber band */}
+              {creating && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 z-[5] rounded-md border"
+                  style={{
+                    top: (Math.min(creating.startMin, creating.curMin) - dayStartMin) * pxPerMin,
+                    height: Math.abs(creating.curMin - creating.startMin) * pxPerMin,
+                    background:
+                      "color-mix(in oklch, var(--color-interactive-primary) 14%, transparent)",
+                    borderColor: "var(--color-interactive-primary)",
+                  }}
+                >
+                  <span
+                    className="ml-1 font-mono text-[11px] font-medium"
+                    style={{ color: "var(--color-interactive-primary)" }}
+                  >
+                    {minuteToHHMM(Math.min(creating.startMin, creating.curMin))}–{minuteToHHMM(Math.max(creating.startMin, creating.curMin))}
+                  </span>
+                </div>
+              )}
+
               {/* quick-add composer */}
               {adding && (
                 <div
@@ -252,7 +275,7 @@ export function DayTimeline() {
                       color: "var(--color-interactive-primary)",
                     }}
                   >
-                    {minuteToHHMM(adding.minute)}
+                    {minuteToHHMM(adding.minute)} · {formatDuration(adding.durationMinute, lang as "ko" | "en")}
                   </span>
                   <input
                     autoFocus
@@ -266,8 +289,8 @@ export function DayTimeline() {
                           date,
                           title: draft.trim(),
                           categoryId: null,
+                          durationMinute: adding.durationMinute,
                           startMinute: adding.minute,
-                          durationMinute: 30,
                           notes: null,
                         });
                         setAdding(null);
@@ -291,8 +314,10 @@ export function DayTimeline() {
                 pxPerMin={pxPerMin}
                 date={date}
                 heightPx={heightPx}
-                onAdd={(minute) => setAdding({ minute })}
+                dayEndMin={dayEnd * 60}
+                onCompose={(minute, durationMinute) => setAdding({ minute, durationMinute })}
                 onHover={setHover}
+                onPreviewChange={setCreating}
               />
             </div>
 
@@ -318,7 +343,6 @@ function nowMin(): number {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
 }
-
 /** Droppable area over the timeline for drag-and-drop + click-to-add. Sits below
  *  the blocks (z-1) so existing blocks still receive their own clicks. */
 function DropZone({
@@ -326,26 +350,73 @@ function DropZone({
   pxPerMin,
   date,
   heightPx,
-  onAdd,
+  dayEndMin,
+  onCompose,
   onHover,
+  onPreviewChange,
 }: {
   dayStartMin: number;
   pxPerMin: number;
   date: string;
   heightPx: number;
-  onAdd: (minute: number) => void;
+  dayEndMin: number;
+  onCompose: (minute: number, durationMinute: number) => void;
   onHover: (minute: number | null) => void;
+  onPreviewChange: (c: { startMin: number; curMin: number } | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: "timeline-slot",
     data: { kind: "timeline-slot", date, pxPerMin, dayStartMin },
   });
+  const creatingRef = useRef<{ startMin: number; startClientY: number; curMin: number } | null>(null);
+  const didDragRef = useRef(false);
 
-  const minuteAt = (e: React.MouseEvent): number => {
+  function minuteAt(e: { clientY: number; currentTarget: EventTarget | null }): number {
     const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const y = e.clientY - rect.top;
     return Math.max(0, Math.min(1439, Math.round(y / pxPerMin + dayStartMin)));
-  };
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    const m = snapMinute(minuteAt(e), 15);
+    creatingRef.current = { startMin: m, startClientY: e.clientY, curMin: m };
+    didDragRef.current = false;
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    if (!creatingRef.current) {
+      onHover(snap(minuteAt(e)));
+      return;
+    }
+    if (!didDragRef.current && Math.abs(e.clientY - creatingRef.current.startClientY) > 8) {
+      didDragRef.current = true;
+    }
+    if (didDragRef.current) {
+      const m = snapMinute(minuteAt(e), 15);
+      creatingRef.current.curMin = m;
+      onPreviewChange({ startMin: creatingRef.current.startMin, curMin: m });
+    }
+  }
+  function onPointerUp() {
+    const c = creatingRef.current;
+    creatingRef.current = null;
+    if (c && didDragRef.current) {
+      const start = Math.min(c.startMin, c.curMin);
+      const end = Math.max(c.startMin, c.curMin);
+      const dur = clampDuration(start, Math.max(15, end - start), dayEndMin, 15);
+      onPreviewChange(null);
+      onCompose(start, dur);
+    }
+    // pure click (didDragRef=false) → onClick handles it
+  }
+  function onClick(e: React.MouseEvent) {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      onPreviewChange(null);
+      return;
+    }
+    onHover(null);
+    onCompose(snapMinute(minuteAt(e), 15), 30);
+  }
 
   return (
     <div
@@ -355,15 +426,16 @@ function DropZone({
         top: 0,
         height: heightPx,
         zIndex: 1,
+        touchAction: "none",
         background: isOver ? "var(--color-interactive-primary-subtle)" : undefined,
         transition: "background var(--duration-slow) var(--ease-out)",
       }}
-      onMouseMove={(e) => onHover(snap(minuteAt(e)))}
-      onMouseLeave={() => onHover(null)}
-      onClick={(e) => {
-        onHover(null);
-        onAdd(snap(minuteAt(e)));
-      }}
+      onMouseMove={(e) => { if (!creatingRef.current) onHover(snap(minuteAt(e))); }}
+      onMouseLeave={() => { if (!creatingRef.current) onHover(null); }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onClick={onClick}
     />
   );
 }
