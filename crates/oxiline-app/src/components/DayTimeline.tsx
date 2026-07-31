@@ -381,6 +381,7 @@ function DropZone({
     const m = snapMinute(minuteAt(e), 15);
     creatingRef.current = { startMin: m, startClientY: e.clientY, curMin: m };
     didDragRef.current = false;
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
     if (!creatingRef.current) {
@@ -396,17 +397,31 @@ function DropZone({
       onPreviewChange({ startMin: creatingRef.current.startMin, curMin: m });
     }
   }
-  function onPointerUp() {
+  function onPointerUp(e: React.PointerEvent) {
     const c = creatingRef.current;
+    const target = e.currentTarget as Element;
+    if (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
     creatingRef.current = null;
     if (c && didDragRef.current) {
       const start = Math.min(c.startMin, c.curMin);
       const end = Math.max(c.startMin, c.curMin);
       const dur = clampDuration(start, Math.max(15, end - start), dayEndMin, 15);
       onPreviewChange(null);
+      // Leave didDragRef set: the synthetic click fires AFTER pointerup and
+      // the onClick guard below consumes + clears it (noDouble-fire).
       onCompose(start, dur);
+      return;
     }
+    didDragRef.current = false;
+    onPreviewChange(null);
     // pure click (didDragRef=false) → onClick handles it
+  }
+  function onPointerCancel(e: React.PointerEvent) {
+    const target = e.currentTarget as Element;
+    if (target.hasPointerCapture(e.pointerId)) target.releasePointerCapture(e.pointerId);
+    creatingRef.current = null;
+    didDragRef.current = false;
+    onPreviewChange(null);
   }
   function onClick(e: React.MouseEvent) {
     if (didDragRef.current) {
@@ -414,6 +429,7 @@ function DropZone({
       onPreviewChange(null);
       return;
     }
+    onPreviewChange(null);
     onHover(null);
     onCompose(snapMinute(minuteAt(e), 15), 30);
   }
@@ -435,6 +451,7 @@ function DropZone({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onClick={onClick}
     />
   );
