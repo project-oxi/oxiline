@@ -61,11 +61,8 @@ function num(v: unknown, d: number): number {
   return typeof v === "number" ? v : d;
 }
 
-/** Snap a minute to the nearest SLOT boundary so quick-add lands on a clean slot. */
+/** 15-min hover-slot height band; minute-snapping uses timeline-math.snapMinute. */
 const SLOT = 15;
-function snap(m: number): number {
-  return Math.max(0, Math.min(1440 - SLOT, Math.round(m / SLOT) * SLOT));
-}
 
 const GUTTER_PX = 44;
 const SPINE_X = 54;
@@ -138,7 +135,7 @@ export function DayTimeline() {
             dayStartMin={dayStartMin}
             totalMin={totalMin}
             compact
-            onClickMinute={(m) => setAdding({ minute: snap(m), durationMinute: 30 })}
+            onClickMinute={(m) => setAdding({ minute: snapMinute(m, 15), durationMinute: 30 })}
           />
         </div>
 
@@ -456,7 +453,7 @@ function DropZone({
   }
   function onPointerMove(e: React.PointerEvent) {
     if (!creatingRef.current) {
-      onHover(snap(minuteAt(e)));
+      onHover(snapMinute(minuteAt(e), 15));
       return;
     }
     if (!didDragRef.current && Math.abs(e.clientY - creatingRef.current.startClientY) > 8) {
@@ -517,7 +514,7 @@ function DropZone({
         background: isOver ? "var(--color-interactive-primary-subtle)" : undefined,
         transition: "background var(--duration-slow) var(--ease-out)",
       }}
-      onMouseMove={(e) => { if (!creatingRef.current) onHover(snap(minuteAt(e))); }}
+      onMouseMove={(e) => { if (!creatingRef.current) onHover(snapMinute(minuteAt(e), 15)); }}
       onMouseLeave={() => { if (!creatingRef.current) onHover(null); }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
