@@ -1,5 +1,17 @@
 # 06. Design System — OKLCH 토큰, 타이포그래피, 시그니처 비주얼
 
+> **⚠️ 부분 폐기(PARTIALLY SUPERSEDED) — 2026-07-31.** 이 문서의 색상·폰트·토큰 규격(§6.2 컬러,
+> §6.3 타이포그래피, §6.4 형태)은 Oxi 생태계 통합 디자인 시스템
+> [DESIGN.md](../../~/.omp/agent/managed-skills/oxi-design-system/DESIGN.md) (v1.0)으로 이전되었다.
+> OxiLine은 이제 정식 oxi 패밀리의 일원으로, 다음을 채택한다:
+> - **3-티어 토큰 아키텍처** (primitive → semantic `--color-*` → component) — `crates/oxiline-app/src/styles.css`
+> - **폰트**: SUIT(본문) + SUITE(헤드라인) + Geist Mono(숫자) — Pretendard/JetBrains Mono 교체
+> - **다크 모드**: `.dark` 클래스 단일 트리거, `oxi-theme` localStorage + FOUC — `[data-theme=dark]` 폐기
+> - **6-색상 라벨 팔레트**(Red/Amber/Green/Teal/Blue/Purple) — 브랜드 단일 색(verdigris) 제거.
+>   단, 본 문서의 **시그니처 비주얼**(§6.5 지금 선 Now Line, §6.6 산화 바 Oxide Bar, §6.7 모션)은
+>   제품 기능으로 그대로 유지되며, 색상만 verdigris → `--color-interactive-primary`(파랑)로 재지정되었다.
+> 구 구현체(verdigris/rust) 값은 아래 역사적 참고용으로만 남겨둔다.
+
 ## 6.1 디자인 방향 선언
 
 OxiLine은 "예쁜 캘린더 앱"들이 이미 점유한 자리 — 크림색 배경 + 파스텔 톤(Amie류) — 를 반복하지 않는다.
