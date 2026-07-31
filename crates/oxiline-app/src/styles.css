@@ -196,7 +196,7 @@
   --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.50), 0 4px 8px oklch(0% 0 0 / 0.40);
 
   /* Timeline tokens — dark parity (UI-redesign) */
-  --color-block-bg:     oklch(24% 0.016 265);
+  --color-block-bg:     oklch(28% 0.016 265);
   --color-block-border: oklch(33% 0.015 265);
   --tl-tick-color:      oklch(100% 0 0 / 0.05);
 }
