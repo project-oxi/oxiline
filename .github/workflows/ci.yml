@@ -12,9 +12,8 @@ env:
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
-  # Cross-platform gate: runs everywhere. Validates the Rust core + CLI which
-  # are pure-Rust and have no platform-specific deps. Tauri app is excluded
-  # here so this job is green on linux runners.
+  # Cross-platform gate: pure-Rust core + CLI, no platform-specific deps.
+  # Tauri app is excluded so this job is green on linux runners.
   # ─────────────────────────────────────────────────────────────────────────────
   rust-core:
     name: Rust core + CLI
@@ -22,10 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (1.85, edition 2024)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain (1.85 + rustfmt + clippy)
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.85
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -39,8 +39,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy (deny warnings)
-        run: |
-          cargo clippy -p oxiline-core -p oxiline-cli --all-targets --locked -- -D warnings
+        run: cargo clippy -p oxiline-core -p oxiline-cli --all-targets --locked -- -D warnings
 
       - name: Build
         run: cargo build -p oxiline-core -p oxiline-cli --locked
@@ -49,8 +48,8 @@ jobs:
         run: cargo test -p oxiline-core -p oxiline-cli --locked
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # macOS-only gate: builds the Tauri v2 app (uses macOS-only git deps
-  # `tauri-nspanel` branch and `macos-private-api` feature).
+  # macOS-only gate: Tauri v2 app (uses macos-only git deps and
+  # macos-private-api feature).
   # ─────────────────────────────────────────────────────────────────────────────
   app-macos:
     name: Tauri app (macOS)
@@ -58,10 +57,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (1.85, edition 2024)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain (1.85 + clippy)
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.85
+          components: clippy
 
       - name: Install bun
         uses: oven-sh/setup-bun@v2

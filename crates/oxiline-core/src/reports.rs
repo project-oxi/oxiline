@@ -36,13 +36,7 @@ fn bucket_of(is_done: bool, is_skipped: bool) -> Bucket {
 
 /// Is an occurrence on `date` (relative to `today`/`now_minute`) due?
 /// Untimed items on today are due (available all day); future days are not.
-fn is_due(
-    date: &str,
-    today: &str,
-    start: Option<u16>,
-    dur: Option<u16>,
-    now_minute: u16,
-) -> bool {
+fn is_due(date: &str, today: &str, start: Option<u16>, dur: Option<u16>, now_minute: u16) -> bool {
     if date < today {
         return true; // past → all due
     }
@@ -142,7 +136,7 @@ fn sum_categories(by_cat: &CatMap) -> (u32, u32, u32) {
     let mut done = 0;
     let mut skipped = 0;
     let mut not_recorded = 0;
-    for (_, (d, s, n)) in by_cat {
+    for (d, s, n) in by_cat.values() {
         done += d;
         skipped += s;
         not_recorded += n;
@@ -322,7 +316,8 @@ use crate::model::RoutineStreak;
 
 pub fn routine_streak(conn: &Connection, block_id: &str, today: &str) -> Result<RoutineStreak> {
     let block = routines::get(conn, block_id)?;
-    let today_d = util::parse_date(today).unwrap_or_else(|_| util::parse_date("1970-01-01").unwrap());
+    let today_d =
+        util::parse_date(today).unwrap_or_else(|_| util::parse_date("1970-01-01").unwrap());
     let bound = util::parse_date(&routines::bound_date(&block)).unwrap_or(today_d);
 
     // Materialized states for this block in [bound, today]: date -> (done, skipped).

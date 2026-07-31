@@ -29,10 +29,7 @@ fn task_to_item(t: &Task) -> TimelineItem {
 /// virtual occurrences for active routines that apply on `date` and haven't
 /// been materialized yet. Skipped occurrences are hidden (`03-data-model.md`
 /// §3.7: skip == delete-this-occurrence).
-pub fn get_timeline_for_date(
-    conn: &Connection,
-    date: &str,
-) -> Result<Vec<TimelineItem>> {
+pub fn get_timeline_for_date(conn: &Connection, date: &str) -> Result<Vec<TimelineItem>> {
     let day_tasks = tasks::list_by_date(conn, date)?;
     let mut items: Vec<TimelineItem> = Vec::with_capacity(day_tasks.len() + 8);
     let mut materialized: HashSet<String> = HashSet::new();
@@ -75,13 +72,11 @@ pub fn get_timeline_for_date(
     }
 
     // Sort: timed items by start time, untimed (no start) last.
-    items.sort_by(|a, b| {
-        match (a.start_minute, b.start_minute) {
-            (Some(x), Some(y)) => x.cmp(&y),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
-        }
+    items.sort_by(|a, b| match (a.start_minute, b.start_minute) {
+        (Some(x), Some(y)) => x.cmp(&y),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
     });
     Ok(items)
 }
@@ -105,7 +100,7 @@ pub fn get_now_context(conn: &Connection, now_minute: u16) -> Result<NowContext>
     let next = items
         .iter()
         .filter(|i| !i.is_skipped)
-        .filter(|i| i.start_minute.map_or(false, |s| s > now_minute))
+        .filter(|i| i.start_minute.is_some_and(|s| s > now_minute))
         .min_by_key(|i| i.start_minute.unwrap_or(u16::MAX));
 
     let to_now = |it: &TimelineItem| NowItem {

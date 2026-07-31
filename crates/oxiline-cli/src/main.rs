@@ -8,14 +8,12 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
-use oxiline_core::{
-    categories, reports, routine_groups, routines, settings, tasks, timeline,
-};
-use oxiline_core::{util, CoreError, Result};
-use serde_json::{json, Value};
+use oxiline_core::{CoreError, Result, util};
+use oxiline_core::{categories, reports, routine_groups, routines, settings, tasks, timeline};
+use serde_json::{Value, json};
 
 use cli::{Cli, Command, GroupAction, RoutineAction, TaskAction};
-use lang::{Lang, L};
+use lang::{L, Lang};
 
 fn main() -> ExitCode {
     let opts = Cli::parse();
@@ -146,8 +144,7 @@ fn run(opts: Cli) -> Result<()> {
                     }
                 } else {
                     let d = resolve_date_arg(date.as_deref().unwrap_or("today"))?;
-                    let items: Vec<TimelineItem> =
-                        timeline::get_timeline_for_date(&conn, &d)?;
+                    let items: Vec<TimelineItem> = timeline::get_timeline_for_date(&conn, &d)?;
                     if json {
                         say(output::json_pretty(&items));
                     } else {
@@ -194,7 +191,10 @@ fn run(opts: Cli) -> Result<()> {
                         "--backlog and --date are mutually exclusive".into(),
                     ));
                 }
-                let cat_id = category.as_deref().map(|c| resolve_category_opt(&conn, Some(c))).transpose()?;
+                let cat_id = category
+                    .as_deref()
+                    .map(|c| resolve_category_opt(&conn, Some(c)))
+                    .transpose()?;
                 let real = tasks::materialize_if_virtual(&conn, id)?;
                 let upd = tasks::TaskUpdate {
                     title: title.clone(),
@@ -206,10 +206,7 @@ fn run(opts: Cli) -> Result<()> {
                             None => None,
                         }
                     },
-                    start_minute: match parse_at(at.as_deref())? {
-                        Some(v) => Some(Some(v)),
-                        None => None,
-                    },
+                    start_minute: parse_at(at.as_deref())?.map(Some),
                     duration_minute: duration.map(Some),
                     category_id: cat_id,
                     notes: notes.clone().map(Some),
@@ -307,7 +304,10 @@ fn run(opts: Cli) -> Result<()> {
                     Some(d) => Some(routines::parse_days_spec(d)?),
                     None => None,
                 };
-                let cat_id = category.as_deref().map(|c| resolve_category_opt(&conn, Some(c))).transpose()?;
+                let cat_id = category
+                    .as_deref()
+                    .map(|c| resolve_category_opt(&conn, Some(c)))
+                    .transpose()?;
                 let upd = routines::RoutineUpdate {
                     title: title.clone(),
                     start_minute: parse_at(at.as_deref())?,
@@ -425,10 +425,10 @@ fn run(opts: Cli) -> Result<()> {
         Command::Export { range } => {
             let (from, to) = parse_range(range)?;
             let mut days: Vec<Value> = Vec::new();
-            let mut cur = util::parse_date(&from)
-                .map_err(|e| CoreError::InvalidArgument(e.to_string()))?;
-            let end = util::parse_date(&to)
-                .map_err(|e| CoreError::InvalidArgument(e.to_string()))?;
+            let mut cur =
+                util::parse_date(&from).map_err(|e| CoreError::InvalidArgument(e.to_string()))?;
+            let end =
+                util::parse_date(&to).map_err(|e| CoreError::InvalidArgument(e.to_string()))?;
             while cur <= end {
                 let d = util::fmt_date(cur);
                 let items = timeline::get_timeline_for_date(&conn, &d)?;
@@ -439,11 +439,15 @@ fn run(opts: Cli) -> Result<()> {
             say(serde_json::to_string_pretty(&Value::Array(days)).unwrap_or_default());
         }
 
-        Command::Report { week: _, last, range } => {
+        Command::Report {
+            week: _,
+            last,
+            range,
+        } => {
             let today = util::today_local();
             let now = util::now_minute_local();
             if let Some(r) = range {
-                let (from, to) = parse_range(&r)?;
+                let (from, to) = parse_range(r.as_str())?;
                 let rep = reports::range_report(&conn, &from, &to, &today, now)?;
                 if json {
                     say(output::json_pretty(&rep));
@@ -503,7 +507,8 @@ fn run(opts: Cli) -> Result<()> {
                         {"check": "schema", "ok": true, "detail": format!("v{}", ver)},
                         {"check": "wal", "ok": true, "detail": "WAL"},
                     ]
-                }).to_string());
+                })
+                .to_string());
             } else {
                 say(format!(
                     "✔ {}: {}\n✔ {}: {} ({}).\n✔ {}.\n✔ {}: {}",
@@ -528,7 +533,11 @@ fn resource_out<T: serde::Serialize>(json: bool, label: &str, t: &T) -> String {
     if json {
         serde_json::to_string(t).unwrap_or_else(|_| "null".into())
     } else {
-        format!("{}\n{}", label, serde_json::to_string_pretty(t).unwrap_or_default())
+        format!(
+            "{}\n{}",
+            label,
+            serde_json::to_string_pretty(t).unwrap_or_default()
+        )
     }
 }
 
@@ -536,7 +545,10 @@ fn preview(json: bool, label: &str, v: &Value) -> String {
     if json {
         v.to_string()
     } else {
-        format!("{label}\n{}", serde_json::to_string_pretty(v).unwrap_or_default())
+        format!(
+            "{label}\n{}",
+            serde_json::to_string_pretty(v).unwrap_or_default()
+        )
     }
 }
 
@@ -604,19 +616,21 @@ fn resolve_routine_target(conn: &rusqlite::Connection, id_or_name: &str) -> Resu
     match matches.len() {
         1 => Ok(matches[0].id.clone()),
         0 => Err(CoreError::NotFound(format!("routine '{id_or_name}'"))),
-        _ => Err(CoreError::InvalidArgument(format!("ambiguous routine '{id_or_name}'"))),
+        _ => Err(CoreError::InvalidArgument(format!(
+            "ambiguous routine '{id_or_name}'"
+        ))),
     }
 }
 
-fn handle_group(
-    action: &GroupAction,
-    conn: &rusqlite::Connection,
-    opts: &Cli,
-) -> Result<()> {
+fn handle_group(action: &GroupAction, conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
     let json = opts.json;
     let lang = resolve_lang(conn, opts);
     let l = L(lang);
-    let say = |s: String| if !opts.quiet { println!("{s}") };
+    let say = |s: String| {
+        if !opts.quiet {
+            println!("{s}")
+        }
+    };
     match action {
         GroupAction::List => {
             let groups = routine_groups::list(conn)?;
@@ -627,18 +641,30 @@ fn handle_group(
             say(resource_out(json, "group", &g));
         }
         GroupAction::Add { name, icon } => {
-            let g = routine_groups::create(conn, routine_groups::NewRoutineGroup {
-                name: name.clone(),
-                icon: icon.clone(),
-            })?;
+            let g = routine_groups::create(
+                conn,
+                routine_groups::NewRoutineGroup {
+                    name: name.clone(),
+                    icon: icon.clone(),
+                },
+            )?;
             say(resource_out(json, "created", &g));
         }
-        GroupAction::Edit { id, name, icon, sort_order } => {
-            let g = routine_groups::update(conn, id, routine_groups::RoutineGroupUpdate {
-                name: name.clone(),
-                icon: icon.clone(),
-                sort_order: *sort_order,
-            })?;
+        GroupAction::Edit {
+            id,
+            name,
+            icon,
+            sort_order,
+        } => {
+            let g = routine_groups::update(
+                conn,
+                id,
+                routine_groups::RoutineGroupUpdate {
+                    name: name.clone(),
+                    icon: icon.clone(),
+                    sort_order: *sort_order,
+                },
+            )?;
             say(resource_out(json, "updated", &g));
         }
         GroupAction::Rm { id } => {
