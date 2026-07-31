@@ -137,7 +137,7 @@ export function Header() {
                 style={{
                   background: isToday ? "var(--accent-oxide)" : "transparent",
                   color: isToday ? "white" : "var(--text-secondary)",
-                  boxShadow: isToday ? "0 2px 8px oklch(0.62 0.1 189 / 0.35)" : undefined,
+                  boxShadow: isToday ? "0 2px 8px color-mix(in oklch, var(--accent-oxide) 35%, transparent)" : undefined,
                 }}
               >
                 {dayNum}
