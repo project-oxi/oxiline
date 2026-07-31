@@ -11,9 +11,10 @@ use rusqlite_migration::{M, Migrations};
 /// The initial migration, embedded at compile time.
 const V1_INIT: &str = include_str!("../migrations/V1__init.sql");
 const V2_PHASE2: &str = include_str!("../migrations/V2__phase2.sql");
+const V3_OXI_PALETTE: &str = include_str!("../migrations/V3__oxi_palette.sql");
 
 fn migrations() -> Migrations<'static> {
-    Migrations::new(vec![M::up(V1_INIT), M::up(V2_PHASE2)])
+    Migrations::new(vec![M::up(V1_INIT), M::up(V2_PHASE2), M::up(V3_OXI_PALETTE)])
 }
 
 /// Apply PRAGMAs required for concurrent GUI+CLI access
