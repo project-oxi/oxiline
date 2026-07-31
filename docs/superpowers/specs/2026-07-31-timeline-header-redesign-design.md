@@ -41,16 +41,19 @@ aesthetic inspired by a node-and-spine calendar reference (see mockup v2). Two s
 - The bottom `border-b` on the tab row (line 108) — separation now comes from the gap +
   card elevation below.
 
-**Row 1 — date title + icons (replaces current date+chevron / icon cluster):**
-- Left: large localized date title. Format:
+**Row 1 — date title + chevrons + icons (replaces current date+chevron / icon cluster):**
+- Left: ±1-day chevrons flanking a large localized date title. Format:
   - ko: `YYYY` (oxide-strong, 18px) + `M월 D일` (primary, 21px, 700) + `요일` (tertiary, 16px, 500)
   - en: `YYYY` (oxide-strong) + `Mon, Feb 1` (primary)
   - Clicking the title calls `goToToday()`.
+- **Chevrons kept but promoted to always-visible** (was hover-reveal). `ChevronLeft`/`ChevronRight`
+  at `opacity-40` by default, `opacity-100` on hover, calling `shiftDate(-1)` / `shiftDate(1)`.
+  Rationale: a fixed ISO week strip (Mon–Sun) only renders 7 days — clicking within it never
+  crosses a week boundary, so a visible ±1-day mouse control is required for cross-week
+  navigation. Stepping ±1 from an edge day recomputes the strip to the adjacent week
+  automatically. Keyboard `ArrowLeft`/`ArrowRight` (App.tsx:50-53) and `t` (today) still work
+  but are not discoverable, so the visible chevrons are the primary mouse affordance.
 - Right: icon cluster unchanged (Layers/Search/Settings). Keep `rounded p-1.5 hover:bg-sunken`.
-- **Chevrons removed** from row 1. Day navigation moves to the week strip (click a day) +
-  the existing keyboard shortcuts / command palette. *(If the user wants ±1-day stepping
-  without leaving the week, the strip's edge days cover ±3; beyond that uses ⌘K or week
-  boundary crossing via clicking into the next/prev week's first/last visible day.)*
 
 **Row 2 — week strip (new):**
 - Compute the ISO week (Monday–Sunday) containing `date`:
@@ -77,7 +80,8 @@ aesthetic inspired by a node-and-spine calendar reference (see mockup v2). Two s
 - Inactive: `text-secondary`, transparent bg, hover → `text-primary`.
 
 **Imports change:** add `useTimelineRange`, `shift`, `todayStr`, `categoryById`,
-`categoryColor`. Remove `OxideBar` import.
+`categoryColor`. Keep `ChevronLeft`/`ChevronRight` (lucide-react) for ±1-day nav.
+Remove `OxideBar`, `useTimeline`, `useSettings` imports and the `num`/`localeDateLabel` helpers.
 
 ### 3.2 DayTimeline.tsx — hybrid spine timeline
 
@@ -227,6 +231,5 @@ None required. Weekday labels use `Date.toLocaleDateString(locale, { weekday: "s
   visually they stack with a slightly larger outline). Acceptable.
 - **Very short blocks** (< 22px tall): node (14px) may exceed block height. Node is
   positioned at start-time Y (top of block), so it sits at the block's top edge regardless
-  of height — no overflow.
-- **OxideBar in card handle** adds ~14px to card top. Net header height drops by more
-  (removed OxideBar row + chevrons), so timeline gains vertical room overall.
+- **OxideBar in card handle** adds ~14px to card top. Net header height drops (removed
+  OxideBar row), so timeline gains vertical room overall.
