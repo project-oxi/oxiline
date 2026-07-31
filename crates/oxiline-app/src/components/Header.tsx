@@ -1,38 +1,25 @@
 import { ChevronLeft, ChevronRight, Search, Settings as SettingsIcon, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useTimeline, useCategories, useSettings } from "../hooks";
-import { useUi } from "../lib/store";
-import { OxideBar } from "./OxideBar";
-
-function num(v: unknown, d: number): number {
-  return typeof v === "number" ? v : d;
-}
-
-function localeDateLabel(dateStr: string, lang: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  const wd = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][dt.getDay()];
-  const wdKo = ["일", "월", "화", "수", "목", "금", "토"][dt.getDay()];
-  if (lang === "ko") {
-    return `${y}년 ${m}월 ${d}일 (${wdKo})`;
-  }
-  const wdEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()];
-  void wd;
-  return `${wdEn}, ${dt.toLocaleDateString("en-US", { month: "short" })} ${d}`;
-}
+import { useTimelineRange, useCategories } from "../hooks";
+import { useUi, todayStr, shift } from "../lib/store";
+import { categoryById, categoryColor } from "../lib/colors";
 
 export function Header() {
   const { t, i18n } = useTranslation();
-  const { date, view, setView, shiftDate, goToToday, setPaletteOpen, setPreferencesOpen, setRoutineManagerOpen } =
+  const { date, view, setView, setDate, shiftDate, goToToday, setPaletteOpen, setPreferencesOpen, setRoutineManagerOpen } =
     useUi();
   const catsQ = useCategories();
-  const tlQ = useTimeline(date);
-  const settingsQ = useSettings();
+  const lang = i18n.language?.startsWith("en") ? "en" : "ko";
 
-  const dayStart = num(settingsQ.data?.day_start_hour, 5);
-  const dayEnd = num(settingsQ.data?.day_end_hour, 26);
-  const dayStartMin = dayStart * 60;
-  const totalMin = (dayEnd - dayStart) * 60;
+  // Week (Mon–Sun) containing the selected date
+  const dow = new Date(date + "T12:00:00").getDay();
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const monday = shift(date, mondayOffset);
+  const sunday = shift(monday, 6);
+  const weekQ = useTimelineRange(monday, sunday);
+  const weekCols = weekQ.data ?? [];
+  const categories = catsQ.data ?? [];
+  const today = todayStr();
 
   const tabs: { key: typeof view; label: string }[] = [
     { key: "today", label: t("nav.today") },
@@ -41,26 +28,42 @@ export function Header() {
     { key: "report", label: t("nav.report") },
   ];
 
+  // Date title parts
+  const [yy, mm, dd] = date.split("-").map(Number);
+  const titleDt = new Date(yy, mm - 1, dd);
+  const wdKo = ["일", "월", "화", "수", "목", "금", "토"][titleDt.getDay()];
+
   return (
-    <div data-tauri-drag-region className="shrink-0 px-3 pt-9">
-      <div className="flex items-center justify-between gap-2">
-        <div className="group flex items-center gap-1">
+    <div data-tauri-drag-region className="shrink-0 px-4 pt-9 pb-2">
+      {/* Row 1: chevrons + big date title + icons */}
+      <div className="flex items-center justify-between gap-2 pb-2.5">
+        <div className="flex items-center gap-1">
           <button
-            className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-sunken"
+            className="rounded p-1 opacity-40 transition hover:bg-sunken hover:opacity-100"
             onClick={() => shiftDate(-1)}
             aria-label="prev day"
           >
             <ChevronLeft size={16} />
           </button>
           <button
-            className="rounded px-1 text-[15px] font-semibold hover:bg-sunken"
             onClick={goToToday}
+            className="flex items-baseline gap-1.5 rounded px-1 hover:bg-sunken"
             title={t("nav.today")}
           >
-            {localeDateLabel(date, i18n.language)}
+            <span className="text-[18px] font-semibold" style={{ color: "var(--accent-oxide-strong)" }}>
+              {yy}
+            </span>
+            <span className="text-[21px] font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>
+              {lang === "ko"
+                ? `${mm}월 ${dd}일`
+                : titleDt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            </span>
+            <span className="text-[16px] font-medium" style={{ color: "var(--text-tertiary)" }}>
+              {lang === "ko" ? wdKo : titleDt.toLocaleDateString("en-US", { weekday: "short" })}
+            </span>
           </button>
           <button
-            className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-sunken"
+            className="rounded p-1 opacity-40 transition hover:bg-sunken hover:opacity-100"
             onClick={() => shiftDate(1)}
             aria-label="next day"
           >
@@ -96,24 +99,70 @@ export function Header() {
         </div>
       </div>
 
-      <div className="mt-1.5 mb-1.5 px-1">
-        <OxideBar
-          items={tlQ.data ?? []}
-          categories={catsQ.data ?? []}
-          dayStartMin={dayStartMin}
-          totalMin={totalMin}
-        />
+      {/* Row 2: week strip */}
+      <div className="flex gap-1 pb-2.5">
+        {weekCols.map(({ date: dStr, items }) => {
+          const [cy, cm, cdd] = dStr.split("-").map(Number);
+          const cdt = new Date(cy, cm - 1, cdd);
+          const dayNum = cdt.getDate();
+          const wdLabel =
+            lang === "ko"
+              ? ["일", "월", "화", "수", "목", "금", "토"][cdt.getDay()]
+              : cdt.toLocaleDateString("en-US", { weekday: "narrow" });
+          const isToday = dStr === today;
+          const hues = [
+            ...new Set(
+              items
+                .filter((i) => !i.is_skipped)
+                .map((i) => categoryById(categories, i.category_id)?.color_hue ?? null),
+            ),
+          ].slice(0, 5);
+          return (
+            <button
+              key={dStr}
+              onClick={() => {
+                setDate(dStr);
+                setView("today");
+              }}
+              className="flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition hover:bg-sunken"
+            >
+              <span
+                className="text-[10px] font-semibold"
+                style={{ color: isToday ? "var(--accent-oxide-strong)" : "var(--text-tertiary)" }}
+              >
+                {wdLabel}
+              </span>
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold transition"
+                style={{
+                  background: isToday ? "var(--accent-oxide)" : "transparent",
+                  color: isToday ? "white" : "var(--text-secondary)",
+                  boxShadow: isToday ? "0 2px 8px oklch(0.62 0.1 189 / 0.35)" : undefined,
+                }}
+              >
+                {dayNum}
+              </span>
+              <span className="flex h-1.5 items-center gap-0.5">
+                {hues.map((h, i) => (
+                  <span key={i} className="h-1 w-1 rounded-full" style={{ background: categoryColor(h) }} />
+                ))}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border-subtle pb-1">
+      {/* Row 3: segmented tabs */}
+      <div className="flex gap-0.5 rounded-lg p-0.5" style={{ background: "var(--surface-sunken)" }}>
         {tabs.map((tb) => (
           <button
             key={tb.key}
             onClick={() => setView(tb.key)}
-            className="rounded-md px-3 py-1 text-[13px] font-medium transition"
+            className="flex-1 rounded-md px-3 py-1.5 text-[13px] font-semibold transition"
             style={{
-              background: view === tb.key ? "var(--surface-sunken)" : "transparent",
+              background: view === tb.key ? "var(--surface-raised)" : "transparent",
               color: view === tb.key ? "var(--text-primary)" : "var(--text-secondary)",
+              boxShadow: view === tb.key ? "var(--elevation-card)" : undefined,
             }}
           >
             {tb.label}
