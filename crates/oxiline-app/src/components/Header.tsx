@@ -34,7 +34,7 @@ export function Header() {
   const wdKo = ["일", "월", "화", "수", "목", "금", "토"][titleDt.getDay()];
 
   return (
-    <div className="shrink-0 select-none px-4 pb-2">
+    <div className="shrink-0 select-none px-4 pb-2 pt-2">
       {/* Titlebar strip — overlaps native traffic lights (Overlay style).
           The strip is the window drag region; interactive buttons are drag-free islands. */}
       <div data-tauri-drag-region className="flex items-center justify-between gap-2 py-1.5 pl-[56px]">

@@ -78,8 +78,16 @@ export function NowLine({ pxPerMin, dayStartMin, spineX }: Props) {
         />
         <span
           ref={labelRef}
-          className="absolute font-mono text-[10px]"
-          style={{ left: 10, top: -7, color: "var(--color-interactive-primary)" }}
+          className="absolute font-mono text-[10px] font-medium"
+          style={{
+            left: 10,
+            top: -9,
+            padding: "1px 5px",
+            borderRadius: "var(--radius-xs)",
+            background: "var(--color-surface-raised)",
+            boxShadow: "var(--shadow-xs)",
+            color: "var(--color-interactive-primary)",
+          }}
         />
       </div>
       <style>{`@keyframes oxiline-pulse { 0%,100%{opacity:.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }`}</style>

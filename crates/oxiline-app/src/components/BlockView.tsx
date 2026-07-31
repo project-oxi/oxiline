@@ -90,8 +90,8 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
     left: `calc(${leftPct}% + ${leftPct > 0 ? 4 : 0}px)`,
     width: `calc(${widthPct}% - 4px)`,
     background: item.is_done
-      ? "color-mix(in oklch, var(--color-status-success) 6%, var(--color-surface-raised))"
-      : `color-mix(in oklch, ${accent} 8%, var(--color-surface-raised))`,
+      ? "color-mix(in oklch, var(--color-status-success) 8%, var(--color-block-bg))"
+      : "var(--color-block-bg)",
     opacity: isDragging
       ? 0.5
       : item.is_virtual && !item.is_done
@@ -99,8 +99,11 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
         : past && !item.is_done
           ? 0.55
           : 1,
-    transform: CSS.Translate.toString(transform),
+    transform: isDragging
+      ? `${CSS.Translate.toString(transform)} scale(1.02)`
+      : CSS.Translate.toString(transform),
     zIndex: isDragging ? 999 : 2,
+    boxShadow: isDragging ? "var(--shadow-block-drag)" : undefined,
     transition: isDragging
       ? undefined
       : `transform var(--duration-base) var(--ease-out),
@@ -137,11 +140,7 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
     <div
       ref={setNodeRef}
       style={style}
-      className={`absolute overflow-hidden rounded-lg ${
-        isDragging
-          ? "shadow-lg"
-          : "shadow-sm hover:shadow-lg"
-      }`}
+      className="absolute overflow-hidden rounded-lg border border-[var(--color-block-border)] hover:border-[var(--color-border-strong)] shadow-[var(--shadow-block-rest)] hover:shadow-[var(--shadow-block-hover)]"
       title={item.title}
       {...attributes}
       {...listeners}
@@ -149,6 +148,11 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
       aria-describedby={undefined}
       onKeyDown={onKeyDown}
     >
+      <div
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0"
+        style={{ width: "var(--tl-rail-width)", background: accent }}
+      />
       <div
         role="presentation"
         tabIndex={-1}

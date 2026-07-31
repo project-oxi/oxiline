@@ -125,7 +125,7 @@ export function DayTimeline() {
     <div className="flex h-full flex-col px-3 pb-3">
       <div
         className="flex flex-1 flex-col overflow-hidden rounded-2xl"
-        style={{ background: "var(--color-surface-raised)", boxShadow: "var(--shadow-lg)" }}
+        style={{ background: "var(--color-surface-raised)", boxShadow: "var(--shadow-card)" }}
       >
         {/* oxide handle — day minimap as card grabber */}
         <div className="px-3 pt-2.5 pb-1.5">
@@ -144,7 +144,7 @@ export function DayTimeline() {
             {/* spine line */}
             <div
               className="pointer-events-none absolute"
-              style={{ left: SPINE_X - 1, top: 0, bottom: 0, width: 2, background: "var(--color-border)" }}
+              style={{ left: SPINE_X - 0.5, top: 0, bottom: 0, width: "var(--tl-spine-width)", background: "var(--color-border)" }}
             />
 
             {/* quiet time labels — no gridlines */}
@@ -167,6 +167,18 @@ export function DayTimeline() {
                 >
                   {label}
                 </span>
+              );
+            })}
+
+            {/* subtle hour tick notches — rhythm without gridlines (spec §3.3) */}
+            {hours.map((h) => {
+              const top = (h * 60 - dayStartMin) * pxPerMin;
+              return (
+                <div
+                  key={`tick-${h}`}
+                  className="pointer-events-none absolute"
+                  style={{ left: SPINE_X - 6, top, width: 6, height: 1, background: "var(--tl-tick-color)" }}
+                />
               );
             })}
 
