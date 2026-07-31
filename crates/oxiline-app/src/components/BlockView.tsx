@@ -7,7 +7,7 @@ import type { Category, TimelineItem } from "../types";
 import { categoryById, categoryColor, rangeLabel } from "../lib/colors";
 import { useSetTaskDone, useDeleteTask, useSetTaskSkipped, useUpdateTask } from "../hooks";
 import { api } from "../lib/api";
-import { snapMinute, clampDuration } from "../lib/timeline-math";
+import { clampDuration } from "../lib/timeline-math";
 import { announce } from "../lib/a11y";
 interface Props {
   item: TimelineItem;
@@ -45,15 +45,25 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
     if (!drag.current) return;
     const deltaMin = (e.clientY - drag.current.startY) / pxPerMin;
     const start = item.start_minute!;
-    const rawEnd = start + drag.current.startDur + deltaMin;
-    const dur = clampDuration(start, snapMinute(rawEnd, 15) - start, dayEndMin, 15);
+    const newDur = drag.current.startDur + deltaMin;
+    const dur = clampDuration(start, Math.round(newDur / 15) * 15, dayEndMin, 15);
     setPreviewDur(dur);
+  }
+  function onPointerCancel(e: React.PointerEvent) {
+    if (!drag.current) return;
+    (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    drag.current = null;
+    setPreviewDur(null);
   }
   function onResizeUp(e: React.PointerEvent) {
     if (!drag.current) return;
     (e.currentTarget as Element).releasePointerCapture(e.pointerId);
-    const dur = previewDur ?? drag.current.startDur;
     drag.current = null;
+    if (previewDur == null) {
+      setPreviewDur(null);
+      return;
+    }
+    const dur = previewDur;
     setPreviewDur(null);
     commitDuration(dur);
   }
@@ -188,6 +198,7 @@ export function BlockView({ item, categories, left, columns, top, height, past, 
         onPointerDown={onResizeDown}
         onPointerMove={onResizeMove}
         onPointerUp={onResizeUp}
+        onPointerCancel={onPointerCancel}
         className="absolute bottom-0 left-0 right-0 flex h-2 cursor-ns-resize items-end justify-center pb-0.5 opacity-40 hover:opacity-100"
         style={{ touchAction: "none" }}
       >
