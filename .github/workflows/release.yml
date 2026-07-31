@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  cli:
+    name: Build CLI binaries
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.85
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --bin oxiline --target ${{ matrix.target }} --locked
+
+      - name: Package
+        run: |
+          mkdir -p out
+          cp target/${{ matrix.target }}/release/oxiline out/oxiline-${{ matrix.target }}
+          (cd out && tar -czf oxiline-${{ matrix.target }}.tar.gz oxiline-${{ matrix.target }})
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxiline-${{ matrix.target }}
+          path: out/oxiline-${{ matrix.target }}.tar.gz
+
+  release:
+    name: GitHub Release
+    needs: cli
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/**/oxiline-*.tar.gz

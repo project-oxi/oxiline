@@ -12,7 +12,7 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Oxi"]
 license = "MIT"
-repository = ""
+repository = "https://github.com/project-oxi/oxiline"
 
 [workspace.dependencies]
 oxiline-core = { path = "crates/oxiline-core" }

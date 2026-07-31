@@ -1,0 +1,5 @@
+# Default owners for everything in this repo.
+*       @a7garden
+
+# Doc changes only need the design/code reviewers — anyone can review docs without CODEOWNERS assignment.
+# (Adding more specific paths below as the team grows.)
