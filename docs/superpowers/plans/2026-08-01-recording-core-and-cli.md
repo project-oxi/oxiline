@@ -324,7 +324,11 @@ fn start_switches_single_active() {
 fn resolve_links_record_to_plan() {
     let (_f, c) = db();
     let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
-    let p = oxiline_core::plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, oxiline_core::model::PlanInput{
+        date: None, start_minute: 9*60, duration_minute: 90,
+        weekday_mask: 0b0000001, title: None,
+        activity_ids: vec![a.id.clone()],
+    }).unwrap();
     let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();   // Monday 09:10, inside plan window
     oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
     let rec = oxiline_core::record::current(&c, now, "2026-08-03").unwrap().active.unwrap().record;
@@ -336,7 +340,10 @@ fn resolve_links_record_to_plan() {
 #[test]
 fn delete_activity_refuses_with_history() {
     let (_f, c) = db();
-    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: None, target_minutes_weekly: None, is_active: None, sort_order: None,
+    }).unwrap();
     oxiline_core::record::start(&c, &a.id, chrono::Utc::now(), "2026-08-03").unwrap();
     assert!(oxiline_core::activities::delete_activity(&c, &a.id, false).is_err());   // conflict
     oxiline_core::activities::delete_activity(&c, &a.id, true).unwrap();              // force: records + activity gone
@@ -386,8 +393,15 @@ use chrono::{TimeZone, Utc};
 #[test]
 fn slot_marked_resolved_after_record() {
     let (_f, c) = db();   // helper at top of tests/plan.rs (Task 1 harness)
-    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
-    let p = oxiline_core::plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: None, target_minutes_weekly: None, is_active: None, sort_order: None,
+    }).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, oxiline_core::model::PlanInput{
+        date: None, start_minute: 9*60, duration_minute: 90,
+        weekday_mask: 0b0000001, title: None,
+        activity_ids: vec![a.id.clone()],
+    }).unwrap();
     let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();
     oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
     let slots = oxiline_core::plan::slots_for_date(&c, "2026-08-03").unwrap();
