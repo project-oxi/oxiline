@@ -7,6 +7,7 @@ interface UiState {
   view: View;
   paletteOpen: boolean;
   preferencesOpen: boolean;
+  switcherOpen: boolean;
   routineManagerOpen: boolean;
   onboardingOpen: boolean;
   paletteDate: string | null;
@@ -14,6 +15,7 @@ interface UiState {
   setView: (v: View) => void;
   setPaletteOpen: (b: boolean) => void;
   setPreferencesOpen: (b: boolean) => void;
+  setSwitcherOpen: (b: boolean) => void;
   setRoutineManagerOpen: (b: boolean) => void;
   setOnboardingOpen: (b: boolean) => void;
   setPaletteDate: (d: string | null) => void;
@@ -42,6 +44,7 @@ export const useUi = create<UiState>((set) => ({
   view: "today",
   paletteOpen: false,
   preferencesOpen: false,
+  switcherOpen: false,
   routineManagerOpen: false,
   onboardingOpen: false,
   paletteDate: null,
@@ -49,6 +52,7 @@ export const useUi = create<UiState>((set) => ({
   setView: (v) => set({ view: v }),
   setPaletteOpen: (b) => set({ paletteOpen: b }),
   setPreferencesOpen: (b) => set({ preferencesOpen: b }),
+  setSwitcherOpen: (b) => set({ switcherOpen: b }),
   setRoutineManagerOpen: (b) => set({ routineManagerOpen: b }),
   setOnboardingOpen: (b) => set({ onboardingOpen: b }),
   setPaletteDate: (d) => set({ paletteDate: d }),

@@ -10,6 +10,7 @@ import { Preferences } from "./components/Preferences";
 import { Onboarding } from "./components/Onboarding";
 import { Sidebar } from "./components/Sidebar";
 import { Inspector } from "./components/Inspector";
+import { ActivitySwitcher } from "./components/ActivitySwitcher";
 import { useUi } from "./lib/store";
 
 function useGlobalKeys() {
@@ -37,6 +38,11 @@ function useGlobalKeys() {
         e.preventDefault();
         ui.setPaletteDate(ui.date);
         ui.setPaletteOpen(true);
+        return;
+      }
+      if (mod && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        ui.setSwitcherOpen(!ui.switcherOpen);
         return;
       }
       if (typing) return;
@@ -91,6 +97,7 @@ export default function App() {
       </DndProvider>
 
       <CommandPalette />
+      <ActivitySwitcher />
       <Preferences />
       <RoutineManager />
       <Onboarding />
