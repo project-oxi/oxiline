@@ -52,7 +52,6 @@ Each core module owns one entity (matches existing `routines.rs`/`tasks.rs`/`cat
 - Create: `crates/oxiline-core/migrations/V4__record.sql`
 - Modify: `crates/oxiline-core/src/db.rs` (add `V4_RECORD` const + push into `migrations()` vec — migrations are NOT auto-discovered; each is an explicit `include_str!` registered by hand in `db.rs:11-17`)
 - Modify: `crates/oxiline-core/src/model.rs` (append types)
-- Modify: `crates/oxiline-core/src/lib.rs` (`pub mod activities; pub mod plan; pub mod record;`)
 - Test: `crates/oxiline-core/tests/record.rs` (create file; first test only — uses the `NamedTempFile` + `open_and_migrate(path)` harness from `tests/timeline.rs:13-17`, NOT `:memory:`; call `settings::ensure_defaults(&conn)` after open)
 
 **Interfaces:**
@@ -107,7 +106,7 @@ pub struct PlanInput { pub date: Option<String>, pub start_minute: u16, pub dura
 
 - [ ] **Step 3: Write the failing test**
 
-`crates/oxiline-core/tests/record.rs` — note: every test in this file uses the same `db()` helper (defined at the top of the file per Task 1's harness note):
+`crates/oxiline-core/tests/record.rs` — note: every test in this file uses the same `db()` helper (defined at the top of the file per Task 1's harness note). The test uses only `oxiline_core::open_and_migrate` + raw SQL — no module imports of `activities`/`plan`/`record` are needed (those modules are added in Tasks 3/4/5 with their own `pub mod` line each; Task 1 deliberately does NOT touch `lib.rs` to avoid `E0583 file not found` errors before those modules exist):
 ```rust
 use chrono::{TimeZone, Utc};
 use rusqlite::Connection;
@@ -144,7 +143,7 @@ Expected: PASS. (Step 1a is what actually applies V4; the `.sql` file alone does
 
 - [ ] **Step 5: Commit**
 ```bash
-git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/db.rs crates/oxiline-core/src/model.rs crates/oxiline-core/src/lib.rs crates/oxiline-core/tests/record.rs
+git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/db.rs crates/oxiline-core/src/model.rs crates/oxiline-core/tests/record.rs
 git commit -m "feat(core): V4 migration + recording domain types"
 ```
 
