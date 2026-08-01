@@ -215,6 +215,7 @@ fn create_list_resolve_activity() {
     let r2 = oxiline_core::activities::resolve_activity(&c, &a.id).unwrap();   // by id
     assert_eq!(r2.id, a.id);
 }
+```
 
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement** `activities.rs`: `create_activity` (INSERT, return row), `list_activities` (`SELECT ... WHERE is_active` when active_only, ORDER BY sort_order), `get_activity` (by id), `update_activity` (apply `ActivityInput` fields; double-Option on targets ⇒ set/clear), `resolve_activity` (exact id, else case-insensitive exact name; ambiguous ⇒ `CoreError::Ambiguous`, none ⇒ `NotFound` — reuse the category resolution style). IDs via the existing UUID helper used in `tasks.rs`/`routines.rs`.
@@ -317,6 +318,7 @@ fn start_switches_single_active() {
 
 - [ ] **Step 1: Failing tests** — append to `tests/record.rs` and `tests/activities.rs`:
 (Add `use chrono::{TimeZone, Utc};` to the top of `tests/record.rs` if not already present — needed for `Utc::now()` / `Utc.with_ymd_and_hms` in these tests.)
+```rust
 // tests/record.rs append
 #[test]
 fn resolve_links_record_to_plan() {
@@ -376,6 +378,23 @@ fn compliance_is_neutral_and_rounded() {
     assert!(matches!(cm.state, oxiline_core::model::ComplianceState::Under));
     assert_eq!(cm.ratio.unwrap(), (40.0*60.0)/(1200.0*60.0));
 }
+
+// tests/plan.rs append
+```rust
+use chrono::{TimeZone, Utc};
+
+#[test]
+fn slot_marked_resolved_after_record() {
+    let (_f, c) = db();   // helper at top of tests/plan.rs (Task 1 harness)
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
+    let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let slots = oxiline_core::plan::slots_for_date(&c, "2026-08-03").unwrap();
+    let ours = slots.iter().find(|s| s.plan_id == p.id).unwrap();
+    assert!(ours.is_resolved, "the slot should be resolved after a matching record was created in Task 7");
+}
+```
 
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement:**
