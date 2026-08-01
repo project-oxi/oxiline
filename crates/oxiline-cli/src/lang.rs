@@ -239,4 +239,26 @@ impl L {
             Lang::En => "off",
         }
     }
+    /// When `record` (bare) has no active session.
+    pub fn record_idle(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "녹화 중인 활동이 없어요",
+            Lang::En => "No active recording",
+        }
+    }
+
+    /// Marker for live-recording duration in `record state` text.
+    pub fn record_recording(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "녹화 중",
+            Lang::En => "recording",
+        }
+    }
+    /// When `record log` produced no rows.
+    pub fn record_log_empty(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "기록이 없어요",
+            Lang::En => "no records",
+        }
+    }
 }

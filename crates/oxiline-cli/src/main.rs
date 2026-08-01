@@ -9,11 +9,11 @@ use std::process::ExitCode;
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
 use oxiline_core::{
-    CoreError, Result, activities, categories, reports, routine_groups, routines, settings, tasks, timeline, util,
+    CoreError, Result, activities, categories, record, reports, routine_groups, routines, settings, tasks, timeline, util,
 };
 use serde_json::{Value, json};
 
-use cli::{ActivityAction, Cli, Command, GroupAction, RoutineAction, TaskAction};
+use cli::{ActivityAction, Cli, Command, GroupAction, RecordAction, RoutineAction, TaskAction};
 use lang::{L, Lang};
 
 fn main() -> ExitCode {
@@ -497,6 +497,10 @@ fn run(opts: Cli) -> Result<()> {
                 }
             }
         }
+        Command::Record { action } => match action {
+            Some(a) => handle_record(a, &conn, &opts)?,
+            None => handle_record_bare(&conn, &opts)?,
+        },
         Command::Doctor => {
             let ver = oxiline_core::db::schema_version(&conn)? as i64;
             let cats = categories::list(&conn)?;
@@ -833,5 +837,112 @@ fn handle_activity(
             });
         }
     }
+    Ok(())
+}
+
+/// Parse an ISO 8601 / RFC 3339 timestamp into `DateTime<Utc>`.
+fn parse_at_iso(at: Option<&str>) -> Result<Option<chrono::DateTime<chrono::Utc>>> {
+    match at {
+        None => Ok(None),
+        Some(s) => chrono::DateTime::parse_from_rfc3339(s)
+            .map(|d| Some(d.with_timezone(&chrono::Utc)))
+            .map_err(|e| CoreError::InvalidArgument(format!("bad --at '{s}' (expect RFC 3339): {e}"))),
+    }
+}
+
+/// Dispatch `oxiline record` subcommands (Task 9).
+fn handle_record(
+    action: &RecordAction,
+    conn: &rusqlite::Connection,
+    opts: &Cli,
+) -> Result<()> {
+    use chrono::Utc;
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    let today = util::today_local();
+    let now = Utc::now();
+    match action {
+        RecordAction::State => {
+            let st = record::current(conn, now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Start { activity, at } => {
+            let resolved = activities::resolve_activity(conn, activity)?;
+            let at_parsed = parse_at_iso(at.as_deref())?;
+            let effective_now = at_parsed.unwrap_or(now);
+            let st = record::start(conn, &resolved.id, effective_now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Stop => {
+            let st = record::stop(conn, now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Log { activity, date, range } => {
+            let (from, to) = match (date, range) {
+                (Some(_), Some(_)) => {
+                    return Err(CoreError::InvalidArgument(
+                        "--date and --range are mutually exclusive".into(),
+                    ));
+                }
+                (Some(d), None) => {
+                    let d = resolve_date_arg(d)?;
+                    (format!("{d}T00:00:00Z"), format!("{d}T23:59:59Z"))
+                }
+                (None, Some(r)) => {
+                    let (from_date, to_date) = parse_range(r)?;
+                    (
+                        format!("{from_date}T00:00:00Z"),
+                        format!("{to_date}T23:59:59Z"),
+                    )
+                }
+                (None, None) => (
+                    format!("{today}T00:00:00Z"),
+                    format!("{today}T23:59:59Z"),
+                ),
+            };
+            let activity_id = match activity.as_deref() {
+                Some(a) => Some(activities::resolve_activity(conn, a)?.id),
+                None => None,
+            };
+            let records = record::list_records(conn, activity_id.as_deref(), &from, &to)?;
+            if json {
+                say(output::json_pretty(&records));
+            } else {
+                say(output::record_log_text(l, &records, now));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn record_state_output(json: bool, l: L, st: &oxiline_core::model::RecordState) -> String {
+    if json {
+        output::json_pretty(st)
+    } else {
+        output::record_state_text(l, st)
+    }
+}
+
+/// Bare `record` (no subcommand) — emit the current `RecordState` JSON/text.
+fn handle_record_bare(conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
+    use chrono::Utc;
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let today = util::today_local();
+    let now = Utc::now();
+    let st = record::current(conn, now, &today)?;
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    say(record_state_output(json, l, &st));
     Ok(())
 }

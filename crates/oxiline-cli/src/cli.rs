@@ -96,7 +96,11 @@ pub enum Command {
         /// Routine id or name. Omit for all active routines.
         target: Option<String>,
     },
-    /// Self-diagnostic: DB path, schema version, WAL, GUI process.
+    /// Manage recording sessions (start/stop/log). Bare `record` emits state.
+    Record {
+        #[command(subcommand)]
+        action: Option<RecordAction>,
+    },
     Doctor,
 }
 
@@ -352,5 +356,32 @@ pub enum ActivityAction {
         id: String,
         #[arg(long)]
         force: bool,
+    },
+}
+
+/// Manage recording sessions (`05-cli-spec.md` §5.4).
+#[derive(Subcommand)]
+pub enum RecordAction {
+    /// Emit the current recording state (active session + today's compliance).
+    State,
+    /// Start a new recording session for an activity (closes any prior open one).
+    Start {
+        /// Activity name or id to record.
+        activity: String,
+        /// Backdate the switch instant to the given ISO 8601 UTC timestamp.
+        /// The prior record (if any) is closed at the same instant.
+        #[arg(long, value_name = "ISO")]
+        at: Option<String>,
+    },
+    /// Close the currently-open record (if any).
+    Stop,
+    /// List records (today by default; filter by --activity / --date / --range).
+    Log {
+        #[arg(long, value_name = "ID|NAME")]
+        activity: Option<String>,
+        #[arg(long, value_name = "YYYY-MM-DD")]
+        date: Option<String>,
+        #[arg(long, value_name = "FROM:TO")]
+        range: Option<String>,
     },
 }

@@ -39,8 +39,18 @@ pub fn start(
 ) -> Result<RecordState> {
     let now_text = timestamp(now);
     let tx = conn.unchecked_transaction()?;
+    // Close the prior record at `now`. The schema requires `ended_at >
+    // started_at`; if `now` falls inside the same second as the prior
+    // record's `started_at` (or — when the caller passed `--at` to backdate
+    // the switch — `now` is before the prior record's `started_at`), floor
+    // `ended_at` at `started_at + 1 second` so the CHECK holds.
     tx.execute(
-        "UPDATE records SET ended_at = ?1, updated_at = ?1 WHERE ended_at IS NULL",
+        "UPDATE records SET
+            ended_at = CASE WHEN started_at >= ?1
+                            THEN strftime('%Y-%m-%dT%H:%M:%SZ', started_at, '+1 second')
+                            ELSE ?1 END,
+            updated_at = ?1
+         WHERE ended_at IS NULL",
         params![now_text],
     )?;
     tx.execute(
@@ -55,8 +65,17 @@ pub fn start(
 
 pub fn stop(conn: &Connection, now: DateTime<Utc>, today: &str) -> Result<RecordState> {
     let now_text = timestamp(now);
+    // Same CHECK-floor as `start`: if the open record was opened within the
+    // same second as `now`, push `ended_at` to `started_at + 1s`. Without
+    // this, `record stop` immediately after `record start` (within the same
+    // second) would fail the `ended_at > started_at` constraint.
     conn.execute(
-        "UPDATE records SET ended_at = ?1, updated_at = ?1 WHERE ended_at IS NULL",
+        "UPDATE records SET
+            ended_at = CASE WHEN started_at >= ?1
+                            THEN strftime('%Y-%m-%dT%H:%M:%SZ', started_at, '+1 second')
+                            ELSE ?1 END,
+            updated_at = ?1
+         WHERE ended_at IS NULL",
         params![now_text],
     )?;
     // `stop` clears the active session but still surfaces today's compliance
