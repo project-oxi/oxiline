@@ -39,3 +39,13 @@ fn v4_creates_record_tables() {
     // (Tasks 5+) can call `Utc.with_ymd_and_hms(...)` without re-importing.
     let _ = Utc.with_ymd_and_hms(2026, 8, 3, 9, 0, 0);
 }
+
+
+#[test]
+fn round_duration_snaps_half_up() {
+    use oxiline_core::util::round_duration;
+    assert_eq!(round_duration(42 * 60, 5), 40 * 60); // 2520s -> 2400s (nearest 5min, half-up)
+    assert_eq!(round_duration(37 * 60 + 30, 5), 40 * 60); // 2250s -> 2400s (half-up at 37.5)
+    assert_eq!(round_duration(42 * 60, 0), 42 * 60); // 0 disables
+    assert_eq!(round_duration(0, 5), 0);
+}
