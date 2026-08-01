@@ -447,32 +447,29 @@ fn run(opts: Cli) -> Result<()> {
             last,
             range,
         } => {
+            // Task 11: neutral activity compliance via record::compliance. The
+            // core fn derives its window from Scope + today; arbitrary
+            // --range / --last need a Scope variant that does not yet exist,
+            // so they are deferred (Plan 2) rather than silently falling back
+            // to the legacy completion report.
+            if range.is_some() || last.is_some() {
+                return Err(CoreError::InvalidArgument(
+                    "report supports the weekly scope (default / --week); --range and --last arrive with budget scope settings".into(),
+                ));
+            }
             let today = util::today_local();
-            let now = util::now_minute_local();
-            if let Some(r) = range {
-                let (from, to) = parse_range(r.as_str())?;
-                let rep = reports::range_report(&conn, &from, &to, &today, now)?;
-                if json {
-                    say(output::json_pretty(&rep));
-                } else {
-                    say(output::range_report_text(l, &rep));
-                }
-            } else if let Some(n) = last {
-                let to = today.clone();
-                let from = util::add_days(&to, -((*n as i64) - 1)).unwrap_or_else(|| to.clone());
-                let rep = reports::range_report(&conn, &from, &to, &today, now)?;
-                if json {
-                    say(output::json_pretty(&rep));
-                } else {
-                    say(output::range_report_text(l, &rep));
-                }
+            let comps = record::compliance(
+                &conn,
+                oxiline_core::model::Scope::Week,
+                chrono::Utc::now(),
+                &today,
+            )?;
+            if json {
+                say(output::json_pretty(&comps));
+            } else if comps.is_empty() {
+                say(format!("({})\n", l.report_empty()));
             } else {
-                let rep = reports::week_report(&conn, &today, now)?;
-                if json {
-                    say(output::json_pretty(&rep));
-                } else {
-                    say(output::week_report_text(l, &rep));
-                }
+                say(output::compliance_text(l, &comps));
             }
         }
         Command::Streak { target } => {

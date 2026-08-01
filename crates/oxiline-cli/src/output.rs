@@ -1,6 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Activity, Category, NowContext, NowItem, Plan, PlanSlot, Record, RecordState, RoutineBlock, Task, TimelineItem};
+use oxiline_core::model::{Activity, Category, Compliance, NowContext, NowItem, Plan, PlanSlot, Record, RecordState, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -251,6 +251,42 @@ fn render_mask(mask: u8) -> String {
     }
 }
 
+// ---- neutral compliance rendering (report, Task 11) ---------------------
+
+/// Per active activity: recorded vs target, ratio, and a neutral state
+/// label. Over is a surplus ("초과 +Xm"), never a failure.
+pub fn compliance_text(lang: L, comps: &[Compliance]) -> String {
+    let mut out = String::new();
+    for c in comps {
+        let recorded = h_mm(c.recorded_seconds as i64);
+        let target = c
+            .target_seconds
+            .map(|t| h_mm(t as i64))
+            .unwrap_or_else(|| "—".into());
+        let ratio = pct(c.ratio);
+        out.push_str(&format!(
+            "● {:<16} {:>6} / {:<6} {:>5}  {}\n",
+            c.activity.name, recorded, target, ratio, compliance_state_label(lang, c),
+        ));
+    }
+    out
+}
+
+fn compliance_state_label(lang: L, c: &Compliance) -> String {
+    use oxiline_core::model::ComplianceState::*;
+    match c.state {
+        Under => lang.compliance_under().into(),
+        Met => lang.compliance_met().into(),
+        Over => {
+            let over_secs = c
+                .recorded_seconds
+                .saturating_sub(c.target_seconds.unwrap_or(0));
+            format!("{} +{}m", lang.compliance_over(), (over_secs as f64 / 60.0).round() as i64)
+        }
+        Unbudgeted => lang.compliance_unbudgeted().into(),
+    }
+}
+
 pub fn settings_text(map: &serde_json::Map<String, serde_json::Value>) -> String {
     let mut keys: Vec<&String> = map.keys().collect();
     keys.sort();
@@ -263,45 +299,13 @@ pub fn settings_text(map: &serde_json::Map<String, serde_json::Value>) -> String
 
 // ---- report rendering -----------------------------------------------------
 
-use oxiline_core::model::{CategoryBreakdown, DayTotals, RangeReport, RoutineStreak, WeekReport};
+use oxiline_core::model::RoutineStreak;
 
 fn pct(r: Option<f64>) -> String {
     match r {
         Some(v) => format!("{}%", (v * 100.0).round() as i64),
         None => "—".into(),
     }
-}
-
-pub fn week_report_text(lang: L, r: &WeekReport) -> String {
-    let mut out = format!(
-        "{} ~ {} ({})\n",
-        r.week_start,
-        r.week_end,
-        lang.report_this_week()
-    );
-    out.push_str(&totals_line(lang, &r.totals));
-    out.push_str(&format!(
-        "{} {}   {} {}\n\n",
-        lang.report_rate(),
-        pct(r.completion_rate),
-        lang.report_prev_week(),
-        pct(r.prev_completion_rate)
-    ));
-    out.push_str(&cat_block(lang, &r.categories));
-    out.push_str(&streak_block(lang, &r.streaks));
-    out
-}
-
-pub fn range_report_text(lang: L, r: &RangeReport) -> String {
-    let mut out = format!("{} ~ {}\n", r.from, r.to);
-    out.push_str(&format!(
-        "{} {}\n\n",
-        lang.report_rate(),
-        pct(r.completion_rate)
-    ));
-    out.push_str(&cat_block(lang, &r.categories));
-    out.push_str(&streak_block(lang, &r.streaks));
-    out
 }
 
 pub fn streak_list_text(lang: L, streaks: &[RoutineStreak]) -> String {
@@ -318,46 +322,6 @@ pub fn streak_list_text(lang: L, streaks: &[RoutineStreak]) -> String {
         out = format!("  ({})\n", lang.report_no_routines());
     }
     out
-}
-
-fn totals_line(lang: L, t: &DayTotals) -> String {
-    format!(
-        "{} {} · {} {} · {} {} · {} {}\n",
-        lang.report_done(),
-        t.done,
-        lang.report_skipped(),
-        t.skipped,
-        lang.report_not_recorded(),
-        t.not_recorded,
-        lang.report_upcoming(),
-        t.upcoming
-    )
-}
-
-fn cat_block(lang: L, cats: &[CategoryBreakdown]) -> String {
-    let mut out = format!("{}\n", lang.report_categories());
-    for c in cats {
-        let denom = c.done + c.not_recorded;
-        out.push_str(&format!(
-            "  {:<8} {}/{}  {}\n",
-            c.category_name,
-            c.done,
-            denom,
-            pct(c.completion_rate)
-        ));
-    }
-    out
-}
-
-fn streak_block(lang: L, streaks: &[RoutineStreak]) -> String {
-    if streaks.is_empty() {
-        return String::new();
-    }
-    format!(
-        "\n{}\n{}",
-        lang.report_streaks(),
-        streak_list_text(lang, streaks)
-    )
 }
 
 // ---- record layer rendering (Task 9) ------------------------------------

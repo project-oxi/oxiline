@@ -159,60 +159,6 @@ impl L {
             Lang::En => "HUD show requested (displays if a GUI is running)",
         }
     }
-    pub fn report_this_week(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "이번 주",
-            Lang::En => "this week",
-        }
-    }
-    pub fn report_prev_week(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "저번 주",
-            Lang::En => "last week",
-        }
-    }
-    pub fn report_rate(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "완료율",
-            Lang::En => "completion",
-        }
-    }
-    pub fn report_done(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "완료",
-            Lang::En => "done",
-        }
-    }
-    pub fn report_skipped(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "건너뜀",
-            Lang::En => "skipped",
-        }
-    }
-    pub fn report_not_recorded(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "체크인 없음",
-            Lang::En => "no check-in",
-        }
-    }
-    pub fn report_upcoming(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "예정",
-            Lang::En => "upcoming",
-        }
-    }
-    pub fn report_categories(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "카테고리",
-            Lang::En => "categories",
-        }
-    }
-    pub fn report_streaks(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "루틴 연속",
-            Lang::En => "streaks",
-        }
-    }
     pub fn report_day(&self) -> &'static str {
         match self.0 {
             Lang::Ko => "일",
@@ -273,6 +219,41 @@ impl L {
         match self.0 {
             Lang::Ko => "계획이 없어요",
             Lang::En => "no plans",
+        }
+    }
+    /// When `report` has no activities to show.
+    pub fn report_empty(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "기록된 활동이 없어요",
+            Lang::En => "no activities to report",
+        }
+    }
+    /// Neutral compliance state: under target (never "failure/missed").
+    pub fn compliance_under(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "미달",
+            Lang::En => "under",
+        }
+    }
+    /// Neutral compliance state: met target.
+    pub fn compliance_met(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "달성",
+            Lang::En => "met",
+        }
+    }
+    /// Neutral compliance state: over target — rendered as "초과 +Xm" / "over +Xm".
+    pub fn compliance_over(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "초과",
+            Lang::En => "over",
+        }
+    }
+    /// Neutral compliance state: no target set.
+    pub fn compliance_unbudgeted(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "목표 없음",
+            Lang::En => "no target",
         }
     }
 }
