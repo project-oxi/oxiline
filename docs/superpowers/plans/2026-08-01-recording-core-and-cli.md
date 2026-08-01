@@ -50,15 +50,21 @@ Each core module owns one entity (matches existing `routines.rs`/`tasks.rs`/`cat
 
 **Files:**
 - Create: `crates/oxiline-core/migrations/V4__record.sql`
+- Modify: `crates/oxiline-core/src/db.rs` (add `V4_RECORD` const + push into `migrations()` vec — migrations are NOT auto-discovered; each is an explicit `include_str!` registered by hand in `db.rs:11-17`)
 - Modify: `crates/oxiline-core/src/model.rs` (append types)
-- Test: `crates/oxiline-core/tests/record.rs` (create file; first test only)
+- Modify: `crates/oxiline-core/src/lib.rs` (`pub mod activities; pub mod plan; pub mod record;`)
+- Test: `crates/oxiline-core/tests/record.rs` (create file; first test only — uses the `NamedTempFile` + `open_and_migrate(path)` harness from `tests/timeline.rs:13-17`, NOT `:memory:`; call `settings::ensure_defaults(&conn)` after open)
 
 **Interfaces:**
 - Produces: tables `activities, plans, plan_options, records`; types `Activity, Plan, PlanOption, PlanSlot, Record, ActiveSession, Compliance, ComplianceState, RecordState, Scope, ActivityInput, PlanInput`.
 
+- [ ] **Step 1a: Wire the migration into `db.rs`** *(without this, the `.sql` file is a no-op)*
+
+In `crates/oxiline-core/src/db.rs`, add a `const V4_RECORD: &str = include_str!("../migrations/V4__record.sql");` alongside the existing `V1_INIT`/`V2_PHASE2`/`V3_OXI_PALETTE` consts, and append `M::up(V4_RECORD)` to the `Migrations::new(vec![…])` call. Migrations are NOT auto-discovered.
 - [ ] **Step 1: Write the migration**
 
 `crates/oxiline-core/migrations/V4__record.sql` — copy the schema block verbatim from spec §4 (activities, plans, plan_options, records, all `CREATE INDEX`es), then append settings seeds:
+
 
 ```sql
 INSERT OR IGNORE INTO settings (key, value, updated_at) VALUES
@@ -101,15 +107,26 @@ pub struct PlanInput { pub date: Option<String>, pub start_minute: u16, pub dura
 
 - [ ] **Step 3: Write the failing test**
 
-`crates/oxiline-core/tests/record.rs`:
+`crates/oxiline-core/tests/record.rs` — note: every test in this file uses the same `db()` helper (defined at the top of the file per Task 1's harness note):
 ```rust
-use oxiline_core::open_and_migrate;
-fn db() -> rusqlite::Connection { let c = open_and_migrate(&":memory:").unwrap(); c }
+use chrono::{TimeZone, Utc};
+use rusqlite::Connection;
+use tempfile::NamedTempFile;
+
+use oxiline_core::settings;
+
+fn db() -> (NamedTempFile, Connection) {
+    let f = NamedTempFile::new().unwrap();
+    let c = oxiline_core::open_and_migrate(f.path()).unwrap();
+    settings::ensure_defaults(&c).unwrap();
+    (f, c)
+}
+
 #[test]
 fn v4_creates_record_tables() {
-    let c = db();
+    let (_f, c) = db();
     let mut names: Vec<String> = c.prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .unwrap().query_map([], |r| r.get::<_,String>(0)).unwrap().map(|r|r.unwrap()).collect();
+        .unwrap().query_map([], |r| r.get::<_,String>(0)).unwrap().map(|r| r.unwrap()).collect();
     names.sort();
     assert!(names.iter().any(|n| n == "activities"));
     assert!(names.iter().any(|n| n == "plans"));
@@ -118,16 +135,19 @@ fn v4_creates_record_tables() {
 }
 ```
 
+> **Test harness (use this exact shape across all core tests):** each test file defines a `db() -> (NamedTempFile, Connection)` helper using `tempfile::NamedTempFile` + `oxiline_core::open_and_migrate(f.path())` + `settings::ensure_defaults(&conn)` — same pattern as `tests/timeline.rs:13-17`. The `:memory:` shorthand does NOT work with `open_and_migrate(path)` (it takes a `&Path`).
+
 - [ ] **Step 4: Run — verify pass**
 
 Run: `cargo test -p oxiline-core --test record v4_creates_record_tables`
-Expected: PASS. (Migration auto-applies via the existing `rusqlite_migration` loader in `db.rs`.)
+Expected: PASS. (Step 1a is what actually applies V4; the `.sql` file alone does nothing.)
 
 - [ ] **Step 5: Commit**
 ```bash
-git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/model.rs crates/oxiline-core/tests/record.rs
+git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/db.rs crates/oxiline-core/src/model.rs crates/oxiline-core/src/lib.rs crates/oxiline-core/tests/record.rs
 git commit -m "feat(core): V4 migration + recording domain types"
 ```
+
 
 ---
 
@@ -165,29 +185,38 @@ pub fn round_duration(seconds: u64, increment_minutes: u32) -> u64 {
 
 ### Task 3: `activities.rs` — CRUD + resolve (no delete yet)
 
-**Files:** Create `crates/oxiline-core/src/activities.rs` · Modify `lib.rs` (`pub mod activities;`) · Test: `tests/activities.rs`
+- Create: `crates/oxiline-core/src/activities.rs` · Modify `lib.rs` (`pub mod activities;`) · Test: `tests/activities.rs` (use the `NamedTempFile` harness described in Task 1's Step 4 note)
 
 **Interfaces:** Consumes `ActivityInput`. Produces `create_activity, list_activities(active_only), get_activity, update_activity, resolve_activity`.
 
-- [ ] **Step 1: Failing test** — `tests/activities.rs` (use the `db()` helper pattern; copy from `tests/record.rs`):
+- [ ] **Step 1: Failing test** — `tests/activities.rs` (same harness as Task 1):
 ```rust
-use oxiline_core::{activities, model::ActivityInput};
+use oxiline_core::model::ActivityInput;
+use tempfile::NamedTempFile;
+
+fn db() -> (NamedTempFile, rusqlite::Connection) {
+    let f = NamedTempFile::new().unwrap();
+    let c = oxiline_core::open_and_migrate(f.path()).unwrap();
+    oxiline_core::settings::ensure_defaults(&c).unwrap();
+    (f, c)
+}
+
 #[test]
 fn create_list_resolve_activity() {
-    let c = crate::db();
-    let a = activities::create_activity(&c, ActivityInput{
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
         name: Some("코딩".into()), hue_label: Some("blue".into()), icon: None, category_id: None,
         target_minutes_daily: Some(Some(240)), target_minutes_weekly: Some(Some(1200)),
         is_active: None, sort_order: None }).unwrap();
     assert_eq!(a.name, "코딩");
-    let listed = activities::list_activities(&c, false).unwrap();
+    let listed = oxiline_core::activities::list_activities(&c, false).unwrap();
     assert_eq!(listed.len(), 1);
-    let r = activities::resolve_activity(&c, "코딩").unwrap();   // case-insensitive name
+    let r = oxiline_core::activities::resolve_activity(&c, "코딩").unwrap();   // case-insensitive name
     assert_eq!(r.id, a.id);
-    let r2 = activities::resolve_activity(&c, &a.id).unwrap();   // by id
+    let r2 = oxiline_core::activities::resolve_activity(&c, &a.id).unwrap();   // by id
     assert_eq!(r2.id, a.id);
 }
-```
+
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement** `activities.rs`: `create_activity` (INSERT, return row), `list_activities` (`SELECT ... WHERE is_active` when active_only, ORDER BY sort_order), `get_activity` (by id), `update_activity` (apply `ActivityInput` fields; double-Option on targets ⇒ set/clear), `resolve_activity` (exact id, else case-insensitive exact name; ambiguous ⇒ `CoreError::Ambiguous`, none ⇒ `NotFound` — reuse the category resolution style). IDs via the existing UUID helper used in `tasks.rs`/`routines.rs`.
 - [ ] **Step 4: Run — verify pass.**
@@ -196,23 +225,30 @@ fn create_list_resolve_activity() {
 ---
 
 ### Task 4: `plan.rs` — OR choice-sets + `slots_for_date`
-
-**Files:** Create `crates/oxiline-core/src/plan.rs` · Modify `lib.rs` · Test: `tests/plan.rs`
+- Create: `crates/oxiline-core/src/plan.rs` · Modify `lib.rs` · Test: `tests/plan.rs`
 
 **Interfaces:** Consumes `PlanInput`. Produces `create_plan, list_plans(recurring_only), update_plan, delete_plan, add_option, remove_option, slots_for_date(date)`.
 
 - [ ] **Step 1: Failing test** — `tests/plan.rs`:
 ```rust
-use oxiline_core::{activities, plan, model::{ActivityInput, PlanInput}};
+use tempfile::NamedTempFile;
+
+fn db() -> (NamedTempFile, rusqlite::Connection) {
+    let f = NamedTempFile::new().unwrap();
+    let c = oxiline_core::open_and_migrate(f.path()).unwrap();
+    oxiline_core::settings::ensure_defaults(&c).unwrap();
+    (f, c)
+}
+
 #[test]
 fn plan_holds_or_options_and_materializes_per_date() {
-    let c = crate::db();
-    let a1 = activities::create_activity(&c, ActivityInput{name:Some("코딩".into()),..Default::default()}).unwrap();
-    let a2 = activities::create_activity(&c, ActivityInput{name:Some("독서".into()),..Default::default()}).unwrap();
+    let (_f, c) = db();
+    let a1 = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{name:Some("코딩".into()),..Default::default()}).unwrap();
+    let a2 = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{name:Some("독서".into()),..Default::default()}).unwrap();
     // recurring plan: weekday bit for Monday (bit0), 11:00–13:00, options 코딩 OR 독서
-    let p = plan::create_plan(&c, PlanInput{ date:None, start_minute:11*60, duration_minute:120,
+    let p = oxiline_core::plan::create_plan(&c, oxiline_core::model::PlanInput{ date:None, start_minute:11*60, duration_minute:120,
         weekday_mask:0b0000001, title:None, activity_ids:vec![a1.id.clone(), a2.id.clone()] }).unwrap();
-    let slots = plan::slots_for_date(&c, "2026-08-03").unwrap(); // 2026-08-03 is a Monday
+    let slots = oxiline_core::plan::slots_for_date(&c, "2026-08-03").unwrap(); // 2026-08-03 is a Monday
     let ours = slots.iter().find(|s| s.plan_id==p.id).unwrap();
     assert_eq!(ours.options.len(), 2);
     assert!(!ours.is_resolved); // no records yet
@@ -231,30 +267,39 @@ fn plan_holds_or_options_and_materializes_per_date() {
 
 ### Task 5: `record.rs` — start/stop/current (single-active)
 
-**Files:** Create `crates/oxiline-core/src/record.rs` · Modify `lib.rs` · Test: append to `tests/record.rs`
+- Create: `crates/oxiline-core/src/record.rs` · Modify `lib.rs` · Test: append to `tests/record.rs` (same harness)
 
 **Interfaces:** Consumes `DateTime<Utc>` + `today`. Produces `start, stop, current` returning `RecordState`.
 
-- [ ] **Step 1: Failing test**:
+- [ ] **Step 1: Failing test** — append to `tests/record.rs`:
 ```rust
-use oxiline_core::{activities, record};
 use chrono::{TimeZone, Utc};
+
+fn activity_input(name: &str) -> oxiline_core::model::ActivityInput {
+    oxiline_core::model::ActivityInput {
+        name: Some(name.into()),
+        hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: None, target_minutes_weekly: None,
+        is_active: None, sort_order: None,
+    }
+}
+
 #[test]
 fn start_switches_single_active() {
-    let c = crate::db();
-    let a = activities::create_activity(&c, activity_input("코딩")).unwrap();
-    let b = activities::create_activity(&c, activity_input("독서")).unwrap();
+    let (_f, c) = db();   // helper at top of tests/record.rs (Task 1 harness)
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let b = oxiline_core::activities::create_activity(&c, activity_input("독서")).unwrap();
     let now = Utc.with_ymd_and_hms(2026,8,3,9,0,0).unwrap();
-    record::start(&c, &a.id, now, "2026-08-03").unwrap();
-    record::start(&c, &b.id, now, "2026-08-03").unwrap();  // switch
-    let st = record::current(&c, now, "2026-08-03").unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    oxiline_core::record::start(&c, &b.id, now, "2026-08-03").unwrap();  // switch
+    let st = oxiline_core::record::current(&c, now, "2026-08-03").unwrap();
     assert_eq!(st.active.as_ref().unwrap().activity.id, b.id);   // B is the open one
     // exactly one open row:
     let open: i64 = c.query_row("SELECT COUNT(*) FROM records WHERE ended_at IS NULL", [], |r| r.get(0)).unwrap();
     assert_eq!(open, 1);
 }
 ```
-(`activity_input` = a small helper in the test file building `ActivityInput{name:Some(..),..Default::default()}`.)
+(`activity_input` helper lives at the top of `tests/record.rs`.)
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement** `record.rs`:
   - `start(conn, activity_id, now, today)`: one txn — `UPDATE records SET ended_at=:now, updated_at=:now WHERE ended_at IS NULL;` then `INSERT INTO records(id, activity_id, started_at, ended_at NULL, ...)`. Return `current(...)`.
@@ -271,27 +316,30 @@ fn start_switches_single_active() {
 
 **Interfaces:** Produces `record::{list_records, edit_record, delete_record, resolve_plan_for}`, `activities::delete_activity(force)`.
 
-- [ ] **Step 1: Failing tests**:
-```rust
+- [ ] **Step 1: Failing tests** — append to `tests/record.rs` and `tests/activities.rs`:
+(Add `use chrono::{TimeZone, Utc};` to the top of `tests/record.rs` if not already present — needed for `Utc::now()` / `Utc.with_ymd_and_hms` in these tests.)
+// tests/record.rs append
 #[test]
 fn resolve_links_record_to_plan() {
-    let c = crate::db();
-    let a = activities::create_activity(&c, activity_input("코딩")).unwrap();
-    let p = plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
     let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();   // Monday 09:10, inside plan window
-    record::start(&c, &a.id, now, "2026-08-03").unwrap();
-    let rec = record::current(&c, now, "2026-08-03").unwrap().active.unwrap().record;
-    let slot = record::resolve_plan_for(&c, &rec).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let rec = oxiline_core::record::current(&c, now, "2026-08-03").unwrap().active.unwrap().record;
+    let slot = oxiline_core::record::resolve_plan_for(&c, &rec).unwrap();
     assert_eq!(slot.unwrap().plan_id, p.id);
 }
+
+// tests/activities.rs append (use its db() helper)
 #[test]
 fn delete_activity_refuses_with_history() {
-    let c = crate::db();
-    let a = activities::create_activity(&c, activity_input("코딩")).unwrap();
-    record::start(&c, &a.id, Utc::now(), "2026-08-03").unwrap();
-    assert!(activities::delete_activity(&c, &a.id, false).is_err());   // conflict
-    activities::delete_activity(&c, &a.id, true).unwrap();              // force: records + activity gone
-    assert!(activities::list_activities(&c, false).unwrap().is_empty());
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    oxiline_core::record::start(&c, &a.id, chrono::Utc::now(), "2026-08-03").unwrap();
+    assert!(oxiline_core::activities::delete_activity(&c, &a.id, false).is_err());   // conflict
+    oxiline_core::activities::delete_activity(&c, &a.id, true).unwrap();              // force: records + activity gone
+    assert!(oxiline_core::activities::list_activities(&c, false).unwrap().is_empty());
 }
 ```
 - [ ] **Step 2: Run — verify fail.**
@@ -310,29 +358,26 @@ fn delete_activity_refuses_with_history() {
 
 **Interfaces:** Produces `record::compliance(scope, now, today) -> Vec<Compliance>`. `current` now fills `today`.
 
-- [ ] **Step 1: Failing tests**:
+- [ ] **Step 1: Failing tests** — append to `tests/record.rs` and `tests/plan.rs`:
 ```rust
+// tests/record.rs append
 #[test]
 fn compliance_is_neutral_and_rounded() {
-    let c = crate::db();
-    let a = activities::create_activity(&c, ActivityInput{name:Some("코딩".into()),
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{name:Some("코딩".into()),
         target_minutes_weekly:Some(Some(1200)),..Default::default()}).unwrap(); // 20h/wk
     // record 42 min (rounds to 40) this week
     let s = Utc.with_ymd_and_hms(2026,8,3,9,0,0).unwrap();
-    record::start(&c, &a.id, s, "2026-08-03").unwrap();
-    record::stop(&c, s + chrono::Duration::minutes(42), "2026-08-03").unwrap();
-    set_setting(&c, "record_rounding_minutes", "5");
-    let week = record::compliance(&c, oxiline_core::model::Scope::Week, s, "2026-08-03").unwrap();
+    oxiline_core::record::start(&c, &a.id, s, "2026-08-03").unwrap();
+    oxiline_core::record::stop(&c, s + chrono::Duration::minutes(42), "2026-08-03").unwrap();
+    set_setting(&c, "record_rounding_minutes", "5");   // tiny test helper in tests/record.rs: oxiline_core::settings::set(conn, key, value).unwrap();
+    let week = oxiline_core::record::compliance(&c, oxiline_core::model::Scope::Week, s, "2026-08-03").unwrap();
     let cm = week.iter().find(|x| x.activity.id==a.id).unwrap();
     assert_eq!(cm.recorded_seconds, 40*60);          // rounded
     assert!(matches!(cm.state, oxiline_core::model::ComplianceState::Under));
     assert_eq!(cm.ratio.unwrap(), (40.0*60.0)/(1200.0*60.0));
 }
-#[test]
-fn slot_marked_resolved_after_record() {
-    // same setup as Task 6 resolve test; then slots_for_date -> is_resolved == true
-}
-```
+
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement:**
   - `compliance(scope, now, today)`: for each active activity, sum rounded record-overlap over the scope window (today = local date; week = `week_start_date` honoring `settings.week_starts_on`, reuse `reports::week_start_date`). `target_seconds` from the activity's daily/weekly target per scope. `ratio`, `remaining_seconds`, `state` (Under `<1.0`, Met `[1.0,1.05)`, Over `≥1.05`, Unbudgeted when target None). **All states share the activity hue** (no color logic here — that's GUI).
@@ -341,6 +386,7 @@ fn slot_marked_resolved_after_record() {
 - [ ] **Step 4: Run — verify pass.**
 - [ ] **Step 5: Commit** — `feat(core): neutral weekly compliance + plan resolution wiring`.
 
+> **One-time `db.rs` change (this is the only plan task that touches `db.rs`):** wiring `V4_RECORD` into `migrations()` is required for V4 to apply at all. No later task modifies `db.rs`. Plan 2 (GUI) does not add further core migrations; if it does, it must re-extend `db.rs` the same way.
 **End of Phase 1 — core is complete and fully tested.** Run `cargo test -p oxiline-core` green; `cargo build --workspace` passes.
 
 ---
