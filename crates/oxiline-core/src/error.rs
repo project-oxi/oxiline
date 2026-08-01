@@ -10,6 +10,7 @@ pub enum ErrorCode {
     NotFound,
     InvalidArgument,
     AmbiguousCategory,
+    Conflict,
     DbLocked,
     DbMigrationFailed,
     Internal,
@@ -21,6 +22,7 @@ impl ErrorCode {
             ErrorCode::NotFound => "not_found",
             ErrorCode::InvalidArgument => "invalid_argument",
             ErrorCode::AmbiguousCategory => "ambiguous_category",
+            ErrorCode::Conflict => "conflict",
             ErrorCode::DbLocked => "db_locked",
             ErrorCode::DbMigrationFailed => "db_migration_failed",
             ErrorCode::Internal => "internal",
@@ -36,6 +38,8 @@ pub enum CoreError {
     InvalidArgument(String),
     #[error("ambiguous category: {0}")]
     AmbiguousCategory(String),
+    #[error("conflict: {0}")]
+    Conflict(String),
     #[error("database is locked: {0}")]
     DbLocked(String),
     #[error("database migration failed: {0}")]
@@ -50,6 +54,7 @@ impl CoreError {
             CoreError::NotFound(_) => ErrorCode::NotFound,
             CoreError::InvalidArgument(_) => ErrorCode::InvalidArgument,
             CoreError::AmbiguousCategory(_) => ErrorCode::AmbiguousCategory,
+            CoreError::Conflict(_) => ErrorCode::Conflict,
             CoreError::DbLocked(_) => ErrorCode::DbLocked,
             CoreError::DbMigrationFailed(_) => ErrorCode::DbMigrationFailed,
             CoreError::Internal(_) => ErrorCode::Internal,

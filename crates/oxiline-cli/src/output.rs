@@ -1,6 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Category, NowContext, NowItem, RoutineBlock, Task, TimelineItem};
+use oxiline_core::model::{Activity, Category, NowContext, NowItem, Record, RecordState, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -158,6 +158,40 @@ pub fn category_list_text(cats: &[Category]) -> String {
     }
     out
 }
+pub fn activity_text(a: &Activity, inactive_label: &str) -> String {
+    let off = if a.is_active { "" } else { " (" };
+    let closing = if a.is_active { "" } else { ")" };
+    let daily = a
+        .target_minutes_daily
+        .map(|m| format!("{m}m"))
+        .unwrap_or_else(|| "—".to_string());
+    let weekly = a
+        .target_minutes_weekly
+        .map(|m| format!("{m}m"))
+        .unwrap_or_else(|| "—".to_string());
+    let hue = a.hue_label.clone().unwrap_or_else(|| "—".to_string());
+    format!(
+        "● {name}{off}{off_label}{closing}  daily={daily}  weekly={weekly}  hue={hue}  icon={icon}  id={id}",
+        name = a.name,
+        off = off,
+        off_label = inactive_label,
+        closing = closing,
+        daily = daily,
+        weekly = weekly,
+        hue = hue,
+        icon = a.icon.clone().unwrap_or_else(|| "—".to_string()),
+        id = a.id,
+    )
+}
+
+pub fn activity_list_text(as_: &[Activity], inactive_label: &str) -> String {
+    let mut out = String::new();
+    for a in as_ {
+        out.push_str(&activity_text(a, inactive_label));
+        out.push('\n');
+    }
+    out
+}
 
 pub fn settings_text(map: &serde_json::Map<String, serde_json::Value>) -> String {
     let mut keys: Vec<&String> = map.keys().collect();
@@ -266,4 +300,94 @@ fn streak_block(lang: L, streaks: &[RoutineStreak]) -> String {
         lang.report_streaks(),
         streak_list_text(lang, streaks)
     )
+}
+
+// ---- record layer rendering (Task 9) ------------------------------------
+
+use chrono::{DateTime, Utc};
+
+/// Format a duration in seconds as `H:MM` or `M:SS` (minutes under one hour).
+fn h_mm(secs: i64) -> String {
+    let s = secs.max(0);
+    if s >= 3600 {
+        let h = s / 3600;
+        let m = (s % 3600) / 60;
+        format!("{h}:{m:02}")
+    } else {
+        let m = s / 60;
+        let ss = s % 60;
+        format!("{m}:{ss:02}")
+    }
+}
+
+/// Render the bare `record` view: active session + today's compliance.
+pub fn record_state_text(lang: L, st: &RecordState) -> String {
+    let mut out = String::new();
+    match &st.active {
+        Some(active) => {
+            let dur = h_mm(active.elapsed_seconds as i64);
+            out.push_str(&format!(
+                "● {}  {dur} ({})\n",
+                active.activity.name,
+                lang.record_recording()
+            ));
+        }
+        None => {
+            out.push_str(&format!("({})\n", lang.record_idle()));
+        }
+    }
+    if !st.today.is_empty() {
+        out.push('\n');
+        for c in &st.today {
+            let recorded = h_mm(c.recorded_seconds as i64);
+            let target = c
+                .target_seconds
+                .map(|t| h_mm(t as i64))
+                .unwrap_or_else(|| "—".into());
+            out.push_str(&format!(
+                "  {:<16} {recorded} / {target}\n",
+                c.activity.name
+            ));
+        }
+    }
+    out
+}
+
+/// Render `record log` view: each row as `HH:MM:SS  <name>  (<duration>)`.
+pub fn record_log_text(lang: L, records: &[Record], now: DateTime<Utc>) -> String {
+    if records.is_empty() {
+        return format!("({})\n", lang.record_log_empty());
+    }
+    let mut out = String::new();
+    for r in records {
+        let end = match &r.ended_at {
+            Some(e) => e.clone(),
+            None => {
+                // Live record: stamp it with `now` so the duration is meaningful.
+                now.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+            }
+        };
+        let start_ts = DateTime::parse_from_rfc3339(&r.started_at)
+            .ok()
+            .map(|d| d.with_timezone(&Utc));
+        let end_ts = DateTime::parse_from_rfc3339(&end).ok().map(|d| d.with_timezone(&Utc));
+        let dur = match (start_ts, end_ts) {
+            (Some(s), Some(e)) => (e - s).num_seconds(),
+            _ => 0,
+        };
+        let hh = format!(
+            "{:02}:{:02}:{:02}",
+            start_ts.map(|d| d.format("%H").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
+            start_ts.map(|d| d.format("%M").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
+            start_ts.map(|d| d.format("%S").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
+        );
+        let marker = if r.ended_at.is_none() { "▶" } else { " " };
+        let activity_name = r.activity_id.clone();
+        out.push_str(&format!(
+            "{marker} {hh}  {activity}  ({dur})\n",
+            activity = activity_name,
+            dur = h_mm(dur),
+        ));
+    }
+    out
 }

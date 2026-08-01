@@ -255,7 +255,7 @@ fn category_crud_roundtrip() {
 #[test]
 fn schema_version_after_migrate() {
     let (_f, conn) = fresh_db();
-    assert_eq!(oxiline_core::db::schema_version(&conn).unwrap(), 3);
+    assert_eq!(oxiline_core::db::schema_version(&conn).unwrap(), 4);
 }
 
 #[test]

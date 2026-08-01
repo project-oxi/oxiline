@@ -8,11 +8,12 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
-use oxiline_core::{CoreError, Result, util};
-use oxiline_core::{categories, reports, routine_groups, routines, settings, tasks, timeline};
+use oxiline_core::{
+    CoreError, Result, activities, categories, record, reports, routine_groups, routines, settings, tasks, timeline, util,
+};
 use serde_json::{Value, json};
 
-use cli::{Cli, Command, GroupAction, RoutineAction, TaskAction};
+use cli::{ActivityAction, Cli, Command, GroupAction, RecordAction, RoutineAction, TaskAction};
 use lang::{L, Lang};
 
 fn main() -> ExitCode {
@@ -377,6 +378,8 @@ fn run(opts: Cli) -> Result<()> {
             }
         },
 
+        Command::Activity { action } => handle_activity(action, &conn, &opts)?,
+
         Command::Settings { action } => match action {
             cli::SettingsAction::Get { key } => match key {
                 Some(k) => {
@@ -494,6 +497,10 @@ fn run(opts: Cli) -> Result<()> {
                 }
             }
         }
+        Command::Record { action } => match action {
+            Some(a) => handle_record(a, &conn, &opts)?,
+            None => handle_record_bare(&conn, &opts)?,
+        },
         Command::Doctor => {
             let ver = oxiline_core::db::schema_version(&conn)? as i64;
             let cats = categories::list(&conn)?;
@@ -686,5 +693,256 @@ fn handle_group(action: &GroupAction, conn: &rusqlite::Connection, opts: &Cli) -
             say(resource_out(json, "toggled", &g));
         }
     }
+    Ok(())
+}
+/// Dispatch `oxiline activity` subcommands (Task 8).
+fn handle_activity(
+    action: &ActivityAction,
+    conn: &rusqlite::Connection,
+    opts: &Cli,
+) -> Result<()> {
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    match action {
+        ActivityAction::Add {
+            name,
+            daily,
+            weekly,
+            hue,
+            icon,
+            category,
+        } => {
+            let cat_id: Option<String> = match category.as_deref() {
+                Some(c) => Some(categories::resolve(conn, c)?.id),
+                None => None,
+            };
+            if opts.dry_run {
+                say(preview(
+                    json,
+                    l.activity_added(),
+                    &json!({
+                        "name": name,
+                        "target_minutes_daily": daily.and_then(|m| m.0),
+                        "target_minutes_weekly": weekly.and_then(|m| m.0),
+                        "hue_label": hue,
+                        "icon": icon,
+                        "category_id": cat_id,
+                        "dry_run": true,
+                    }),
+                ));
+                return Ok(());
+            }
+            // For add: any provided budget is SET. `--daily 0` translates to
+            // Some(None) which clears (no budget); positive N is Some(Some(n)).
+            // We use `and_then` to wrap the inner option exactly once.
+            let daily_inner: Option<Option<u32>> = daily.map(|m| m.0);
+            let weekly_inner: Option<Option<u32>> = weekly.map(|m| m.0);
+            let a = activities::create_activity(
+                conn,
+                oxiline_core::model::ActivityInput {
+                    name: Some(name.clone()),
+                    hue_label: hue.clone(),
+                    icon: icon.clone(),
+                    category_id: cat_id,
+                    target_minutes_daily: daily_inner,
+                    target_minutes_weekly: weekly_inner,
+                    is_active: None,
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, l.activity_added(), &a));
+        }
+        ActivityAction::List { active_only } => {
+            let list = activities::list_activities(conn, *active_only)?;
+            if json {
+                say(output::json_pretty(&list));
+            } else {
+                say(output::activity_list_text(&list, l.activity_inactive()));
+            }
+        }
+        ActivityAction::Show { id } => {
+            let a = activities::resolve_activity(conn, id)?;
+            if json {
+                say(output::json_pretty(&a));
+            } else {
+                say(output::activity_text(&a, l.activity_inactive()));
+            }
+        }
+        ActivityAction::Edit {
+            id,
+            name,
+            daily,
+            weekly,
+            hue,
+            icon,
+        } => {
+            // tri-state: outer Option<MinuteBudget> -> absent vs present;
+            // MinuteBudget.0 -> clear (None) vs set (Some(n)).
+            let daily_v = daily.map(|m| m.0);
+            let weekly_v = weekly.map(|m| m.0);
+            let resolved = activities::resolve_activity(conn, id)?;
+            let a = activities::update_activity(
+                conn,
+                &resolved.id,
+                oxiline_core::model::ActivityInput {
+                    name: name.clone(),
+                    hue_label: hue.clone(),
+                    icon: icon.clone(),
+                    category_id: None,
+                    target_minutes_daily: daily_v,
+                    target_minutes_weekly: weekly_v,
+                    is_active: None,
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, "updated", &a));
+        }
+        ActivityAction::Toggle { id, on, off } => {
+            if on == off {
+                return Err(CoreError::InvalidArgument(
+                    "use exactly one of --on / --off".into(),
+                ));
+            }
+            let resolved = activities::resolve_activity(conn, id)?;
+            let a = activities::update_activity(
+                conn,
+                &resolved.id,
+                oxiline_core::model::ActivityInput {
+                    name: None,
+                    hue_label: None,
+                    icon: None,
+                    category_id: None,
+                    target_minutes_daily: None,
+                    target_minutes_weekly: None,
+                    is_active: Some(*on || !*off),
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, "toggled", &a));
+        }
+        ActivityAction::Rm { id, force } => {
+            let resolved = activities::resolve_activity(conn, id)?;
+            let removed_id = resolved.id.clone();
+            activities::delete_activity(conn, &resolved.id, *force)?;
+            say(if json {
+                json!({ "id": removed_id, "removed": true }).to_string()
+            } else {
+                format!("{}: {}", l.removed(), removed_id)
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Parse an ISO 8601 / RFC 3339 timestamp into `DateTime<Utc>`.
+fn parse_at_iso(at: Option<&str>) -> Result<Option<chrono::DateTime<chrono::Utc>>> {
+    match at {
+        None => Ok(None),
+        Some(s) => chrono::DateTime::parse_from_rfc3339(s)
+            .map(|d| Some(d.with_timezone(&chrono::Utc)))
+            .map_err(|e| CoreError::InvalidArgument(format!("bad --at '{s}' (expect RFC 3339): {e}"))),
+    }
+}
+
+/// Dispatch `oxiline record` subcommands (Task 9).
+fn handle_record(
+    action: &RecordAction,
+    conn: &rusqlite::Connection,
+    opts: &Cli,
+) -> Result<()> {
+    use chrono::Utc;
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    let today = util::today_local();
+    let now = Utc::now();
+    match action {
+        RecordAction::State => {
+            let st = record::current(conn, now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Start { activity, at } => {
+            let resolved = activities::resolve_activity(conn, activity)?;
+            let at_parsed = parse_at_iso(at.as_deref())?;
+            let effective_now = at_parsed.unwrap_or(now);
+            let st = record::start(conn, &resolved.id, effective_now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Stop => {
+            let st = record::stop(conn, now, &today)?;
+            say(record_state_output(json, l, &st));
+        }
+        RecordAction::Log { activity, date, range } => {
+            let (from, to) = match (date, range) {
+                (Some(_), Some(_)) => {
+                    return Err(CoreError::InvalidArgument(
+                        "--date and --range are mutually exclusive".into(),
+                    ));
+                }
+                (Some(d), None) => {
+                    let d = resolve_date_arg(d)?;
+                    (format!("{d}T00:00:00Z"), format!("{d}T23:59:59Z"))
+                }
+                (None, Some(r)) => {
+                    let (from_date, to_date) = parse_range(r)?;
+                    (
+                        format!("{from_date}T00:00:00Z"),
+                        format!("{to_date}T23:59:59Z"),
+                    )
+                }
+                (None, None) => (
+                    format!("{today}T00:00:00Z"),
+                    format!("{today}T23:59:59Z"),
+                ),
+            };
+            let activity_id = match activity.as_deref() {
+                Some(a) => Some(activities::resolve_activity(conn, a)?.id),
+                None => None,
+            };
+            let records = record::list_records(conn, activity_id.as_deref(), &from, &to)?;
+            if json {
+                say(output::json_pretty(&records));
+            } else {
+                say(output::record_log_text(l, &records, now));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn record_state_output(json: bool, l: L, st: &oxiline_core::model::RecordState) -> String {
+    if json {
+        output::json_pretty(st)
+    } else {
+        output::record_state_text(l, st)
+    }
+}
+
+/// Bare `record` (no subcommand) — emit the current `RecordState` JSON/text.
+fn handle_record_bare(conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
+    use chrono::Utc;
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let today = util::today_local();
+    let now = Utc::now();
+    let st = record::current(conn, now, &today)?;
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    say(record_state_output(json, l, &st));
     Ok(())
 }

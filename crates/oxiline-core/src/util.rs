@@ -85,3 +85,15 @@ pub fn resolve_date_keyword(keyword: &str) -> Option<String> {
         _ => None,
     }
 }
+
+/// Round a duration in seconds up/down to the nearest multiple of
+/// `increment_minutes`. Half-up: the midpoint rounds up. `increment_minutes == 0`
+/// disables rounding and returns the input unchanged. 0 always stays 0.
+pub fn round_duration(seconds: u64, increment_minutes: u32) -> u64 {
+    if increment_minutes == 0 {
+        return seconds;
+    }
+    let step = u64::from(increment_minutes) * 60;
+    let q = (seconds + step / 2) / step; // half-up
+    q * step
+}

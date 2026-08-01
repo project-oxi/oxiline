@@ -4,12 +4,15 @@
 //! CRUD. Knows nothing about Tauri or clap. Both `oxiline-app` (GUI) and
 //! `oxiline-cli` call into this crate.
 
+pub mod activities;
 pub mod cards;
 pub mod categories;
 pub mod db;
 pub mod error;
 pub mod model;
 pub mod paths;
+pub mod plan;
+pub mod record;
 pub mod reports;
 pub mod routine_groups;
 pub mod routines;

@@ -225,4 +225,40 @@ impl L {
             Lang::En => "no active routines",
         }
     }
+    /// Generic resource label for a successful activity add.
+    pub fn activity_added(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "활동이 추가됐어요",
+            Lang::En => "Activity added",
+        }
+    }
+    /// Marker for an inactive activity row (list / show).
+    pub fn activity_inactive(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "비활성",
+            Lang::En => "off",
+        }
+    }
+    /// When `record` (bare) has no active session.
+    pub fn record_idle(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "녹화 중인 활동이 없어요",
+            Lang::En => "No active recording",
+        }
+    }
+
+    /// Marker for live-recording duration in `record state` text.
+    pub fn record_recording(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "녹화 중",
+            Lang::En => "recording",
+        }
+    }
+    /// When `record log` produced no rows.
+    pub fn record_log_empty(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "기록이 없어요",
+            Lang::En => "no records",
+        }
+    }
 }

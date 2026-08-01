@@ -52,7 +52,6 @@ Each core module owns one entity (matches existing `routines.rs`/`tasks.rs`/`cat
 - Create: `crates/oxiline-core/migrations/V4__record.sql`
 - Modify: `crates/oxiline-core/src/db.rs` (add `V4_RECORD` const + push into `migrations()` vec — migrations are NOT auto-discovered; each is an explicit `include_str!` registered by hand in `db.rs:11-17`)
 - Modify: `crates/oxiline-core/src/model.rs` (append types)
-- Modify: `crates/oxiline-core/src/lib.rs` (`pub mod activities; pub mod plan; pub mod record;`)
 - Test: `crates/oxiline-core/tests/record.rs` (create file; first test only — uses the `NamedTempFile` + `open_and_migrate(path)` harness from `tests/timeline.rs:13-17`, NOT `:memory:`; call `settings::ensure_defaults(&conn)` after open)
 
 **Interfaces:**
@@ -107,7 +106,7 @@ pub struct PlanInput { pub date: Option<String>, pub start_minute: u16, pub dura
 
 - [ ] **Step 3: Write the failing test**
 
-`crates/oxiline-core/tests/record.rs` — note: every test in this file uses the same `db()` helper (defined at the top of the file per Task 1's harness note):
+`crates/oxiline-core/tests/record.rs` — note: every test in this file uses the same `db()` helper (defined at the top of the file per Task 1's harness note). The test uses only `oxiline_core::open_and_migrate` + raw SQL — no module imports of `activities`/`plan`/`record` are needed (those modules are added in Tasks 3/4/5 with their own `pub mod` line each; Task 1 deliberately does NOT touch `lib.rs` to avoid `E0583 file not found` errors before those modules exist):
 ```rust
 use chrono::{TimeZone, Utc};
 use rusqlite::Connection;
@@ -144,7 +143,7 @@ Expected: PASS. (Step 1a is what actually applies V4; the `.sql` file alone does
 
 - [ ] **Step 5: Commit**
 ```bash
-git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/db.rs crates/oxiline-core/src/model.rs crates/oxiline-core/src/lib.rs crates/oxiline-core/tests/record.rs
+git add crates/oxiline-core/migrations/V4__record.sql crates/oxiline-core/src/db.rs crates/oxiline-core/src/model.rs crates/oxiline-core/tests/record.rs
 git commit -m "feat(core): V4 migration + recording domain types"
 ```
 
@@ -216,6 +215,50 @@ fn create_list_resolve_activity() {
     let r2 = oxiline_core::activities::resolve_activity(&c, &a.id).unwrap();   // by id
     assert_eq!(r2.id, a.id);
 }
+
+#[test]
+fn update_activity_target_tri_state() {
+    // Tri-state semantics on the double-Option target fields are the
+    // most bug-prone part of activities CRUD (budgeting data). This test
+    // pins all three branches: set, clear, leave-unchanged.
+    let (_f, c) = db();
+
+    // Create with both targets set to verify the "set" branch leaves them
+    // populated after a leave-unchanged update.
+    let created = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: Some("blue".into()), icon: None, category_id: None,
+        target_minutes_daily: Some(Some(240)),
+        target_minutes_weekly: Some(Some(1200)),
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(created.target_minutes_daily, Some(240));
+    assert_eq!(created.target_minutes_weekly, Some(1200));
+
+    // Set the daily target to a new value; leave weekly unchanged.
+    //   target_minutes_daily = Some(Some(300))  -> set to 300
+    //   target_minutes_weekly = None            -> unchanged (still 1200)
+    let updated = oxiline_core::activities::update_activity(&c, &created.id, oxiline_core::model::ActivityInput{
+        name: None, hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: Some(Some(300)),
+        target_minutes_weekly: None,
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(updated.target_minutes_daily, Some(300));
+    assert_eq!(updated.target_minutes_weekly, Some(1200), "weekly target must NOT be cleared by None");
+
+    // Clear the daily target; leave weekly unchanged.
+    //   target_minutes_daily = Some(None)  -> cleared to NULL
+    //   target_minutes_weekly = None       -> unchanged
+    let cleared = oxiline_core::activities::update_activity(&c, &created.id, oxiline_core::model::ActivityInput{
+        name: None, hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: Some(None),
+        target_minutes_weekly: None,
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(cleared.target_minutes_daily, None, "Some(None) must clear, not leave-unchanged");
+    assert_eq!(cleared.target_minutes_weekly, Some(1200));
+}
+```
 
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement** `activities.rs`: `create_activity` (INSERT, return row), `list_activities` (`SELECT ... WHERE is_active` when active_only, ORDER BY sort_order), `get_activity` (by id), `update_activity` (apply `ActivityInput` fields; double-Option on targets ⇒ set/clear), `resolve_activity` (exact id, else case-insensitive exact name; ambiguous ⇒ `CoreError::Ambiguous`, none ⇒ `NotFound` — reuse the category resolution style). IDs via the existing UUID helper used in `tasks.rs`/`routines.rs`.
@@ -318,12 +361,17 @@ fn start_switches_single_active() {
 
 - [ ] **Step 1: Failing tests** — append to `tests/record.rs` and `tests/activities.rs`:
 (Add `use chrono::{TimeZone, Utc};` to the top of `tests/record.rs` if not already present — needed for `Utc::now()` / `Utc.with_ymd_and_hms` in these tests.)
+```rust
 // tests/record.rs append
 #[test]
 fn resolve_links_record_to_plan() {
     let (_f, c) = db();
     let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
-    let p = oxiline_core::plan::create_plan(&c, plan_input(&a.id, 0b0000001, 9*60, 90)).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, oxiline_core::model::PlanInput{
+        date: None, start_minute: 9*60, duration_minute: 90,
+        weekday_mask: 0b0000001, title: None,
+        activity_ids: vec![a.id.clone()],
+    }).unwrap();
     let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();   // Monday 09:10, inside plan window
     oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
     let rec = oxiline_core::record::current(&c, now, "2026-08-03").unwrap().active.unwrap().record;
@@ -335,7 +383,10 @@ fn resolve_links_record_to_plan() {
 #[test]
 fn delete_activity_refuses_with_history() {
     let (_f, c) = db();
-    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: None, target_minutes_weekly: None, is_active: None, sort_order: None,
+    }).unwrap();
     oxiline_core::record::start(&c, &a.id, chrono::Utc::now(), "2026-08-03").unwrap();
     assert!(oxiline_core::activities::delete_activity(&c, &a.id, false).is_err());   // conflict
     oxiline_core::activities::delete_activity(&c, &a.id, true).unwrap();              // force: records + activity gone
@@ -377,6 +428,30 @@ fn compliance_is_neutral_and_rounded() {
     assert!(matches!(cm.state, oxiline_core::model::ComplianceState::Under));
     assert_eq!(cm.ratio.unwrap(), (40.0*60.0)/(1200.0*60.0));
 }
+
+// tests/plan.rs append
+```rust
+use chrono::{TimeZone, Utc};
+
+#[test]
+fn slot_marked_resolved_after_record() {
+    let (_f, c) = db();   // helper at top of tests/plan.rs (Task 1 harness)
+    let a = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: None, target_minutes_weekly: None, is_active: None, sort_order: None,
+    }).unwrap();
+    let p = oxiline_core::plan::create_plan(&c, oxiline_core::model::PlanInput{
+        date: None, start_minute: 9*60, duration_minute: 90,
+        weekday_mask: 0b0000001, title: None,
+        activity_ids: vec![a.id.clone()],
+    }).unwrap();
+    let now = Utc.with_ymd_and_hms(2026,8,3,9,10,0).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let slots = oxiline_core::plan::slots_for_date(&c, "2026-08-03").unwrap();
+    let ours = slots.iter().find(|s| s.plan_id == p.id).unwrap();
+    assert!(ours.is_resolved, "the slot should be resolved after a matching record was created in Task 7");
+}
+```
 
 - [ ] **Step 2: Run — verify fail.**
 - [ ] **Step 3: Implement:**
