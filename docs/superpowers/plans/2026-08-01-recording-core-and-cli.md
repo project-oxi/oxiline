@@ -215,6 +215,49 @@ fn create_list_resolve_activity() {
     let r2 = oxiline_core::activities::resolve_activity(&c, &a.id).unwrap();   // by id
     assert_eq!(r2.id, a.id);
 }
+
+#[test]
+fn update_activity_target_tri_state() {
+    // Tri-state semantics on the double-Option target fields are the
+    // most bug-prone part of activities CRUD (budgeting data). This test
+    // pins all three branches: set, clear, leave-unchanged.
+    let (_f, c) = db();
+
+    // Create with both targets set to verify the "set" branch leaves them
+    // populated after a leave-unchanged update.
+    let created = oxiline_core::activities::create_activity(&c, oxiline_core::model::ActivityInput{
+        name: Some("코딩".into()), hue_label: Some("blue".into()), icon: None, category_id: None,
+        target_minutes_daily: Some(Some(240)),
+        target_minutes_weekly: Some(Some(1200)),
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(created.target_minutes_daily, Some(240));
+    assert_eq!(created.target_minutes_weekly, Some(1200));
+
+    // Set the daily target to a new value; leave weekly unchanged.
+    //   target_minutes_daily = Some(Some(300))  -> set to 300
+    //   target_minutes_weekly = None            -> unchanged (still 1200)
+    let updated = oxiline_core::activities::update_activity(&c, &created.id, oxiline_core::model::ActivityInput{
+        name: None, hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: Some(Some(300)),
+        target_minutes_weekly: None,
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(updated.target_minutes_daily, Some(300));
+    assert_eq!(updated.target_minutes_weekly, Some(1200), "weekly target must NOT be cleared by None");
+
+    // Clear the daily target; leave weekly unchanged.
+    //   target_minutes_daily = Some(None)  -> cleared to NULL
+    //   target_minutes_weekly = None       -> unchanged
+    let cleared = oxiline_core::activities::update_activity(&c, &created.id, oxiline_core::model::ActivityInput{
+        name: None, hue_label: None, icon: None, category_id: None,
+        target_minutes_daily: Some(None),
+        target_minutes_weekly: None,
+        is_active: None, sort_order: None,
+    }).unwrap();
+    assert_eq!(cleared.target_minutes_daily, None, "Some(None) must clear, not leave-unchanged");
+    assert_eq!(cleared.target_minutes_weekly, Some(1200));
+}
 ```
 
 - [ ] **Step 2: Run — verify fail.**
