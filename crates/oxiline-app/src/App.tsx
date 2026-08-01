@@ -8,6 +8,8 @@ import { RoutineManager } from "./components/RoutineManager";
 import { CommandPalette } from "./components/CommandPalette";
 import { Preferences } from "./components/Preferences";
 import { Onboarding } from "./components/Onboarding";
+import { Sidebar } from "./components/Sidebar";
+import { Inspector } from "./components/Inspector";
 import { useUi } from "./lib/store";
 
 function useGlobalKeys() {
@@ -76,11 +78,15 @@ export default function App() {
     <div className="flex h-screen flex-col bg-surface">
       <Header />
       <DndProvider>
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {view === "today" && <DayTimeline />}
-          {view === "week" && <WeekView />}
-          {view === "backlog" && <BacklogView />}
-          {view === "report" && <ReportView />}
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar />
+          <main className="flex flex-1 flex-col overflow-hidden border-x border-border">
+            {view === "today" && <DayTimeline />}
+            {view === "week" && <WeekView />}
+            {view === "backlog" && <BacklogView />}
+            {view === "report" && <ReportView />}
+          </main>
+          <Inspector />
         </div>
       </DndProvider>
 
