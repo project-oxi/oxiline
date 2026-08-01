@@ -429,6 +429,7 @@ fn compliance_is_neutral_and_rounded() {
     assert_eq!(cm.ratio.unwrap(), (40.0*60.0)/(1200.0*60.0));
 }
 
+```
 // tests/plan.rs append
 ```rust
 use chrono::{TimeZone, Utc};
