@@ -24,7 +24,7 @@ function Select<T extends string>(props: { value: T; options: { v: T; label: str
     <select
       value={props.value}
       onChange={(e) => props.onChange(e.target.value as T)}
-      className="rounded border border-border bg-transparent px-2 py-1 text-[12px]"
+      className="rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
     >
       {props.options.map((o) => (
         <option key={o.v} value={o.v}>{o.label}</option>
@@ -126,13 +126,13 @@ export function Preferences() {
         <section className="mb-4">
           <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.timeline")}</h3>
           <Row label={t("settings.dayStart")}>
-            <input type="number" defaultValue={(s.day_start_hour as number) ?? 5} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_start_hour", value: e.target.value })} />
+            <input type="number" defaultValue={(s.day_start_hour as number) ?? 5} className="w-16 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" onBlur={(e) => setSetting.mutate({ key: "day_start_hour", value: e.target.value })} />
           </Row>
           <Row label={t("settings.dayEnd")}>
-            <input type="number" defaultValue={(s.day_end_hour as number) ?? 26} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "day_end_hour", value: e.target.value })} />
+            <input type="number" defaultValue={(s.day_end_hour as number) ?? 26} className="w-16 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" onBlur={(e) => setSetting.mutate({ key: "day_end_hour", value: e.target.value })} />
           </Row>
           <Row label={t("settings.workloadWarning")}>
-            <input type="number" defaultValue={(s.workload_warning_minutes as number) ?? 600} className="w-20 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "workload_warning_minutes", value: e.target.value })} />
+            <input type="number" defaultValue={(s.workload_warning_minutes as number) ?? 600} className="w-20 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" onBlur={(e) => setSetting.mutate({ key: "workload_warning_minutes", value: e.target.value })} />
           </Row>
         </section>
 
@@ -141,12 +141,12 @@ export function Preferences() {
           <Row label={t("settings.globalHotkey")}>
             <input
               defaultValue={(s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O"}
-              className="w-44 rounded border border-border bg-transparent px-2 py-1 font-mono text-[12px]"
+              className="w-44 rounded bg-transparent px-2 py-1 font-mono text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
               onBlur={(e) => setSetting.mutate({ key: "global_hotkey", value: e.target.value })}
             />
           </Row>
           <Row label={t("settings.hudDuration")}>
-            <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded border border-border bg-transparent px-2 py-1 text-[12px]" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
+            <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
           </Row>
           {/* §7.10 keyboard shortcuts reference table */}
           <table className="mt-3 w-full border-collapse text-[12px]">
@@ -237,9 +237,9 @@ export function Preferences() {
             ))}
           </ul>
           <div className="flex items-center gap-2">
-            <input type="color" value={`hsl(${catHue}, 70%, 50%)`} onChange={() => {}} className="h-7 w-7" />
+            <span className="h-7 w-7 shrink-0 rounded-[var(--input-radius)]" style={{ background: categoryColor(catHue) }} aria-hidden />
             <input type="range" min={0} max={360} value={catHue} onChange={(e) => setCatHue(Number(e.target.value))} className="flex-1" />
-            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("routine.name")} className="w-28 rounded border border-border bg-transparent px-2 py-1 text-[12px]" />
+            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("routine.name")} className="w-28 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
             <button
               className="rounded bg-interactive-primary px-2 py-1 text-[12px] text-interactive-primary-foreground"
               onClick={() => { if (catName.trim()) { createCat.mutate({ name: catName.trim(), hue: catHue, icon: null }); setCatName(""); } }}

@@ -222,8 +222,7 @@ export function CommandPalette() {
                 id={`palette-opt-${i}`}
                 aria-selected={active}
                 onMouseEnter={() => setSel(i)}
-                className="flex items-center gap-2 px-3 py-2 text-[13px]"
-                style={{ background: active ? "var(--color-surface-sunken)" : "transparent" }}
+                className={`flex items-center gap-2 px-3 py-2 text-[13px]${active ? " bg-surface-sunken" : ""}`}
               >
                 {isCreate ? (
                   <Plus size={13} className="shrink-0" style={{ color: "var(--color-interactive-primary)" }} />

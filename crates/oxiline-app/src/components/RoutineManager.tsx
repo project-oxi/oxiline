@@ -181,8 +181,7 @@ export function RoutineManager() {
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder={t("routineGroup.addGroup")}
-                  className="min-w-0 flex-1 rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]"
-                  style={{ borderColor: "var(--color-border-strong)" }}
+                  className="min-w-0 flex-1 rounded bg-transparent px-2 py-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newGroupName.trim()) {
                       createGroup.mutate({ name: newGroupName.trim(), icon: null });
@@ -332,11 +331,11 @@ function RoutineFormInline({
       <div className="mb-2 flex gap-2">
         <label className="text-[11px] text-text-subtle">
           {t("routine.at")}
-          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
+          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded bg-transparent px-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
         </label>
         <label className="text-[11px] text-text-subtle">
           {t("routine.duration")}
-          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
+          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded bg-transparent px-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
         </label>
       </div>
       <div className="mb-2 flex gap-1 text-[11px] text-text-subtle">
@@ -367,7 +366,7 @@ function RoutineFormInline({
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}
-          className="rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }}
+          className="rounded bg-transparent px-2 py-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
           aria-label={t("routine.category")}
         >
           <option value="">{t("routine.category")}</option>
@@ -432,11 +431,11 @@ function RoutineEditInline({
       <div className="mb-2 flex gap-2">
         <label className="text-[11px] text-text-subtle">
           {t("routine.at")}
-          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
+          <input type="time" value={at} onChange={(e) => setAt(e.target.value)} className="ml-1 rounded bg-transparent px-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
         </label>
         <label className="text-[11px] text-text-subtle">
           {t("routine.duration")}
-          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded border border-border-strong bg-transparent px-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }} />
+          <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} min={5} step={5} className="ml-1 w-16 rounded bg-transparent px-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
         </label>
       </div>
       <div className="mb-2 flex gap-1 text-[11px] text-text-subtle">
@@ -467,7 +466,7 @@ function RoutineEditInline({
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}
-          className="rounded border border-border-strong bg-transparent px-2 py-1 text-[11px]" style={{ borderColor: "var(--color-border-strong)" }}
+          className="rounded bg-transparent px-2 py-1 text-[11px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
           aria-label={t("routine.category")}
         >
           <option value="">{t("routine.category")}</option>
