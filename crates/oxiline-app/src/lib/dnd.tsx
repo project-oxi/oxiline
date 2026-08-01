@@ -10,7 +10,7 @@ import { api } from "./api";
 
 export const SNAP_MINUTES = 5;
 
-/** Shared DnD context provider for DayTimeline + BacklogView. */
+/** Shared DnD context provider for the recording timeline + BacklogView. */
 export function DndProvider({ children }: { children: ReactNode }) {
   const upd = useUpdateTask();
   const createPlan = useCreatePlan();
