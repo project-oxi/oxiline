@@ -5,7 +5,7 @@ import {
   useSensor,
 } from "@dnd-kit/core";
 import type { ReactNode } from "react";
-import { useUpdateTask } from "../hooks";
+import { useCreatePlan, useUpdateTask } from "../hooks";
 import { api } from "./api";
 
 export const SNAP_MINUTES = 5;
@@ -13,6 +13,7 @@ export const SNAP_MINUTES = 5;
 /** Shared DnD context provider for DayTimeline + BacklogView. */
 export function DndProvider({ children }: { children: ReactNode }) {
   const upd = useUpdateTask();
+  const createPlan = useCreatePlan();
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 8 },
@@ -52,6 +53,16 @@ export function DndProvider({ children }: { children: ReactNode }) {
       upd.mutate({
         id: realId,
         startMinute: dropMinute,
+      });
+    } else if (data.kind === "activity") {
+      // Library card → timetable: create a one-shot plan at the drop minute.
+      createPlan.mutate({
+        date: overData.date as string,
+        start_minute: dropMinute,
+        duration_minute: 60,
+        weekday_mask: 0,
+        title: null,
+        activity_ids: [(data as { activityId: string }).activityId],
       });
     }
   }

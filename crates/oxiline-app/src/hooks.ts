@@ -292,6 +292,17 @@ export function useStopRecord() {
   return useMutation({ mutationFn: () => api.stopRecord(), onSuccess: () => inv() });
 }
 
+export function useCreatePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createPlan>[0]) => api.createPlan(input),
+    onSuccess: (_d, _vars) => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+    },
+  });
+}
+
 /** ISO window [date-1 00:00Z, date+1 23:59Z] for a local `date` (YYYY-MM-DD). */
 function windowFor(date: string): { from: string; to: string } {
   const [y, m, d] = date.split("-").map(Number);

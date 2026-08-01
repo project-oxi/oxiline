@@ -7,6 +7,8 @@
  */
 import { useActivities, useCompliance, useRecordState, useStopRecord } from "../hooks";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
+import { useDraggable } from "@dnd-kit/core";
+import type { Activity, Compliance } from "../types";
 
 export function Sidebar() {
   const stateQ = useRecordState();
@@ -91,51 +93,58 @@ function ActivityLibrary() {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {activities.map((a) => {
-            const c = byId.get(a.id);
-            const ratio = c?.ratio ?? 0;
-            const pct = Math.min(100, Math.round(ratio * 100));
-            const target = c?.target_seconds ?? null;
-            const recorded = c?.recorded_seconds ?? 0;
-            const surplus = Math.max(0, recorded - (target ?? 0));
-            const sub = c
-              ? target == null
-                ? hmm(recorded)
-                : c.state === "met"
-                  ? `${hmm(recorded)} · 달성`
-                  : c.state === "over"
-                    ? `${hmm(recorded)} · ${complianceLabel("over", surplus)}`
-                    : `${hmm(recorded)} · 남음 ${hmm((target - recorded))}`
-              : "—";
-            return (
-              <div key={a.id} className="rounded-md p-1.5 hover:bg-surface-sunken">
-                <div className="flex items-center justify-between text-[12px]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: hueVar(a.hue_label) }} />
-                    {a.name}
-                  </span>
-                  <span className="text-[10px] text-text-subtle">
-                    {a.target_minutes_weekly ? `주 ${hmm(a.target_minutes_weekly * 60)}` : ""}
-                  </span>
-                </div>
-                <div className="relative mt-1 h-1.5 rounded-full bg-surface-sunken">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: hueVar(a.hue_label) }}
-                  />
-                  {target != null && (
-                    <span
-                      className="absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 bg-text-subtle"
-                      style={{ left: "100%" }}
-                    />
-                  )}
-                </div>
-                <div className="mt-0.5 text-[10px] text-text-subtle">{sub}</div>
-              </div>
-            );
-          })}
+          {activities.map((a) => (
+            <DraggableActivity key={a.id} activity={a} compliance={byId.get(a.id)} />
+          ))}
         </div>
       )}
     </section>
+  );
+}
+
+function DraggableActivity({ activity, compliance }: { activity: Activity; compliance?: Compliance }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `activity-${activity.id}`,
+    data: { kind: "activity", activityId: activity.id },
+  });
+  const ratio = compliance?.ratio ?? 0;
+  const pct = Math.min(100, Math.round(ratio * 100));
+  const target = compliance?.target_seconds ?? null;
+  const recorded = compliance?.recorded_seconds ?? 0;
+  const surplus = Math.max(0, recorded - (target ?? 0));
+  const sub = compliance
+    ? target == null
+      ? hmm(recorded)
+      : compliance.state === "met"
+        ? `${hmm(recorded)} · 달성`
+        : compliance.state === "over"
+          ? `${hmm(recorded)} · ${complianceLabel("over", surplus)}`
+          : `${hmm(recorded)} · 남음 ${hmm(target - recorded)}`
+    : "—";
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""}`}
+      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
+    >
+      <div className="flex items-center justify-between text-[12px]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ background: hueVar(activity.hue_label) }} />
+          {activity.name}
+        </span>
+        <span className="text-[10px] text-text-subtle">
+          {activity.target_minutes_weekly ? `주 ${hmm(activity.target_minutes_weekly * 60)}` : ""}
+        </span>
+      </div>
+      <div className="relative mt-1 h-1.5 rounded-full bg-surface-sunken">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: hueVar(activity.hue_label) }} />
+        {target != null && (
+          <span className="absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 bg-text-subtle" style={{ left: "100%" }} />
+        )}
+      </div>
+      <div className="mt-0.5 text-[10px] text-text-subtle">{sub}</div>
+    </div>
   );
 }

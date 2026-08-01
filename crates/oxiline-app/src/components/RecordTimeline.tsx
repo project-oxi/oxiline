@@ -12,6 +12,7 @@
  * store local minutes. No `is_done` anywhere — completion = a record existing.
  */
 import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import { useActivities, useDayRecords, useSettings, useSlots } from "../hooks";
 import { todayStr, useUi } from "../lib/store";
 import type { ActivityRecord, PlanSlot } from "../types";
@@ -71,6 +72,10 @@ export function RecordTimeline() {
   const showPlan = mode !== "act";
   const showAct = mode !== "plan";
   const both = mode === "both";
+  const { setNodeRef } = useDroppable({
+    id: "record-timeline",
+    data: { kind: "timeline-slot", date, pxPerMin: PX_PER_MIN, dayStartMin },
+  });
 
   // now-line (today only)
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
@@ -121,6 +126,7 @@ export function RecordTimeline() {
           </div>
 
           <div
+            ref={setNodeRef}
             className={both ? "relative grid flex-1" : "relative flex-1"}
             style={both ? { gridTemplateColumns: "1fr 1fr" } : undefined}
           >
