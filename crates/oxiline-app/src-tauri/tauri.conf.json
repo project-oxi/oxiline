@@ -30,7 +30,7 @@
         "title": "OxiLine HUD",
         "url": "hud.html",
         "width": 360,
-        "height": 150,
+        "height": 170,
         "resizable": false,
         "decorations": false,
         "transparent": true,

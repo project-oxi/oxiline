@@ -64,7 +64,7 @@ fn position_top_center(hud: &WebviewWindow) {
     let size = monitor.size();
     let scale = monitor.scale_factor();
     let win_w = 360.0_f64;
-    let win_h = 150.0_f64;
+    let win_h = 170.0_f64;
     let pos = monitor.position();
     let x = pos.x as f64 + (size.width as f64 / scale - win_w) / 2.0;
     let y = pos.y as f64 + 48.0;
