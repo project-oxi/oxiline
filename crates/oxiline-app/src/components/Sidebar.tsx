@@ -1,17 +1,43 @@
 /**
- * Sidebar (Plan 2 Task 1 scaffolding) — left pane of the 3-pane shell.
- *
- * Two regions matching the converged mockup (`2026-08-01-final-mockup.html`):
- *   1. Now-card  — the active recording session (filled in Task 4).
- *   2. Activity library — drag-to-place cards with weekly bars (Task 4 + 7).
- *
- * This scaffolding renders intentional empty states so the shell is visually
- * complete before the data layer (Task 2) lands.
+ * Sidebar (Plan 2 Task 4) — left pane.
+ *   1. NowCard — the active recording session (current_record_state) with a
+ *      stop control and today/weekly progress.
+ *   2. ActivityLibrary — each active activity with a neutral weekly bar
+ *      (target tick, 남음/달성/+Xm), drag source for Task 7.
  */
+import { useActivities, useCompliance, useRecordState, useStopRecord } from "../hooks";
+import { complianceLabel, hmm, hueVar } from "../lib/record-format";
+
 export function Sidebar() {
+  const stateQ = useRecordState();
+  const stop = useStopRecord();
+  const active = stateQ.data?.active ?? null;
+
   return (
     <aside className="flex w-[260px] shrink-0 flex-col gap-4 overflow-y-auto p-3">
-      {/* Now-card */}
+      <NowCard
+        active={active}
+
+        onStop={() => stop.mutate(undefined)}
+        stopping={stop.isPending}
+      />
+      <ActivityLibrary />
+    </aside>
+  );
+}
+
+function NowCard({
+  active,
+  onStop,
+  stopping,
+}: {
+  active: { activity: { name: string; hue_label: string | null }; elapsed_seconds: number } | null;
+
+  onStop: () => void;
+  stopping: boolean;
+}) {
+  if (!active) {
+    return (
       <section className="rounded-lg border border-border bg-surface-raised p-3">
         <div className="flex items-center gap-2 text-[11px] text-text-subtle">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-text-subtle" />
@@ -20,19 +46,96 @@ export function Sidebar() {
         <div className="mt-2 text-[13px] text-text-muted">녹화 중인 활동이 없어요</div>
         <div className="mt-1 text-[11px] text-text-subtle">⌘⇧A 로 빠르게 전환</div>
       </section>
+    );
+  }
+  return (
+    <section
+      className="rounded-lg border p-3"
+      style={{ borderColor: hueVar(active.activity.hue_label), background: "var(--color-surface-raised)" }}
+    >
+      <div className="flex items-center gap-2 text-[11px] text-text-subtle">
+        <span
+          className="inline-block h-1.5 w-1.5 animate-pulse rounded-full"
+          style={{ background: hueVar(active.activity.hue_label) }}
+        />
+        지금 녹화 중
+      </div>
+      <div className="mt-1 text-[15px] font-semibold">{active.activity.name}</div>
+      <div className="text-[12px] text-text-subtle">{hmm(active.elapsed_seconds)}</div>
+      <button
+        onClick={onStop}
+        disabled={stopping}
+        className="mt-2 w-full rounded-md bg-surface-sunken py-1.5 text-[12px] font-medium text-text disabled:opacity-50"
+      >
+        ⏸ 멈춤
+      </button>
+    </section>
+  );
+}
 
-      {/* Activity library */}
-      <section className="flex min-h-0 flex-1 flex-col">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wide text-text-subtle">
-            활동 · 카드
-          </h2>
-          <span className="text-[10px] text-text-subtle">드래그 → 배치</span>
-        </div>
+function ActivityLibrary() {
+  const activitiesQ = useActivities(true);
+  const weekQ = useCompliance("week");
+  const byId = new Map(weekQ.data?.map((c) => [c.activity.id, c]));
+  const activities = activitiesQ.data ?? [];
+
+  return (
+    <section className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-text-subtle">활동 · 카드</h2>
+        <span className="text-[10px] text-text-subtle">드래그 → 배치</span>
+      </div>
+      {activities.length === 0 ? (
         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border text-[12px] text-text-subtle">
           활동을 추가하세요
         </div>
-      </section>
-    </aside>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {activities.map((a) => {
+            const c = byId.get(a.id);
+            const ratio = c?.ratio ?? 0;
+            const pct = Math.min(100, Math.round(ratio * 100));
+            const target = c?.target_seconds ?? null;
+            const recorded = c?.recorded_seconds ?? 0;
+            const surplus = Math.max(0, recorded - (target ?? 0));
+            const sub = c
+              ? target == null
+                ? hmm(recorded)
+                : c.state === "met"
+                  ? `${hmm(recorded)} · 달성`
+                  : c.state === "over"
+                    ? `${hmm(recorded)} · ${complianceLabel("over", surplus)}`
+                    : `${hmm(recorded)} · 남음 ${hmm((target - recorded))}`
+              : "—";
+            return (
+              <div key={a.id} className="rounded-md p-1.5 hover:bg-surface-sunken">
+                <div className="flex items-center justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: hueVar(a.hue_label) }} />
+                    {a.name}
+                  </span>
+                  <span className="text-[10px] text-text-subtle">
+                    {a.target_minutes_weekly ? `주 ${hmm(a.target_minutes_weekly * 60)}` : ""}
+                  </span>
+                </div>
+                <div className="relative mt-1 h-1.5 rounded-full bg-surface-sunken">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, background: hueVar(a.hue_label) }}
+                  />
+                  {target != null && (
+                    <span
+                      className="absolute top-1/2 h-2.5 w-0.5 -translate-y-1/2 bg-text-subtle"
+                      style={{ left: "100%" }}
+                    />
+                  )}
+                </div>
+                <div className="mt-0.5 text-[10px] text-text-subtle">{sub}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
