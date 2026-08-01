@@ -68,11 +68,10 @@ pub fn create(conn: &Connection, input: NewRoutineBlock) -> Result<RoutineBlock>
             "duration_minute must be 1..=1440".into(),
         ));
     }
-    if input.weekday_mask == 0 {
-        return Err(CoreError::InvalidArgument(
-            "weekday_mask must select at least one day".into(),
-        ));
-    }
+    // `weekday_mask == 0` is allowed: it marks an on-demand *template* — a
+    // predefined card that never auto-schedules (`scheduled_for` excludes it
+    // from every timeline/now/report path) but surfaces in quick-add
+    // suggestions (`cards::suggest`). See `is_template`.
     let id = util::new_id();
     let now = util::now_iso();
     let next_order: i64 = conn
@@ -136,11 +135,7 @@ pub fn update(conn: &Connection, id: &str, upd: RoutineUpdate) -> Result<Routine
         None => existing.duration_minute,
     };
     let weekday_mask = match upd.weekday_mask {
-        Some(0) => {
-            return Err(CoreError::InvalidArgument(
-                "weekday_mask must select at least one day".into(),
-            ));
-        }
+        // mask=0 is allowed: marks an on-demand template (never auto-schedules).
         Some(v) => v,
         None => existing.weekday_mask,
     };
@@ -237,6 +232,15 @@ pub fn parse_days_spec(spec: &str) -> Result<u8> {
 pub fn mask_includes(mask: u8, weekday: chrono::Weekday) -> bool {
     let bit = util::weekday_mask_bit(weekday);
     (mask & (1 << bit)) != 0
+}
+
+/// Is this block an on-demand *template* — a predefined card that never
+/// auto-schedules? A `weekday_mask` of 0 selects no weekdays, so
+/// `mask_includes` (and thus `scheduled_for`) returns false for every day.
+/// The timeline, `now`, and reports all gate on `scheduled_for`, so templates
+/// stay invisible there and only resurface via `cards::suggest`.
+pub fn is_template(b: &RoutineBlock) -> bool {
+    b.weekday_mask == 0
 }
 
 // ---- scheduled-on-date predicate (§2.1) -----------------------------------

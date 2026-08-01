@@ -228,6 +228,7 @@ export function RoutineManager() {
                 at={at} setAt={setAt}
                 dur={dur} setDur={setDur}
                 mask={mask} toggleDay={toggleDay}
+                setMask={setMask}
                 catId={catId} setCatId={setCatId}
                 cats={catsQ.data ?? []}
                 onSubmit={submit}
@@ -271,9 +272,21 @@ export function RoutineManager() {
                     <span className="font-mono text-[11px] text-text-subtle">
                       {r.duration_minute}분
                     </span>
-                    <span className="hidden text-[11px] text-text-subtle group-hover:inline">
-                      {daysFromMask(r.weekday_mask)}
-                    </span>
+                    {r.weekday_mask === 0 ? (
+                      <span
+                        className="rounded px-1 text-[10px]"
+                        style={{
+                          background: "var(--color-interactive-primary-subtle)",
+                          color: "var(--color-interactive-primary)",
+                        }}
+                      >
+                        {t("routine.template")}
+                      </span>
+                    ) : (
+                      <span className="hidden text-[11px] text-text-subtle group-hover:inline">
+                        {daysFromMask(r.weekday_mask)}
+                      </span>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); del.mutate(r.id); }}
                       className="rounded p-1 opacity-0 transition group-hover:opacity-100 hover:bg-surface-sunken"
@@ -292,13 +305,13 @@ export function RoutineManager() {
 }
 
 function RoutineFormInline({
-  title, setTitle, at, setAt, dur, setDur, mask, toggleDay,
+  title, setTitle, at, setAt, dur, setDur, mask, setMask, toggleDay,
   catId, setCatId, cats, onSubmit, onCancel, t,
 }: {
   title: string; setTitle: (v: string) => void;
   at: string; setAt: (v: string) => void;
   dur: number; setDur: (v: number) => void;
-  mask: number; toggleDay: (i: number) => void;
+  mask: number; setMask: (v: number) => void; toggleDay: (i: number) => void;
   catId: string; setCatId: (v: string) => void;
   cats: { id: string; name: string }[];
   onSubmit: () => void;
@@ -340,6 +353,17 @@ function RoutineFormInline({
             {t(`weekdays.${k}` as keyof typeof t)}
           </button>
         ))}
+        <button
+          onClick={() => setMask(0)}
+          className="ml-auto rounded px-1 py-0.5"
+          style={{
+            background: mask === 0 ? "var(--color-interactive-primary)" : "var(--color-surface-muted)",
+            color: mask === 0 ? "var(--color-interactive-primary-foreground)" : "var(--color-text-muted)",
+          }}
+          aria-pressed={mask === 0}
+        >
+          {t("routine.template")}
+        </button>
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}
@@ -429,6 +453,17 @@ function RoutineEditInline({
             {t(`weekdays.${k}` as keyof typeof t)}
           </button>
         ))}
+        <button
+          onClick={() => setMask(0)}
+          className="ml-auto rounded px-1 py-0.5"
+          style={{
+            background: mask === 0 ? "var(--color-interactive-primary)" : "var(--color-surface-muted)",
+            color: mask === 0 ? "var(--color-interactive-primary-foreground)" : "var(--color-text-muted)",
+          }}
+          aria-pressed={mask === 0}
+        >
+          {t("routine.template")}
+        </button>
       </div>
       <div className="flex items-center gap-2">
         <select value={catId} onChange={(e) => setCatId(e.target.value)}

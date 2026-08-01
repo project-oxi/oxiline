@@ -7,9 +7,10 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task, TimelineItem, WeekReport,
+    CardSuggestion, Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task,
+    TimelineItem, WeekReport,
 };
-use oxiline_core::{categories, reports, routines, settings, tasks, timeline, util};
+use oxiline_core::{cards, categories, reports, routines, settings, tasks, timeline, util};
 use serde_json::Value;
 use tauri::State;
 use tauri_plugin_notification::NotificationExt;
@@ -393,6 +394,20 @@ pub fn open_notification_settings(app: tauri::AppHandle) -> Result<(), String> {
 #[specta::specta]
 pub fn materialize_if_virtual(state: State<AppState>, id: String) -> Result<String, String> {
     tasks::materialize_if_virtual(&state.conn(), &id).map_err(map_err)
+}
+
+// ---- quick-add suggestions (autocomplete from templates + history) --------
+
+/// Ranked card signatures for the quick-add palette: on-demand templates
+/// (mask=0 routines) first, then distinct historical task/routine titles.
+/// Selecting one prefills a new task (`07-ui-screens-and-flows.md` §7.5).
+#[tauri::command]
+#[specta::specta]
+pub fn suggest_cards(
+    state: State<AppState>,
+    limit: Option<usize>,
+) -> Result<Vec<CardSuggestion>, String> {
+    cards::suggest(&state.conn(), limit.unwrap_or(0)).map_err(map_err)
 }
 
 // ---- reports (habit streak / weekly report) -------------------------------

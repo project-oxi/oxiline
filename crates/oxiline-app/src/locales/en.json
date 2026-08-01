@@ -33,7 +33,8 @@
     "hint": "Enter to add · @time to schedule",
     "addToList": "Add to backlog",
     "noMatch": "No matches",
-    "title": "Quick add"
+    "title": "Quick add",
+    "template": "Template"
   },
   "routine": {
     "title": "Routines",
@@ -47,7 +48,8 @@
     "duration": "Duration (min)",
     "days": "Repeat on",
     "category": "Category",
-    "empty": "No routines yet. Add one to build the skeleton of your day."
+    "empty": "No routines yet. Add one to build the skeleton of your day.",
+    "template": "Template (no repeat)"
   },
   "task": {
     "addTitle": "Add task",

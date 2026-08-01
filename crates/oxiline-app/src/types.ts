@@ -66,6 +66,18 @@ export interface TimelineItem {
   origin_routine_block_id: string | null;
 }
 
+/** Reusable card signature for quick-add autocomplete
+ *  (mirrors `oxiline_core::model::CardSuggestion`). */
+export interface CardSuggestion {
+  title: string;
+  category_id: string | null;
+  duration_minute: number | null;
+  notes: string | null;
+  is_template: boolean;
+  template_id: string | null;
+  last_used_at: string | null;
+}
+
 export interface NowItem {
   id: string;
   is_virtual: boolean;

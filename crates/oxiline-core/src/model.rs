@@ -141,6 +141,27 @@ pub struct NowContext {
     pub generated_at: String,
 }
 
+/// A reusable card signature for quick-add autocomplete (`cards::suggest`).
+///
+/// Merges on-demand templates (`routine_blocks` with `weekday_mask == 0`)
+/// with distinct historical titles drawn from past `tasks` and recurring
+/// `routine_blocks`. Selecting one prefills a new task
+/// (title/category/duration/notes) instead of retyping it (`07-ui-screens-and-flows.md` §7.5).
+#[derive(Serialize, Deserialize, Type, Clone, Debug)]
+pub struct CardSuggestion {
+    pub title: String,
+    pub category_id: Option<String>,
+    pub duration_minute: Option<u16>,
+    pub notes: Option<String>,
+    /// `true` when this is a curated on-demand template (a `routine_block`
+    /// with `weekday_mask == 0`); `false` for an aggregated history entry.
+    pub is_template: bool,
+    /// The originating `routine_block.id` when this suggestion is a template
+    /// or a recurring routine; `None` for task-only history.
+    pub template_id: Option<String>,
+    pub last_used_at: Option<String>,
+}
+
 /// Typed snapshot of all known settings (avoids `serde_json::Value` which does
 /// not implement `specta::Type`).
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]

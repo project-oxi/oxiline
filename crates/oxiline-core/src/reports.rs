@@ -381,6 +381,9 @@ pub fn routine_streak(conn: &Connection, block_id: &str, today: &str) -> Result<
 pub fn routine_streaks(conn: &Connection, today: &str) -> Result<Vec<RoutineStreak>> {
     let mut out = Vec::new();
     for b in routines::list(conn, true)? {
+        if routines::is_template(&b) {
+            continue; // templates never recur — no streak to track
+        }
         out.push(routine_streak(conn, &b.id, today)?);
     }
     out.sort_by(|a, b| b.current.cmp(&a.current));

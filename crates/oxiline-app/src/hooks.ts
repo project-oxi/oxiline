@@ -9,6 +9,7 @@ export const qk = {
   categories: ["categories"] as const,
   routines: (activeOnly: boolean) => ["routines", activeOnly] as const,
   backlog: ["backlog"] as const,
+  cardSuggestions: ["cardSuggestions"] as const,
   now: ["now"] as const,
   settings: ["settings"] as const,
   weekReport: ["weekReport"] as const,
@@ -35,6 +36,14 @@ export function useRoutines(activeOnly = false) {
 
 export function useBacklog() {
   return useQuery({ queryKey: qk.backlog, queryFn: api.listBacklog });
+}
+
+export function useSuggestCards(enabled = true) {
+  return useQuery({
+    queryKey: qk.cardSuggestions,
+    queryFn: () => api.suggestCards(),
+    enabled,
+  });
 }
 
 export function useTimelineRange(from: string, to: string) {

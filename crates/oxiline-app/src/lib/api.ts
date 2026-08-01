@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  CardSuggestion,
   Category,
   NowContext,
   RoutineBlock,
@@ -102,6 +103,9 @@ export const api = {
 
   // drag-and-drop
   materializeIfVirtual: (id: string) => invoke<string>("materialize_if_virtual", { id }),
+
+  // quick-add suggestions (templates + history autocomplete)
+  suggestCards: (limit = 0) => invoke<CardSuggestion[]>("suggest_cards", { limit }),
 
   // routine groups
   listRoutineGroups: () => invoke<RoutineGroup[]>("list_routine_groups"),
