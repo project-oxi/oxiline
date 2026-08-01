@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OxiLine — UI Directions v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Instrument+Serif:ital@0;1&family=Pretendard:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#3b6fe0;            /* the ONE saturated color — reserved for the recording */
+    --font-sans:"Pretendard",system-ui,sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,monospace;
+    --font-d1:"Fraunces",Georgia,serif;
+    --font-d2:"Instrument Serif",Georgia,serif;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font-sans);background:#e7e5e0;color:#16161a;-webkit-font-smoothing:antialiased;line-height:1.5}
+
+  .gallery{max-width:1080px;margin:0 auto;padding:56px 32px 96px}
+  .g-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8d8b84;margin:0 0 12px}
+  .g-title{font-family:var(--font-d1);font-weight:400;font-size:42px;line-height:1.08;margin:0 0 14px;letter-spacing:-.015em}
+  .g-title em{font-style:italic;color:var(--accent)}
+  .g-lede{margin:0;font-size:14.5px;color:#56544e;max-width:60ch;line-height:1.65}
+  .g-lede b{color:#16161a;font-weight:600}
+
+  .dir{margin-top:64px;scroll-margin-top:24px}
+  .dir-meta{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .dir-no{font-family:var(--font-mono);font-size:11px;color:#8d8b84;letter-spacing:.12em}
+  .dir-name{font-family:var(--font-d1);font-size:24px;font-weight:500;margin:0;letter-spacing:-.01em}
+  .dir-tone{font-size:12px;color:#8d8b84}
+  .dir-why{font-size:13px;color:#4a4844;margin:0 0 24px;max-width:66ch;line-height:1.65}
+  .principle{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 26px}
+  .principle span{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;color:#7a7872;padding:3px 9px;border:1px solid #cfccc4;border-radius:999px;background:transparent}
+
+  .frame{border-radius:24px;overflow:hidden;box-shadow:0 30px 60px -24px rgba(20,20,30,.30),0 6px 16px -8px rgba(20,20,30,.16)}
+
+  /* =====================================================================
+     A — LINEN  (warm editorial · grayscale past · single accent bloom)
+     ===================================================================== */
+  .d1{background:#f5f2ea;color:#23211d;padding:40px 40px 36px;position:relative}
+  .d1::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.38  0 0 0 0 0.34  0 0 0 0 0.27  0 0 0 0.03 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .d1>*{position:relative;z-index:1}
+  .d1-head{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:26px;border-bottom:1px solid rgba(35,33,29,.10)}
+  .d1-date{font-family:var(--font-d1);font-weight:400;font-size:32px;line-height:1;letter-spacing:-.015em}
+  .d1-date em{font-style:italic;color:#7a776e;font-size:.72em}
+  .d1-rec{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#8a8780;display:flex;align-items:center;gap:7px}
+  .d1-rec .live{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(59,111,224,.14);animation:pulse 2.2s ease-in-out infinite}
+
+  /* past — pure ink, no color. typography + hairlines + air */
+  .d1-log{padding:4px 0}
+  .d1-row{display:grid;grid-template-columns:1fr auto auto;gap:18px;align-items:baseline;padding:13px 0;border-bottom:1px solid rgba(35,33,29,.06)}
+  .d1-row .nm{font-size:14px;font-weight:500;color:#3a3833;letter-spacing:-.005em}
+  .d1-row .tm{font-family:var(--font-mono);font-size:11px;color:#a8a59c;font-weight:300}
+  .d1-row .dr{font-family:var(--font-mono);font-size:11px;color:#7a776e;min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* intent — faint italic, one line */
+  .d1-intent{margin:22px 0 4px;font-family:var(--font-d1);font-style:italic;font-weight:300;font-size:13.5px;color:#b2aea3;display:flex;align-items:center;gap:10px}
+  .d1-intent::before{content:"";width:22px;height:1px;background:#c9c5ba;flex:0 0 auto}
+
+  /* NOW — the only saturated thing. defined by elevation (shadow) + accent dot. no border, no left-bar */
+  .d1-now{margin-top:14px;background:#fffdf8;border-radius:18px;padding:28px 30px 26px;box-shadow:0 1px 0 rgba(35,33,29,.03),0 26px 50px -30px rgba(35,33,29,.45)}
+  .d1-now-top{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .d1-now-top .pulse{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px rgba(59,111,224,.15);animation:pulse 2.2s ease-in-out infinite}
+  .d1-now-top .lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .d1-now-main{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
+  .d1-now-name{font-family:var(--font-d1);font-weight:400;font-size:38px;line-height:.95;letter-spacing:-.02em;color:#23211d}
+  .d1-now-elapsed{font-family:var(--font-d1);font-weight:300;font-size:50px;line-height:.95;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:#23211d;margin-left:auto}
+  .d1-now-meta{margin-top:16px;font-family:var(--font-mono);font-size:11px;color:#9a978d;display:flex;gap:20px;flex-wrap:wrap;font-weight:300}
+  .d1-now-meta b{color:#56544e;font-weight:500}
+  .d1-now-foot{margin-top:20px;display:flex;align-items:center;gap:22px}
+  .d1-link{font-size:13px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:5px}
+  .d1-link svg{width:13px;height:13px}
+  .d1-stop{font-size:12px;color:#9a978d;background:none;border:none;cursor:pointer;padding:0}
+
+  /* future — margin whispers */
+  .d1-future{display:flex;gap:30px;margin-top:26px;flex-wrap:wrap}
+  .d1-fut{font-family:var(--font-d1);font-style:italic;font-weight:300;font-size:13px;color:#b2aea3}
+  .d1-fut em{font-style:normal;font-family:var(--font-mono);font-size:10.5px;color:#c4c0b5;margin-left:5px;font-weight:300}
+
+  /* =====================================================================
+     B — SPOOL  (cinematic dark · gray-flow tape · glow only at the head)
+     ===================================================================== */
+  .d2{background:radial-gradient(130% 90% at 50% 14%,#1a1d28 0%,#0e1016 58%,#08090d 100%);color:#e9eaf0;padding:44px 42px 40px;position:relative;overflow:hidden}
+  .d2::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.026 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .d2>*{position:relative;z-index:1}
+  .d2-glow{position:absolute;top:-150px;left:50%;transform:translateX(-50%);width:560px;height:360px;background:radial-gradient(circle,rgba(59,111,224,.30),transparent 62%);pointer-events:none;z-index:0}
+  .d2-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:40px}
+  .d2-date{font-family:var(--font-d2);font-size:21px;font-weight:400;letter-spacing:.005em}
+  .d2-date em{font-style:italic;color:#8489a0}
+  .d2-rec{font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#7e8294}
+
+  /* the tape: gray recorded-flow past, glow only at head. no category colors. */
+  .d2-tape{position:relative;height:46px;margin-bottom:48px}
+  .d2-track{position:absolute;inset:0;border-radius:8px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}
+  .d2-past{position:absolute;left:5px;top:5px;bottom:5px;border-radius:5px;background:rgba(255,255,255,.10)}  /* filled recorded time, gray */
+  .d2-tick{position:absolute;top:4px;bottom:4px;width:0;border-left:1px dashed rgba(255,255,255,.18)}
+  .d2-tick .lbl{position:absolute;top:-19px;left:5px;font-family:var(--font-mono);font-size:9px;color:#5e6273;white-space:nowrap;letter-spacing:.02em}
+  .d2-headline{position:absolute;top:-10px;bottom:-10px;width:2px;background:linear-gradient(to bottom,transparent,#bcd0ff 30%,var(--accent) 50%,#bcd0ff 70%,transparent);box-shadow:0 0 14px 2px rgba(59,111,224,.65)}
+  .d2-hdot{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(59,111,224,.45),0 0 18px 4px rgba(120,160,255,.7);animation:pulse 2.2s ease-in-out infinite}
+
+  .d2-hero{text-align:center}
+  .d2-name{font-family:var(--font-d2);font-weight:400;font-size:44px;line-height:1;letter-spacing:.005em;color:#f2f3f7}
+  .d2-elapsed{font-family:var(--font-mono);font-weight:300;font-size:60px;line-height:1.05;letter-spacing:-.015em;font-variant-numeric:tabular-nums;margin-top:14px;color:#eef0f6}
+  .d2-meta{margin-top:16px;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;color:#7e8294;font-weight:300}
+  .d2-meta b{color:#b4b8c8;font-weight:400}
+  .d2-actions{margin-top:30px;display:flex;justify-content:center;gap:14px}
+  .d2-btn{font:inherit;font-size:12.5px;font-weight:500;border-radius:999px;padding:10px 22px;cursor:pointer;letter-spacing:.01em}
+  .d2-btn.ghost{background:transparent;color:#c2c6d6;border:1px solid rgba(255,255,255,.16)}
+  .d2-btn.accent{background:transparent;color:#9ec0ff;border:1px solid rgba(59,111,224,.5);box-shadow:0 0 18px -4px rgba(59,111,224,.5) inset}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  @media(prefers-reduced-motion:reduce){.d1-rec .live,.d1-now-top .pulse,.d2-hdot{animation:none}}
+</style>
+</head>
+<body>
+<div class="gallery">
+
+  <header>
+    <p class="g-eyebrow">OxiLine · UI directions v2 · 2026-08-01</p>
+    <h1 class="g-title">빼는 설계 — <em>지금</em>만 색을 가진다</h1>
+    <p class="g-lede">"조잡함"의 원인은 더하기가 아니라 <b>경쟁하는 색·겹칩 인코딩·밀집</b>이었다. 그래서 과거는 잉크(무채색)로 물러나게 하고, <b>녹화 중인 활동 하나만</b> 색으로 피운다. 한 화면에 초점 하나. 두 방향 모두 같은 절제 원칙, 다른 톤.</p>
+  </header>
+
+  <!-- ============ A — LINEN ============ -->
+  <section class="dir">
+    <div class="dir-meta">
+      <span class="dir-no">A</span>
+      <h2 class="dir-name">Linen</h2>
+      <span class="dir-tone">따뜻한 종이 · 에디토리얼 · 차분한 잉크 로그</span>
+    </div>
+    <p class="dir-why">과거는 hairline 위에 올린 잉크 글줄 — 색 점조차 없다. 지금 카드만 <b>그림자로 뜨고</b> 파랑 한 점으로 산다. serif 숫자가 무게를 대신한다. 상자·보더 대신 여백과 타이포가 구조를 만든다.</p>
+    <div class="principle"><span>단일 액센트</span><span>인코딩 1개/요소 (elevation)</span><span>초점 1개</span><span>타이포가 라인을 대체</span></div>
+
+    <div class="frame d1" style="max-width:440px">
+      <div class="d1-head">
+        <div class="d1-date">금요일 <em>8월 1일</em></div>
+        <div class="d1-rec"><span class="live"></span>녹화 중</div>
+      </div>
+
+      <div class="d1-log">
+        <div class="d1-row"><span class="nm">아침 운동</span><span class="tm">07:02</span><span class="dr">30m</span></div>
+        <div class="d1-row"><span class="nm">출근 준비</span><span class="tm">07:35</span><span class="dr">30m</span></div>
+        <div class="d1-row"><span class="nm">코딩</span><span class="tm">09:00</span><span class="dr">1h30</span></div>
+        <div class="d1-row"><span class="nm">독서</span><span class="tm">10:30</span><span class="dr">45m</span></div>
+      </div>
+
+      <div class="d1-intent">의도했던 시간 — 집중 작업 블록, 11:00</div>
+
+      <div class="d1-now">
+        <div class="d1-now-top"><span class="pulse"></span><span class="lbl">지금 녹화 중</span></div>
+        <div class="d1-now-main">
+          <span class="d1-now-name">코딩</span>
+          <span class="d1-now-elapsed">0:42:17</span>
+        </div>
+        <div class="d1-now-meta"><span>11:15부터</span><span>오늘 <b>2h12m</b> / 4h</span></div>
+        <div class="d1-now-foot">
+          <button class="d1-link">전환 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="d1-stop">⏸ 멈춤</button>
+        </div>
+      </div>
+
+      <div class="d1-future">
+        <span class="d1-fut">점심<em>12:30</em></span>
+        <span class="d1-fut">스탠드업<em>14:00</em></span>
+      </div>
+    </div>
+    <p style="margin-top:18px;font-size:12px;color:#7a7872;line-height:1.65;max-width:60ch">의도(이탤릭 한 줄)가 지금 카드 바로 위 — <em>11:00에 집중작업을 의도했지만 11:15에 코딩을 녹화</em>. figure/ground가 prose가 아니라 화면에 보인다.</p>
+  </section>
+
+  <!-- ============ B — SPOOL ============ -->
+  <section class="dir">
+    <div class="dir-meta">
+      <span class="dir-no">B</span>
+      <h2 class="dir-name">Spool</h2>
+      <span class="dir-tone">영화적 다크 · 가로 테이프 · 헤드에서만 빛</span>
+    </div>
+    <p class="dir-why">테이프는 <b>시간의 흐름</b>을 보여준다 — 카테고리 색이 아니라 "얼마나 채워졌나"를. 그래서 과거는 회색으로 채우고, <b>오직 헤드(지금)만</b> 빛난다. 왼쪽=채워진 과거, 헤드=지금, 오른쪽=빈 미래. 가장 직관적인 은유.</p>
+    <div class="principle"><span>단일 액센트 (헤드 글로우)</span><span>과거=무채색 flow</span><span>초점 1개</span><span>레전드·보더 제거</span></div>
+
+    <div class="frame d2" style="max-width:540px">
+      <div class="d2-glow"></div>
+      <div class="d2-head">
+        <div class="d2-date">Friday <em>· Aug 1</em></div>
+        <div class="d2-rec">● Recording</div>
+      </div>
+
+      <!-- tape 06:00..15:00 = 9h -->
+      <div class="d2-tape">
+        <div class="d2-track"></div>
+        <!-- recorded past = gray fill from 06:00 to 11:57 => (11:57-06:00)/9h = 66.1% -->
+        <div class="d2-past" style="width:66.1%"></div>
+        <!-- intent tick: 집중작업 11:00 => 55.5% -->
+        <div class="d2-tick" style="left:55.5%"><span class="lbl">집중작업 · 의도</span></div>
+        <!-- future ticks -->
+        <div class="d2-tick" style="left:72.2%"><span class="lbl">점심</span></div>
+        <div class="d2-tick" style="left:88.8%"><span class="lbl">스탠드업</span></div>
+        <!-- playhead at 11:57 -->
+        <div class="d2-headline" style="left:66.1%"><span class="d2-hdot"></span></div>
+      </div>
+
+      <div class="d2-hero">
+        <div class="d2-name">코딩</div>
+        <div class="d2-elapsed">0:42:17</div>
+        <div class="d2-meta">11:15부터 녹화 중 &nbsp;·&nbsp; 오늘 <b>2h12m</b> / 4h</div>
+      </div>
+
+      <div class="d2-actions">
+        <button class="d2-btn accent">전환 ⌘⇧A</button>
+        <button class="d2-btn ghost">⏸ 멈춤</button>
+      </div>
+    </div>
+    <p style="margin-top:18px;font-size:12px;color:#7a7872;line-height:1.65;max-width:60ch">점선 의도 눈금(<em>집중작업, 11:00</em>)이 헤드(11:57)보다 앞에 — 그 <b>57분의 괴리</b>가 회색 flow 위에 보인다. 카테고리 색을 버렸기에 "지금"의 빛이 압도적으로 선명하다.</p>
+  </section>
+
+</div>
+</body>
+</html>

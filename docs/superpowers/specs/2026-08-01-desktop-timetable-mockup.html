@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OxiLine — Final Mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUITE@2/fonts/variable/woff2/SUITE-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5/index.css">
+<style>
+  :root{
+    --p-neutral-0:oklch(98.5% 0.004 95); --p-neutral-50:oklch(95% 0.006 95);
+    --p-neutral-100:oklch(90% 0.007 95); --p-neutral-300:oklch(75% 0.010 95);
+    --p-neutral-700:oklch(35% 0.012 265); --p-neutral-900:oklch(18% 0.015 265); --p-neutral-950:oklch(13% 0.020 265);
+    --color-surface:var(--p-neutral-0); --color-surface-raised:oklch(100% 0 0);
+    --color-surface-sunken:var(--p-neutral-50); --color-surface-muted:oklch(96% 0.005 265);
+    --color-text:var(--p-neutral-900); --color-text-muted:var(--p-neutral-700); --color-text-subtle:oklch(48% 0.010 95);
+    --color-border:var(--p-neutral-100); --color-border-strong:oklch(82% 0.008 265);
+    --hue-red:oklch(0.75 0.15 25); --hue-amber:oklch(0.75 0.15 75); --hue-green:oklch(0.75 0.13 145);
+    --hue-teal:oklch(0.75 0.12 195); --hue-blue:oklch(0.70 0.14 250); --hue-purple:oklch(0.72 0.15 310);
+    --interactive-primary:oklch(0.45 0.14 250); --interactive-primary-fg:oklch(98.5% 0.004 95);
+    --r-md:.5rem; --r-lg:.75rem; --r-xl:1rem;
+    --shadow-sm:0 1px 2px oklch(0% 0 0 / .05); --shadow-md:0 4px 8px -2px oklch(0% 0 0 / .08),0 2px 4px -1px oklch(0% 0 0 / .04);
+    --shadow-lg:0 12px 24px -8px oklch(0% 0 0 / .14),0 4px 8px -2px oklch(0% 0 0 / .07);
+    --font-sans:"SUIT Variable","SUIT",system-ui,-apple-system,sans-serif;
+    --font-display:"SUITE Variable","SUITE",system-ui,sans-serif;
+    --font-mono:"Geist Mono Variable","Geist Mono",ui-monospace,monospace;
+    color-scheme:light;
+  }
+  .dark{
+    --p-neutral-100:oklch(28% 0.015 265); --p-neutral-500:oklch(65% 0.012 265);
+    --color-surface:var(--p-neutral-950); --color-surface-raised:oklch(22% 0.016 265);
+    --color-surface-sunken:oklch(11% 0.018 265); --color-surface-muted:oklch(20% 0.012 265);
+    --color-text:var(--p-neutral-0); --color-text-muted:var(--p-neutral-300); --color-text-subtle:oklch(75% 0.012 265);
+    --color-border:oklch(28% 0.015 265); --color-border-strong:oklch(40% 0.015 265);
+    --hue-red:oklch(0.78 0.14 25); --hue-amber:oklch(0.78 0.14 75); --hue-green:oklch(0.78 0.12 145);
+    --hue-teal:oklch(0.78 0.11 195); --hue-blue:oklch(0.74 0.13 250); --hue-purple:oklch(0.76 0.14 310);
+    --interactive-primary:oklch(0.70 0.14 250); --interactive-primary-fg:oklch(15% 0.015 265);
+    color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font-sans);background:#cfcdc6;color:var(--color-text);-webkit-font-smoothing:antialiased;line-height:1.5;padding:36px 24px 64px}
+  .page{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px;align-items:center}
+  .bar{display:flex;align-items:center;justify-content:space-between;width:100%}
+  .cap{font-family:var(--font-mono);font-size:11px;color:#6b6a64}
+  .cap b{color:#2a2925}
+  .tg{appearance:none;cursor:pointer;font-family:var(--font-sans);font-size:12px;font-weight:500;color:#4a4844;background:#e3e1da;border:1px solid #cfccc4;padding:6px 14px;border-radius:999px}
+
+  /* === APP SHELL (responsive via container query) === */
+  .stage{width:100%}
+  .stage.wide{max-width:1180px}
+  .stage.narrow{max-width:430px}
+  .app{container-type:inline-size;width:100%;background:var(--color-surface);border-radius:14px;overflow:hidden;box-shadow:0 40px 80px -30px rgba(20,20,30,.4),0 10px 24px -10px rgba(20,20,30,.2);display:flex;flex-direction:column;border:1px solid var(--color-border);position:relative}
+  .app.tall{height:720px}
+  .app.short{height:680px}
+
+  /* titlebar */
+  .titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--color-surface-raised);border-bottom:1px solid var(--color-border);flex-shrink:0;position:relative;z-index:8}
+  .tl{display:flex;gap:7px;flex-shrink:0}.tl span{width:12px;height:12px;border-radius:50%}
+  .tl .r{background:oklch(0.78 0.14 25)}.tl .y{background:oklch(0.78 0.14 75)}.tl .g{background:oklch(0.74 0.13 145)}
+  .titlebar .spacer{flex:1}
+  .menu-btn{display:none;width:30px;height:30px;align-items:center;justify-content:center;border-radius:var(--r-md);border:1px solid transparent;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:15px}
+  .menu-btn:hover{background:var(--color-surface-muted)}
+  .date-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface-sunken);cursor:pointer}
+  .date-pill b{font-family:var(--font-display);font-weight:600;font-size:12.5px}
+  .date-pill .chev{color:var(--color-text-subtle);font-size:11px}
+  .tb-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .kbd{font-family:var(--font-mono);font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid var(--color-border);background:var(--color-surface-sunken);color:var(--color-text-muted)}
+
+  /* date dropdown popover */
+  .dd{position:absolute;top:42px;left:50%;transform:translateX(-50%);background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);padding:12px;width:248px;z-index:20}
+  .dd-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .dd-head .m{font-family:var(--font-display);font-weight:600;font-size:13px}
+  .dd-nav{display:flex;gap:4px}
+  .dd-nav button{width:24px;height:24px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;font-size:11px}
+  .dd-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .dd-cal .d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10.5px;color:var(--color-text-muted);border-radius:6px}
+  .dd-cal .d.muted{color:var(--color-border-strong)}
+  .dd-cal .d.today{background:var(--interactive-primary);color:var(--interactive-primary-fg);font-weight:600}
+  .dd-cal .d.has::after{content:"";width:3px;height:3px;border-radius:50%;background:var(--hue-blue);position:absolute;transform:translateY(9px)}
+  .dd-cal .d{position:relative}
+  .dd-foot{margin-top:10px;display:flex;justify-content:space-between;align-items:center}
+  .dd-today{font-size:11px;color:var(--interactive-primary);font-weight:600;background:none;border:none;cursor:pointer}
+  .dd-peek{font-family:var(--font-mono);font-size:10px;color:var(--color-text-subtle)}
+
+  .body{flex:1;display:flex;min-height:0;position:relative}
+  .pane{display:flex;flex-direction:column;min-height:0}
+  .sidebar{width:244px;border-right:1px solid var(--color-border);background:var(--color-surface-raised);flex-shrink:0}
+  .inspector{width:264px;border-left:1px solid var(--color-border);background:var(--color-surface-raised);flex-shrink:0;overflow:auto}
+  .main{flex:1;background:var(--color-surface);position:relative;overflow:hidden;min-width:0}
+
+  .sec-head{padding:13px 15px 7px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-subtle)}
+  .sec-head.fl{display:flex;justify-content:space-between;align-items:center}
+  .sec-head .hint{font-family:var(--font-mono);text-transform:none;letter-spacing:0;font-weight:400;font-size:10px}
+
+  /* now card */
+  .now-card{margin:6px 12px 10px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--r-lg);padding:12px 13px}
+  .now-top{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .now-dot{width:8px;height:8px;border-radius:50%;background:var(--hue-blue);box-shadow:0 0 0 3px oklch(from var(--hue-blue) l c h / .16);animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  @media(prefers-reduced-motion:reduce){.now-dot,.rec-tag .d{animation:none}}
+  .now-tag{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--hue-blue);font-weight:600}
+  .now-name{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .now-elapsed{font-family:var(--font-mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:1px;display:flex;align-items:baseline;gap:7px}
+  .now-elapsed .rnd{font-size:9.5px;font-weight:400;color:var(--color-text-subtle);letter-spacing:.02em}
+  .now-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--color-text-subtle);margin-top:4px;line-height:1.5}
+  .now-meta b{color:var(--color-text-muted);font-weight:500}
+  .now-actions{margin-top:9px;display:flex;gap:8px}
+  .btn{font-family:var(--font-sans);font-size:11.5px;font-weight:600;border-radius:999px;padding:6px 13px;cursor:pointer;border:1px solid transparent}
+  .btn.primary{background:var(--interactive-primary);color:var(--interactive-primary-fg)}
+  .btn.ghost{background:var(--color-surface);color:var(--color-text-muted);border-color:var(--color-border)}
+
+  /* library */
+  .lib{padding:0 8px 10px}
+  .lib-row{padding:7px 8px;border-radius:var(--r-md);cursor:grab}
+  .lib-row:hover{background:var(--color-surface-muted)}
+  .lib-top{display:flex;align-items:center;gap:8px}
+  .lib-row .sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .lib-row .nm{font-size:12.5px;font-weight:500;flex:1}
+  .lib-row .tg2{font-family:var(--font-mono);font-size:9.5px;color:var(--color-text-subtle)}
+  .lib-bar{position:relative;height:4px;background:var(--color-surface-sunken);border-radius:999px;margin-top:6px}
+  .lib-bar .f{position:absolute;inset:0 auto 0 0;border-radius:999px}
+  .lib-bar .tk{position:absolute;top:-2px;bottom:-2px;border-left:1px dashed var(--color-border-strong)}
+  .lib-row .sub{font-family:var(--font-mono);font-size:9.5px;color:var(--color-text-subtle);margin-top:4px}
+  .lib-add{margin:4px 8px 0;padding:7px;font-size:12px;color:var(--color-text-subtle);border:1px dashed var(--color-border-strong);border-radius:var(--r-md);text-align:center}
+
+  /* TIMETABLE — cards have NO vertical bar; category = small dot */
+  .tt-wrap{position:absolute;inset:0;overflow:auto}
+  .tt{position:relative;display:grid;grid-template-columns:50px 1fr;padding:16px 0 60px}
+  .rail{position:relative;border-right:1px solid var(--color-border)}
+  .rail .h{position:absolute;right:9px;font-family:var(--font-mono);font-size:10.5px;color:var(--color-text-subtle);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+  .canvas{position:relative;margin:0 16px;height:520px}
+  .grid-line{position:absolute;left:0;right:0;border-top:1px solid var(--color-border);opacity:.5}
+  .card{position:absolute;left:0;right:0;background:var(--color-surface-raised);border:1px solid var(--color-border);border-radius:var(--r-md);box-shadow:var(--shadow-sm);padding:7px 11px;overflow:hidden;cursor:grab}
+  .card .crow{display:flex;align-items:center;gap:7px}
+  .card .dot{width:7px;height:7px;border-radius:50%;background:var(--c,var(--hue-blue));flex-shrink:0}
+  .card .ttl{font-size:12.5px;font-weight:600;letter-spacing:-.005em}
+  .card .sub{font-family:var(--font-mono);font-size:10px;color:var(--color-text-muted);margin-top:2px;display:flex;gap:8px}
+  .card .sub .rec{color:var(--color-text-subtle)}
+  .card.past{opacity:.7}
+  .card.past .ttl{color:var(--color-text-muted)}
+  .card.recording{border-color:oklch(from var(--hue-blue) l c h / .5)}
+  .rec-tag{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--hue-blue);font-weight:600;background:oklch(from var(--hue-blue) l c h / .12);padding:2px 6px;border-radius:999px;margin-top:4px}
+  .rec-tag .d{width:5px;height:5px;border-radius:50%;background:var(--hue-blue);animation:pulse 2.2s ease-in-out infinite}
+  .nowline{position:absolute;left:-6px;right:-6px;border-top:1.5px solid var(--hue-blue);z-index:6}
+  .nowline::before{content:"";position:absolute;left:-4px;top:-5px;width:9px;height:9px;border-radius:50%;background:var(--hue-blue);box-shadow:0 0 0 3px oklch(from var(--hue-blue) l c h / .18)}
+  .nowline .nl-time{position:absolute;right:0;top:-17px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--hue-blue);background:var(--color-surface);padding:0 4px}
+
+  /* inspector */
+  .seg{display:flex;gap:2px;background:var(--color-surface-sunken);border-radius:999px;padding:2px;margin:0 14px 8px}
+  .seg button{flex:1;font-family:var(--font-sans);font-size:11px;font-weight:500;color:var(--color-text-muted);background:none;border:none;padding:5px 0;border-radius:999px;cursor:pointer}
+  .seg button.on{background:var(--color-surface-raised);color:var(--color-text);box-shadow:var(--shadow-sm)}
+  .ov{padding:2px 14px 8px}
+  .ov-row{padding:9px 0;border-bottom:1px solid var(--color-border)}
+  .ov-row:last-child{border-bottom:none}
+  .ov-top{display:flex;align-items:center;gap:8px}
+  .ov-top .sw{width:8px;height:8px;border-radius:2px}
+  .ov-top .nm{font-size:12px;font-weight:500;flex:1}
+  .ov-top .pct{font-family:var(--font-mono);font-size:11px;color:var(--color-text-muted)}
+  .ov-bar{position:relative;height:6px;background:var(--color-surface-sunken);border-radius:999px;margin-top:6px}
+  .ov-bar .f{position:absolute;inset:0 auto 0 0;border-radius:999px}
+  .ov-bar .tk{position:absolute;top:-2px;bottom:-2px;border-left:1px dashed var(--color-border-strong)}
+  .ov-sub{font-family:var(--font-mono);font-size:9.5px;color:var(--color-text-subtle);margin-top:4px}
+  .total{padding:10px 13px;background:var(--color-surface-sunken);margin:6px 14px 0;border-radius:var(--r-md);font-family:var(--font-mono);font-size:10.5px;color:var(--color-text-muted)}
+  .total b{color:var(--color-text);font-weight:600}
+  .log{padding:0 14px 12px}
+  .log-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:11px;border-bottom:1px solid var(--color-border)}
+  .log-row:last-child{border-bottom:none}
+  .log-row .lt{font-family:var(--font-mono);font-size:9.5px;color:var(--color-text-subtle)}
+  .log-row .ln{font-weight:500;display:flex;align-items:center;gap:6px}
+  .log-row .ln .sw{width:6px;height:6px;border-radius:2px}
+  .log-row .ld{font-family:var(--font-mono);font-size:9.5px;color:var(--color-text-muted)}
+
+  /* bottom now-bar (mobile) */
+  .now-bar{display:none;position:absolute;left:0;right:0;bottom:0;padding:9px 12px;background:var(--color-surface-raised);border-top:1px solid var(--color-border);align-items:center;gap:9px;z-index:7}
+  .now-bar .nb-dot{width:8px;height:8px;border-radius:50%;background:var(--hue-blue);animation:pulse 2.2s ease-in-out infinite)}
+  .now-bar .nb-name{font-size:13px;font-weight:600;flex:1}
+  .now-bar .nb-el{font-family:var(--font-mono);font-size:14px;font-weight:500}
+
+  /* drawer overlay (narrow) */
+  .drawer{display:none;position:absolute;top:0;bottom:0;right:0;width:264px;background:var(--color-surface-raised);border-left:1px solid var(--color-border);box-shadow:var(--shadow-lg);z-index:15;flex-direction:column;overflow:auto}
+  .scrim{display:none;position:absolute;inset:0;background:oklch(0% 0 0 / .25);z-index:14}
+
+  /* === RESPONSIVE via container query === */
+  @container(max-width:880px){
+    .sidebar,.inspector{display:none}
+    .menu-btn{display:flex}
+    .now-bar{display:flex}
+    .tt{grid-template-columns:44px 1fr}
+    .titlebar .tb-right{gap:6px}
+    .titlebar .tb-right .kbd{display:none}
+  }
+  .stage.narrow .drawer.show{display:flex}
+  .stage.narrow .scrim.show{display:block}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="bar">
+    <div class="cap"><b>OxiLine</b> · 최종 목업 · 카드 무선(점 라벨) · 주간 충족도 · 5분 반올림 · 날짜 드롭다운 · 반응형(container query)</div>
+    <button class="tg" id="tg">다크</button>
+  </div>
+
+  <!-- ============ WIDE: full desktop ============ -->
+  <div class="stage wide">
+  <div class="app tall" id="app">
+    <div class="titlebar">
+      <div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <button class="menu-btn" title="활동">≡</button>
+      <div class="spacer"></div>
+      <div class="date-pill" id="dp"><b>2026년 8월 1일 (금)</b><span class="chev">▾</span></div>
+      <div class="spacer"></div>
+      <div class="tb-right"><span>빠른 추가</span><span class="kbd">⌘K</span><span>기록 전환</span><span class="kbd">⌘⇧A</span><button class="menu-btn" title="충족도">▤</button></div>
+
+      <!-- date dropdown (open) -->
+      <div class="dd" id="dd">
+        <div class="dd-head"><span class="m">2026년 8월</span><div class="dd-nav"><button>‹</button><button>›</button></div></div>
+        <div class="dd-cal">
+          <span class="d muted">27</span><span class="d muted">28</span><span class="d muted">29</span><span class="d muted">30</span><span class="d muted">31</span><span class="d has">1</span><span class="d">2</span>
+          <span class="d">3</span><span class="d">4</span><span class="d">5</span><span class="d">6</span><span class="d">7</span><span class="d">8</span><span class="d">9</span>
+          <span class="d">10</span><span class="d">11</span><span class="d">12</span><span class="d">13</span><span class="d">14</span><span class="d">15</span><span class="d">16</span>
+          <span class="d">17</span><span class="d">18</span><span class="d">19</span><span class="d">20</span><span class="d">21</span><span class="d">22</span><span class="d">23</span>
+          <span class="d">24</span><span class="d">25</span><span class="d">26</span><span class="d">27</span><span class="d">28</span><span class="d">29</span><span class="d">30</span>
+        </div>
+        <div class="dd-foot"><span class="dd-peek">오늘 기록 3h55m</span><button class="dd-today">오늘로</button></div>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- sidebar -->
+      <div class="pane sidebar">
+        <div class="now-card">
+          <div class="now-top"><span class="now-dot"></span><span class="now-tag">지금 녹화 중</span></div>
+          <div class="now-name">코딩</div>
+          <div class="now-elapsed">0:40 <span class="rnd">5분 단위 반올림</span></div>
+          <div class="now-meta">11:15부터<br><b>오늘</b> 2h10m / 4h · <b>주간</b> 8h20m / 20h</div>
+          <div class="now-actions"><button class="btn primary">전환</button><button class="btn ghost">⏸ 멈춤</button></div>
+        </div>
+        <div class="sec-head fl"><span>활동 · 카드</span><span class="hint">드래그 → 배치</span></div>
+        <div class="lib">
+          <div class="lib-row"><div class="lib-top"><span class="sw" style="background:var(--hue-blue)"></span><span class="nm">코딩</span><span class="tg2">주 20h</span></div><div class="lib-bar"><div class="f" style="width:42%;background:var(--hue-blue)"></div><div class="tk" style="left:100%"></div></div><div class="sub">주간 8h20m · 남음 11h40m</div></div>
+          <div class="lib-row"><div class="lib-top"><span class="sw" style="background:var(--hue-purple)"></span><span class="nm">독서</span><span class="tg2">주 5h</span></div><div class="lib-bar"><div class="f" style="width:55%;background:var(--hue-purple)"></div><div class="tk" style="left:100%"></div></div><div class="sub">주간 2h45m · 남음 2h15m</div></div>
+          <div class="lib-row"><div class="lib-top"><span class="sw" style="background:var(--hue-green)"></span><span class="nm">아침 운동</span><span class="tg2">주 2h30</span></div><div class="lib-bar"><div class="f" style="width:100%;background:var(--hue-green)"></div><div class="tk" style="left:100%"></div></div><div class="sub">주간 2h30m · 달성</div></div>
+          <div class="lib-row"><div class="lib-top"><span class="sw" style="background:var(--hue-teal)"></span><span class="nm">글쓰기</span><span class="tg2">주 3h</span></div><div class="lib-bar"><div class="f" style="width:100%;background:var(--hue-teal)"></div><div class="tk" style="left:100%"></div></div><div class="sub">주간 3h10m · +10m</div></div>
+          <div class="lib-row"><div class="lib-top"><span class="sw" style="background:var(--hue-amber)"></span><span class="nm">출근 준비</span><span class="tg2">—</span></div><div class="sub" style="margin-top:3px">예산 없음</div></div>
+          <div class="lib-add">+ 활동 추가</div>
+        </div>
+      </div>
+
+      <!-- timetable -->
+      <div class="pane main">
+        <div class="tt-wrap"><div class="tt">
+          <div class="rail">
+            <span class="h" style="top:0">06:00</span><span class="h" style="top:60px">07:00</span><span class="h" style="top:120px">08:00</span>
+            <span class="h" style="top:180px">09:00</span><span class="h" style="top:240px">10:00</span><span class="h" style="top:300px">11:00</span>
+            <span class="h" style="top:360px">12:00</span><span class="h" style="top:420px">13:00</span><span class="h" style="top:480px">14:00</span>
+          </div>
+          <div class="canvas">
+            <div class="grid-line" style="top:60px"></div><div class="grid-line" style="top:120px"></div><div class="grid-line" style="top:180px"></div>
+            <div class="grid-line" style="top:240px"></div><div class="grid-line" style="top:300px"></div><div class="grid-line" style="top:360px"></div>
+            <div class="grid-line" style="top:420px"></div><div class="grid-line" style="top:480px"></div>
+
+            <div class="card past" style="--c:var(--hue-green);top:62px;height:30px"><div class="crow"><span class="dot"></span><span class="ttl">아침 운동</span></div><div class="sub"><span>07:00–07:30</span><span class="rec">기록 30m</span></div></div>
+            <div class="card past" style="--c:var(--hue-amber);top:95px;height:30px"><div class="crow"><span class="dot"></span><span class="ttl">출근 준비</span></div><div class="sub"><span>07:30–08:00</span><span class="rec">기록 30m</span></div></div>
+            <div class="card past" style="--c:var(--hue-blue);top:180px;height:90px"><div class="crow"><span class="dot"></span><span class="ttl">코딩</span></div><div class="sub"><span>09:00–10:30</span><span class="rec">계획 1h30 · 기록 1h30</span></div></div>
+            <div class="card past" style="--c:var(--hue-purple);top:270px;height:45px"><div class="crow"><span class="dot"></span><span class="ttl">독서</span></div><div class="sub"><span>10:30–11:15</span><span class="rec">기록 45m</span></div></div>
+
+            <div class="card recording" style="--c:var(--hue-blue);top:315px;height:42px"><div class="crow"><span class="dot"></span><span class="ttl">코딩</span></div><div class="sub"><span>11:15– · 계획 2h00</span></div><span class="rec-tag"><span class="d"></span>녹화 중</span></div>
+            <div class="nowline" style="top:355px"><span class="nl-time">11:55</span></div>
+
+            <div class="card" style="--c:var(--hue-teal);top:390px;height:60px"><div class="crow"><span class="dot"></span><span class="ttl">점심 식사</span></div><div class="sub"><span>12:30–13:30 · 계획</span></div></div>
+            <div class="card" style="--c:var(--hue-blue);top:478px;height:26px;padding:4px 11px"><div class="crow"><span class="dot" style="width:6px;height:6px"></span><span class="ttl" style="font-size:11px">팀 스탠드업 · 14:00</span></div></div>
+          </div>
+        </div></div>
+        <!-- bottom now-bar (hidden on wide) -->
+        <div class="now-bar"><span class="nb-dot"></span><span class="nb-name">코딩</span><span class="nb-el">0:40</span><button class="btn primary">전환</button></div>
+      </div>
+
+      <!-- inspector -->
+      <div class="pane inspector">
+        <div class="sec-head">충족도</div>
+        <div class="seg"><button class="on">주간</button><button>오늘</button></div>
+        <div class="ov">
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-blue)"></span><span class="nm">코딩</span><span class="pct">42%</span></div><div class="ov-bar"><div class="f" style="width:42%;background:var(--hue-blue)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">8h20m / 20h · 남음 11h40m</div></div>
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-purple)"></span><span class="nm">독서</span><span class="pct">55%</span></div><div class="ov-bar"><div class="f" style="width:55%;background:var(--hue-purple)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">2h45m / 5h · 남음 2h15m</div></div>
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-teal)"></span><span class="nm">글쓰기</span><span class="pct">106%</span></div><div class="ov-bar"><div class="f" style="width:100%;background:var(--hue-teal)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">3h10m / 3h · +10m</div></div>
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-green)"></span><span class="nm">아침 운동</span><span class="pct">100%</span></div><div class="ov-bar"><div class="f" style="width:100%;background:var(--hue-green)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">2h30m / 2h30m · 달성</div></div>
+        </div>
+        <div class="total">이번 주 기록 <b>16h45m</b> · 목표 <b>30h30m</b></div>
+        <div class="sec-head">최근 세션</div>
+        <div class="log">
+          <div class="log-row"><span class="ln"><span class="sw" style="background:var(--hue-blue)"></span>코딩</span><span><span class="lt">09:00</span> · <span class="ld">1h30</span></span></div>
+          <div class="log-row"><span class="ln"><span class="sw" style="background:var(--hue-purple)"></span>독서</span><span><span class="lt">10:30</span> · <span class="ld">45m</span></span></div>
+          <div class="log-row"><span class="ln"><span class="sw" style="background:var(--hue-blue)"></span>코딩</span><span><span class="lt">11:15</span> · <span class="ld">0:40 ▶</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="cap" style="align-self:flex-start">↑ 넓은 화면(데스크톱): 3-pane. 창 폭을 줄이면 아래처럼 사이드 패널이 드로어로 접히고 하단에 now-bar가 뜬다.</div>
+
+  <!-- ============ NARROW: responsive collapsed ============ -->
+  <div class="stage narrow">
+  <div class="app short">
+    <div class="titlebar">
+      <div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <button class="menu-btn" title="활동">≡</button>
+      <div class="spacer"></div>
+      <div class="date-pill"><b>8월 1일 (금)</b><span class="chev">▾</span></div>
+      <div class="spacer"></div>
+      <button class="menu-btn" title="충족도">▤</button>
+    </div>
+    <div class="body">
+      <div class="pane main">
+        <div class="tt-wrap"><div class="tt">
+          <div class="rail">
+            <span class="h" style="top:0">07:00</span><span class="h" style="top:60px">08:00</span><span class="h" style="top:120px">09:00</span>
+            <span class="h" style="top:180px">10:00</span><span class="h" style="top:240px">11:00</span><span class="h" style="top:300px">12:00</span>
+          </div>
+          <div class="canvas" style="height:340px">
+            <div class="grid-line" style="top:60px"></div><div class="grid-line" style="top:120px"></div><div class="grid-line" style="top:180px"></div>
+            <div class="grid-line" style="top:240px"></div><div class="grid-line" style="top:300px"></div>
+            <div class="card past" style="--c:var(--hue-green);top:2px;height:30px"><div class="crow"><span class="dot"></span><span class="ttl">아침 운동</span></div><div class="sub"><span>07:00–07:30</span></div></div>
+            <div class="card past" style="--c:var(--hue-blue);top:120px;height:90px"><div class="crow"><span class="dot"></span><span class="ttl">코딩</span></div><div class="sub"><span>09:00–10:30 · 기록 1h30</span></div></div>
+            <div class="card past" style="--c:var(--hue-purple);top:210px;height:45px"><div class="crow"><span class="dot"></span><span class="ttl">독서</span></div><div class="sub"><span>10:30–11:15</span></div></div>
+            <div class="card recording" style="--c:var(--hue-blue);top:255px;height:40px"><div class="crow"><span class="dot"></span><span class="ttl">코딩</span></div><span class="rec-tag"><span class="d"></span>녹화 중</span></div>
+            <div class="nowline" style="top:290px"><span class="nl-time">11:55</span></div>
+          </div>
+        </div></div>
+        <div class="now-bar"><span class="nb-dot"></span><span class="nb-name">코딩</span><span class="nb-el">0:40</span><button class="btn primary">전환</button></div>
+      </div>
+      <!-- inspector drawer (closed by default; opens via ▤ button). Kept in DOM to show structure. -->
+      <div class="scrim"></div>
+      <div class="drawer">
+        <div class="sec-head fl"><span>충족도 · 주간</span><button class="menu-btn" style="display:flex">✕</button></div>
+        <div class="ov" style="padding-top:0">
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-blue)"></span><span class="nm">코딩</span><span class="pct">42%</span></div><div class="ov-bar"><div class="f" style="width:42%;background:var(--hue-blue)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">8h20m / 20h</div></div>
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-purple)"></span><span class="nm">독서</span><span class="pct">55%</span></div><div class="ov-bar"><div class="f" style="width:55%;background:var(--hue-purple)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">2h45m / 5h</div></div>
+          <div class="ov-row"><div class="ov-top"><span class="sw" style="background:var(--hue-teal)"></span><span class="nm">글쓰기</span><span class="pct">106%</span></div><div class="ov-bar"><div class="f" style="width:100%;background:var(--hue-teal)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">3h10m / 3h · +10m</div></div>
+        </div>
+        <div class="total">이번 주 <b>16h45m</b> / 30h30m</div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="cap" style="align-self:flex-start">↑ 좁은 화면: 타임테이블 전체 폭, 상단 ≡/▤ 로 사이드 패널을 드로어로 열고, 하단 now-bar로 항상 기록 중인 활동 표시.</div>
+</div>
+
+<script>
+  document.getElementById('tg').addEventListener('click',()=>{const d=document.documentElement.classList.toggle('dark');event.target.textContent=d?'라이트':'다크'});
+  document.getElementById('dp').addEventListener('click',()=>{document.getElementById('dd').style.display=document.getElementById('dd').style.display==='none'?'block':'none'});
+</script>
+</body>
+</html>

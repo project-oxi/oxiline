@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record Layer — Visual Designs · OxiLine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * OxiLine design tokens — OKLCH, 6-hue palette (mirrors
+   * crates/oxiline-app/src/styles.css). Light default + .dark.
+   * ============================================================ */
+  :root {
+    --color-surface:        oklch(98.5% 0.004 95);
+    --color-surface-raised: oklch(100% 0 0);
+    --color-surface-sunken: oklch(95% 0.006 95);
+    --color-surface-muted:  oklch(96% 0.005 265);
+    --color-text:           oklch(18% 0.015 265);
+    --color-text-muted:     oklch(35% 0.012 95);
+    --color-text-subtle:    oklch(48% 0.012 95);
+    --color-border:         oklch(90% 0.007 95);
+    --color-border-strong:  oklch(82% 0.008 265);
+
+    --color-hue-red:    oklch(0.72 0.15 25);
+    --color-hue-amber:  oklch(0.74 0.14 75);
+    --color-hue-green:  oklch(0.72 0.13 145);
+    --color-hue-teal:   oklch(0.73 0.12 195);
+    --color-hue-blue:   oklch(0.66 0.14 250);
+    --color-hue-purple: oklch(0.68 0.15 310);
+
+    --color-interactive-primary:        oklch(0.45 0.14 250);
+    --color-interactive-primary-soft:   oklch(0.45 0.14 250 / 0.10);
+
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.25rem;
+    --radius-full: 9999px;
+
+    --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.07), 0 1px 2px oklch(0% 0 0 / 0.04);
+    --shadow-md: 0 4px 8px oklch(0% 0 0 / 0.08), 0 2px 4px oklch(0% 0 0 / 0.04);
+    --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.10), 0 4px 8px oklch(0% 0 0 / 0.06);
+    --shadow-xl: 0 24px 48px oklch(0% 0 0 / 0.14), 0 8px 16px oklch(0% 0 0 / 0.06);
+
+    --font-sans: "Pretendard", system-ui, -apple-system, "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    color-scheme: light;
+  }
+  .dark {
+    --color-surface:        oklch(13% 0.020 265);
+    --color-surface-raised: oklch(22% 0.016 265);
+    --color-surface-sunken: oklch(11% 0.018 265);
+    --color-surface-muted:  oklch(20% 0.012 265);
+    --color-text:           oklch(98.5% 0.004 95);
+    --color-text-muted:     oklch(78% 0.012 95);
+    --color-text-subtle:    oklch(65% 0.012 95);
+    --color-border:         oklch(28% 0.015 265);
+    --color-border-strong:  oklch(40% 0.015 265);
+
+    --color-hue-red:    oklch(0.78 0.14 25);
+    --color-hue-amber:  oklch(0.78 0.14 75);
+    --color-hue-green:  oklch(0.76 0.12 145);
+    --color-hue-teal:   oklch(0.76 0.11 195);
+    --color-hue-blue:   oklch(0.74 0.13 250);
+    --color-hue-purple: oklch(0.76 0.14 310);
+
+    --color-interactive-primary:      oklch(0.72 0.13 250);
+    --color-interactive-primary-soft: oklch(0.72 0.13 250 / 0.14);
+
+    --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.40), 0 1px 2px oklch(0% 0 0 / 0.30);
+    --shadow-md: 0 4px 8px oklch(0% 0 0 / 0.45), 0 2px 4px oklch(0% 0 0 / 0.35);
+    --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.50), 0 4px 8px oklch(0% 0 0 / 0.40);
+    --shadow-xl: 0 24px 48px oklch(0% 0 0 / 0.60), 0 8px 16px oklch(0% 0 0 / 0.40);
+
+    color-scheme: dark;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-surface);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    transition: background-color 200ms cubic-bezier(0.4,0,0.2,1), color 200ms cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ---- page chrome ---- */
+  .page-header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: oklch(from var(--color-surface) l c h / 0.75);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .page-header-inner {
+    max-width: 1200px; margin: 0 auto;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .page-title { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .page-sub { margin: 2px 0 0; font-size: 12px; color: var(--color-text-subtle); font-family: var(--font-mono); }
+  .theme-toggle {
+    appearance: none; cursor: pointer;
+    padding: 6px 12px; border-radius: var(--radius-full);
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-family: var(--font-sans); font-size: 12px; font-weight: 500;
+    box-shadow: var(--shadow-sm);
+  }
+  .theme-toggle:hover { color: var(--color-text); }
+  .theme-toggle .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: middle; opacity: 0.5; }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 32px; display: flex; flex-direction: column; gap: 56px; }
+
+  /* ---- intro ---- */
+  .intro { display: flex; flex-direction: column; gap: 10px; }
+  .intro h2 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .intro p { margin: 0; color: var(--color-text-muted); font-size: 15px; max-width: 70ch; }
+  .intro .pills { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .pill { font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface-raised); color: var(--color-text-muted); }
+
+  /* ---- design section ---- */
+  .design-section { display: flex; flex-direction: column; gap: 20px; }
+  .design-header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .design-no { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-subtle); padding: 3px 8px; border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+  .design-header h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .design-header .hotkey { font-family: var(--font-mono); font-size: 13px; color: var(--color-text-subtle); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-surface-raised); }
+  .design-header p { margin: 6px 0 0; font-size: 13px; color: var(--color-text-muted); width: 100%; }
+  .design-notes { font-size: 12px; color: var(--color-text-subtle); padding: 12px 14px; border-left: 2px solid var(--color-interactive-primary); background: var(--color-interactive-primary-soft); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+  .design-notes strong { color: var(--color-text-muted); font-weight: 600; }
+
+  .stage { display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start; }
+  .stage-label { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ---- desktop scene (behind overlays) ---- */
+  .scene {
+    position: relative;
+    width: 720px; max-width: 100%;
+    height: 280px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: linear-gradient(135deg, var(--color-surface-muted), var(--color-surface-sunken));
+  }
+  .ghost {
+    position: absolute;
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    opacity: 0.45;
+    filter: blur(0.3px);
+  }
+  .ghost.g1 { top: 24px; left: 24px; width: 320px; height: 180px; }
+  .ghost.g2 { top: 64px; right: 24px; width: 240px; height: 160px; }
+  .ghost-bar { height: 8px; background: var(--color-border); border-radius: 4px; margin: 14px 14px 0; }
+  .ghost-bar.s { width: 60%; }
+  .ghost-bar.m { width: 80%; }
+  .ghost-bar.l { width: 40%; }
+  .ghost-bar.xs { width: 20%; height: 6px; margin: 10px 14px; }
+  .ghost-bars { padding: 0 14px; display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+
+  /* ============================================================
+   * 01. Peek HUD
+   * ============================================================ */
+  .hud {
+    width: 360px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: 14px 16px 16px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+  }
+  .hud .oxide-bar { height: 22px; background: var(--color-surface-sunken); border-radius: 6px; position: relative; margin-bottom: 14px; overflow: hidden; }
+  .hud .oxide-seg { position: absolute; top: 0; bottom: 0; }
+  .hud .oxide-seg.work { background: var(--color-hue-blue); opacity: 0.55; left: 0%; width: 38%; }
+  .hud .oxide-seg.meet { background: var(--color-hue-amber); opacity: 0.45; left: 38%; width: 6%; }
+  .hud .oxide-seg.gap { background: transparent; left: 44%; width: 56%; }
+  .hud .oxide-dot { position: absolute; top: 50%; left: 44%; transform: translate(-50%,-50%); width: 10px; height: 10px; border-radius: 50%; background: var(--color-interactive-primary); box-shadow: 0 0 0 4px var(--color-interactive-primary-soft); }
+  .hud .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .hud .row.now { font-weight: 600; font-size: 14px; }
+  .hud .row.next { color: var(--color-text-muted); margin-top: 4px; font-size: 12px; }
+  .hud .row.rec { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border); display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-muted); }
+  .hud .row.rec .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-hue-blue); flex-shrink: 0; box-shadow: 0 0 0 3px oklch(from var(--color-hue-blue) l c h / 0.18); }
+  .hud .row.rec .name { font-weight: 600; color: var(--color-text); }
+  .hud .row.rec .mono { font-family: var(--font-mono); font-size: 11.5px; color: var(--color-text); }
+  .hud .row .label { color: var(--color-text-subtle); font-size: 11px; margin-right: 6px; }
+  .hud .row .remain { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-muted); }
+  .hud .row .name-strong { font-weight: 600; }
+
+  /* ============================================================
+   * 02. Switcher
+   * ============================================================ */
+  .switcher {
+    width: 420px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .switcher-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); }
+  .switcher-head .title { font-weight: 600; font-size: 13px; }
+  .switcher-head .esc { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); padding: 2px 7px; border-radius: 4px; border: 1px solid var(--color-border); }
+  .switcher-active { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-left: 3px solid var(--active-hue, var(--color-hue-blue)); background: oklch(from var(--active-hue, var(--color-hue-blue)) l c h / 0.06); }
+  .switcher-active .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--active-hue, var(--color-hue-blue)); box-shadow: 0 0 0 3px oklch(from var(--active-hue, var(--color-hue-blue)) l c h / 0.22); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.7 } }
+  @media (prefers-reduced-motion: reduce) { .switcher-active .live-dot { animation: none; } }
+  .switcher-active .name { font-weight: 600; flex: 1; }
+  .switcher-active .elapsed { font-family: var(--font-mono); font-size: 13px; color: var(--color-text); }
+  .switcher-active .stop { font-size: 11px; color: var(--color-text-muted); padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); }
+  .switcher-list { padding: 4px 0; }
+  .switcher-row { padding: 9px 14px; display: grid; grid-template-columns: 22px 70px 1fr 92px; gap: 10px; align-items: center; cursor: default; }
+  .switcher-row:hover { background: var(--color-surface-muted); }
+  .switcher-row .key { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border); background: var(--color-surface); text-align: center; }
+  .switcher-row .name { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .switcher-row .name .swatch { width: 8px; height: 8px; border-radius: 2px; }
+  .switcher-row .bar-wrap { }
+  .switcher-row .label { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); text-align: right; white-space: nowrap; }
+  .switcher-add { padding: 9px 14px; color: var(--color-text-muted); font-size: 12px; }
+
+  /* compliance bar */
+  .cbar { position: relative; height: 10px; background: var(--color-surface-sunken); border-radius: var(--radius-full); overflow: visible; }
+  .cbar .fill { position: absolute; top: 0; left: 0; bottom: 0; border-radius: var(--radius-full); }
+  .cbar .target { position: absolute; top: -3px; bottom: -3px; width: 0; border-left: 1.5px dashed var(--color-border-strong); }
+  .cbar .over { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-full); /* extends past target tick for over; visually same hue */ }
+
+  /* ============================================================
+   * 03. Record tab (main window)
+   * ============================================================ */
+  .window {
+    width: 420px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .win-titlebar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--color-border); background: var(--color-surface-raised); -webkit-app-region: drag; }
+  .traffic { display: flex; gap: 6px; }
+  .traffic span { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .traffic .r { background: oklch(0.78 0.14 25); }
+  .traffic .y { background: oklch(0.78 0.14 75); }
+  .traffic .g { background: oklch(0.74 0.13 145); }
+  .win-titlebar .title { flex: 1; text-align: center; font-size: 12px; color: var(--color-text-muted); font-weight: 500; }
+  .win-titlebar .icons { display: flex; gap: 10px; color: var(--color-text-subtle); font-size: 13px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--color-border); background: var(--color-surface-raised); }
+  .tab { flex: 1; padding: 9px 0; text-align: center; font-size: 12px; color: var(--color-text-subtle); border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--color-text); border-bottom-color: var(--color-interactive-primary); font-weight: 600; }
+
+  .record-body { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .active-card { padding: 14px; border-radius: var(--radius-lg); background: var(--color-surface-raised); box-shadow: var(--shadow-sm); border-left: 3px solid var(--active-hue, var(--color-hue-blue)); display: flex; align-items: center; gap: 12px; }
+  .active-card .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--active-hue, var(--color-hue-blue)); box-shadow: 0 0 0 4px oklch(from var(--active-hue, var(--color-hue-blue)) l c h / 0.20); }
+  .active-card .nm { font-weight: 600; flex: 1; }
+  .active-card .el { font-family: var(--font-mono); font-size: 18px; font-weight: 500; }
+  .active-card .stop { font-size: 11px; color: var(--color-text-muted); padding: 5px 12px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface); }
+
+  .scope-row { display: flex; justify-content: flex-end; }
+  .scope { font-size: 11px; color: var(--color-text-muted); padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-surface-raised); display: inline-flex; align-items: center; gap: 4px; }
+
+  .cbar-row { display: grid; grid-template-columns: 56px 1fr 130px; gap: 10px; align-items: center; font-size: 12px; }
+  .cbar-row .nm { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .cbar-row .nm .swatch { width: 8px; height: 8px; border-radius: 2px; }
+  .cbar-row .vals { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); text-align: right; white-space: nowrap; }
+  .cbar-row .vals .remain { color: var(--color-text); font-weight: 500; }
+  .cbar-row .vals .over-amt { color: var(--color-text); font-weight: 500; }
+  .cbar-row .vals .met { color: var(--color-text); font-weight: 500; }
+
+  .divider { height: 1px; background: var(--color-border); margin: 4px 0; }
+  .summary { font-size: 12px; color: var(--color-text-muted); font-family: var(--font-mono); display: flex; align-items: center; gap: 8px; }
+  .summary .strong { color: var(--color-text); font-weight: 500; }
+
+  .recent-title { font-size: 11px; color: var(--color-text-subtle); text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+  .session-row { display: grid; grid-template-columns: 100px 60px 1fr 24px; gap: 8px; align-items: center; padding: 6px 0; font-size: 12px; border-bottom: 1px solid var(--color-border); }
+  .session-row:last-child { border-bottom: none; }
+  .session-row .time { font-family: var(--font-mono); color: var(--color-text-muted); font-size: 11px; }
+  .session-row .name { font-weight: 500; }
+  .session-row .dur { font-family: var(--font-mono); color: var(--color-text-subtle); font-size: 11px; }
+  .session-row .menu { color: var(--color-text-subtle); text-align: right; }
+
+  /* ============================================================
+   * 04. Timeline overlay
+   * ============================================================ */
+  .timeline-mock { width: 720px; max-width: 100%; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-md); }
+  .timeline-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .timeline-header h3 { margin: 0; font-size: 14px; font-weight: 600; }
+  .timeline-legend { display: flex; gap: 14px; font-size: 11px; color: var(--color-text-subtle); font-family: var(--font-mono); }
+  .timeline-legend .item { display: flex; align-items: center; gap: 5px; }
+  .timeline-legend .item .sw { width: 10px; height: 10px; border-radius: 2px; }
+  .timeline-body { position: relative; display: grid; grid-template-columns: 48px 1fr; gap: 8px; height: 260px; }
+  .timeline-rail { position: relative; border-right: 1px solid var(--color-border); }
+  .timeline-rail .tick { position: absolute; right: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-subtle); transform: translateY(-50%); }
+  .timeline-canvas { position: relative; background: repeating-linear-gradient(to bottom, transparent 0, transparent 41px, var(--color-border) 41px, var(--color-border) 42px); border-radius: var(--radius-md); }
+  .pl-block { position: absolute; left: 6px; right: 6px; border-radius: var(--radius-md); padding: 8px 10px; font-size: 11px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .pl-block .ttl { font-weight: 600; }
+  .pl-block .sub { font-family: var(--font-mono); font-size: 10px; opacity: 0.8; }
+  .pl-block.work { background: oklch(from var(--color-hue-blue) l c h / 0.18); border: 1px solid oklch(from var(--color-hue-blue) l c h / 0.35); color: var(--color-text); }
+  .pl-block.work .ttl { color: oklch(from var(--color-hue-blue) calc(l - 0.15) c h); }
+  .pl-block.meet { background: oklch(from var(--color-hue-amber) l c h / 0.20); border: 1px solid oklch(from var(--color-hue-amber) l c h / 0.40); }
+  .pl-block.meet .ttl { color: oklch(from var(--color-hue-amber) calc(l - 0.10) c h); }
+  .rec-band { position: absolute; left: 2px; width: 12px; border-radius: 4px; }
+  .rec-band.work { background: oklch(from var(--color-hue-blue) l c h / 0.55); }
+  .rec-band.read { background: oklch(from var(--color-hue-purple) l c h / 0.55); }
+  .rec-band.write { background: oklch(from var(--color-hue-teal) l c h / 0.55); }
+
+  /* ============================================================
+   * 05. Tray menu
+   * ============================================================ */
+  .tray {
+    width: 260px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    font-size: 13px;
+  }
+  .tray-row { padding: 6px 10px; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; }
+  .tray-row.info { color: var(--color-text-muted); font-size: 12px; cursor: default; }
+  .tray-row.menu { color: var(--color-text); }
+  .tray-row.menu:hover { background: var(--color-surface-muted); }
+  .tray-row.menu .hk { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); }
+  .tray-sep { height: 1px; background: var(--color-border); margin: 4px 0; }
+
+  /* ============================================================
+   * 06. Decisions
+   * ============================================================ */
+  .decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .decision { padding: 16px; border-radius: var(--radius-lg); background: var(--color-surface-raised); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); }
+  .decision .q { font-size: 11px; color: var(--color-text-subtle); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .decision .ch { margin: 8px 0 10px; font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .decision .why { font-size: 12px; color: var(--color-text-muted); line-height: 1.55; }
+  .decision .tag { display: inline-block; margin-top: 10px; font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-interactive-primary-soft); color: var(--color-interactive-primary); }
+
+  /* ============================================================
+   * 07. Empty state
+   * ============================================================ */
+  .empty-card { padding: 28px 20px; text-align: center; color: var(--color-text-muted); font-size: 13px; }
+  .empty-card .ttl { font-weight: 600; color: var(--color-text); margin-bottom: 4px; }
+  .empty-card .sub { font-size: 12px; }
+  .empty-card .btn { margin-top: 12px; display: inline-block; font-size: 12px; padding: 6px 14px; border-radius: var(--radius-full); background: var(--color-interactive-primary); color: oklch(98.5% 0.004 95); font-weight: 500; }
+
+  footer { max-width: 1200px; margin: 0 auto; padding: 24px 32px 48px; color: var(--color-text-subtle); font-size: 12px; font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">Record Layer — Visual Designs</h1>
+      <p class="page-sub">OxiLine · manual time recording + budgets · spec 2026-08-01</p>
+    </div>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme"><span class="dot"></span><span id="theme-label">다크</span></button>
+  </div>
+</header>
+
+<main class="page">
+
+  <!-- ============================== INTRO ============================== -->
+  <section class="intro">
+    <h2>Record 레이어 — 화면 설계</h2>
+    <p>
+      계획된 tape 위를 미끄러지던 재생 헤드가, 이제 실제로 무엇을 했는지 <strong>기록</strong>한다.
+      아래는 스펙(<code>docs/superpowers/specs/2026-08-01-record-layer-design.md</code>)에 등장하는 모든 표면을
+      실제 디자인 토큰(OKLCH, oxi 6색 라벨, Geist/Pretendard)으로 렌더한 mockup이다.
+      모든 토큰은 <code>crates/oxiline-app/src/styles.css</code>의 활성 정의에서 가져왔다.
+      <strong>충족도(compliance)는 상태 색을 쓰지 않는다</strong> — 초과의 글쓰기(teal)는 빨강이 아니고,
+      달성한 운동(green)은 트로피가 아니다. 활동 고유 hue와 목표 눈금으로만 표현한다.
+    </p>
+    <div class="pills">
+      <span class="pill">core · record.rs + V4</span>
+      <span class="pill">CLI · oxiline record / activity</span>
+      <span class="pill">GUI · switcher · 기록 탭 · 타임라인 overlay</span>
+      <span class="pill">단일 활동 (switch)</span>
+      <span class="pill">중립 충족도</span>
+    </div>
+  </section>
+
+  <!-- ============================== 01. PEEK HUD ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">01</span>
+      <h2>Peek HUD</h2>
+      <span class="hotkey">⌘⇧O</span>
+      <p>기존 2초 오버레이에 "녹화 중" 한 줄을 추가한다. 텍스트 최소화 원칙은 유지 — 한 줄만.</p>
+    </header>
+
+    <div class="stage">
+      <div>
+        <div class="stage-label">기록 중 (default)</div>
+        <div class="scene">
+          <div class="ghost g1">
+            <div class="ghost-bar s"></div>
+            <div class="ghost-bars">
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar l"></div>
+              <div class="ghost-bar xs"></div>
+              <div class="ghost-bar xs"></div>
+            </div>
+          </div>
+          <div class="ghost g2">
+            <div class="ghost-bar s"></div>
+            <div class="ghost-bars">
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar l"></div>
+              <div class="ghost-bar xs"></div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="oxide-bar">
+              <div class="oxide-seg work"></div>
+              <div class="oxide-seg meet"></div>
+              <div class="oxide-seg gap"></div>
+              <div class="oxide-dot"></div>
+            </div>
+            <div class="row now"><span><span class="label">지금</span><span class="name-strong">집중 작업 블록</span></span><span class="remain">32분 남음</span></div>
+            <div class="row next"><span><span class="label">다음</span>팀 스탠드업 (11:00, 32분 후)</span></div>
+            <div class="row rec">
+              <span class="dot"></span>
+              <span><span class="name">코딩</span> <span class="mono">0:42</span></span>
+              <span class="mono">오늘 2h10m / 4h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="stage-label">기록 없음</div>
+        <div class="scene">
+          <div class="ghost g1">
+            <div class="ghost-bar s"></div>
+            <div class="ghost-bars">
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar l"></div>
+            </div>
+          </div>
+          <div class="ghost g2">
+            <div class="ghost-bar s"></div>
+            <div class="ghost-bars">
+              <div class="ghost-bar m"></div>
+              <div class="ghost-bar xs"></div>
+              <div class="ghost-bar xs"></div>
+            </div>
+          </div>
+          <div class="hud">
+            <div class="oxide-bar">
+              <div class="oxide-seg work"></div>
+              <div class="oxide-seg gap"></div>
+              <div class="oxide-dot"></div>
+            </div>
+            <div class="row now"><span><span class="label">지금</span><span class="name-strong">집중 작업 블록</span></span><span class="remain">32분 남음</span></div>
+            <div class="row next"><span><span class="label">다음</span>팀 스탠드업 (11:00, 32분 후)</span></div>
+            <div class="row rec" style="color: var(--color-text-subtle);">
+              <span class="dot" style="background: var(--color-border-strong); box-shadow: none;"></span>
+              <span><span class="name" style="color: var(--color-text-muted); font-weight: 500;">기록 없음</span></span>
+              <span class="mono">오늘 0h / —</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>설계 노트.</strong> §6.2. 계획(지금/다음)과 실제(녹화 한 줄)의 결합. mono 숫자로 시각적으로 시간을 표현(§6.3).
+      색은 활동 고유 hue만. 2초 안에 사라지므로 정보량은 의도적으로 한 줄.
+    </div>
+  </section>
+
+  <!-- ============================== 02. SWITCHER ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">02</span>
+      <h2>Record Switcher</h2>
+      <span class="hotkey">⌘⇧A</span>
+      <p>활동 전환 패널. 비포커스(non-activating). 선택 = switch(현재 닫고 새로 시작). 단일 활동 핵심 결정이 여기서 보인다.</p>
+    </header>
+
+    <div class="stage">
+      <div>
+        <div class="stage-label">기본 상태</div>
+        <div class="switcher" style="--active-hue: var(--color-hue-blue);">
+          <div class="switcher-head">
+            <span class="title">기록 전환</span>
+            <span class="esc">⎋</span>
+          </div>
+          <div class="switcher-active">
+            <span class="live-dot"></span>
+            <span class="name">코딩</span>
+            <span class="elapsed">0:42:17</span>
+            <span class="stop">⏸ 멈춤</span>
+          </div>
+          <div class="switcher-list">
+            <!-- 1 코딩 under -->
+            <div class="switcher-row">
+              <span class="key">1</span>
+              <span class="name"><span class="swatch" style="background: var(--color-hue-blue);"></span>코딩</span>
+              <div class="bar-wrap">
+                <div class="cbar">
+                  <div class="fill" style="width: 54%; background: var(--color-hue-blue);"></div>
+                  <div class="target" style="left: 100%;"></div>
+                </div>
+              </div>
+              <span class="label">2h10m / 4h · 남음 1h50m</span>
+            </div>
+            <!-- 2 독서 under -->
+            <div class="switcher-row">
+              <span class="key">2</span>
+              <span class="name"><span class="swatch" style="background: var(--color-hue-purple);"></span>독서</span>
+              <div class="bar-wrap">
+                <div class="cbar">
+                  <div class="fill" style="width: 75%; background: var(--color-hue-purple);"></div>
+                  <div class="target" style="left: 100%;"></div>
+                </div>
+              </div>
+              <span class="label">0h45m / 1h · 남음 15m</span>
+            </div>
+            <!-- 3 글쓰기 OVER — teal, NOT red -->
+            <div class="switcher-row">
+              <span class="key">3</span>
+              <span class="name"><span class="swatch" style="background: var(--color-hue-teal);"></span>글쓰기</span>
+              <div class="bar-wrap">
+                <div class="cbar">
+                  <div class="fill" style="width: 100%; background: var(--color-hue-teal);"></div>
+                  <div class="over" style="left: 100%; width: 8%; background: oklch(from var(--color-hue-teal) l c h / 0.55);"></div>
+                  <div class="target" style="left: 100%;"></div>
+                </div>
+              </div>
+              <span class="label">1h05m / 1h · 초과 5m</span>
+            </div>
+            <!-- 4 운동 MET — green activity, plain 달성 label, NO trophy/green-success -->
+            <div class="switcher-row">
+              <span class="key">4</span>
+              <span class="name"><span class="swatch" style="background: var(--color-hue-green);"></span>운동</span>
+              <div class="bar-wrap">
+                <div class="cbar">
+                  <div class="fill" style="width: 100%; background: var(--color-hue-green);"></div>
+                  <div class="target" style="left: 100%;"></div>
+                </div>
+              </div>
+              <span class="label">1h00m / 1h · 달성</span>
+            </div>
+          </div>
+          <div class="switcher-add">+ 새 활동</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="stage-label">활동이 없음 (empty)</div>
+        <div class="switcher">
+          <div class="switcher-head">
+            <span class="title">기록 전환</span>
+            <span class="esc">⎋</span>
+          </div>
+          <div class="empty-card">
+            <div class="ttl">기록할 활동이 없어요.</div>
+            <div class="sub">첫 활동을 추가해서 시간 분배를 시작해보세요.</div>
+            <span class="btn">+ 활동 추가</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>설계 노트.</strong> §6.1. 핵심 디자인 증명 — <em>글쓰기 초과</em>(teal)는 빨강이 아니고, <em>운동 달성</em>(green)은 트로피가 아니다.
+      둘 다 활동 고유 hue를 유지하고 목표 눈금(tick) + 평범한 라벨로만 차이를 만든다 (§3.4, §10).
+      전환은 <strong>switch</strong> 의미: 선택 시 현재 세션 닫고 새로 연다 (단일 활동, §3.2).
+    </div>
+  </section>
+
+  <!-- ============================== 03. RECORD TAB ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">03</span>
+      <h2>기록 탭</h2>
+      <span class="hotkey">5</span>
+      <p>메인 창의 다섯 번째 탭. 활성 세션 + 충족도 대시보드 + 분할 요약 + 최근 세션.</p>
+    </header>
+
+    <div class="stage">
+      <div class="window" style="--active-hue: var(--color-hue-blue);">
+        <div class="win-titlebar">
+          <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <div class="title">2026년 8월 1일 (금)</div>
+          <div class="icons">⌘K &nbsp; ⚙</div>
+        </div>
+        <div class="tabs">
+          <div class="tab">오늘</div>
+          <div class="tab">주간</div>
+          <div class="tab">백로그</div>
+          <div class="tab">리포트</div>
+          <div class="tab active">기록</div>
+        </div>
+        <div class="record-body">
+
+          <div class="active-card">
+            <span class="pulse"></span>
+            <span class="nm">코딩</span>
+            <span class="el">0:42:17</span>
+            <span class="stop">⏸ 멈춤</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="scope-row">
+            <span class="scope">오늘 ▾</span>
+          </div>
+
+          <!-- compliance rows -->
+          <div class="cbar-row">
+            <span class="nm"><span class="swatch" style="background: var(--color-hue-blue);"></span>코딩</span>
+            <div class="cbar">
+              <div class="fill" style="width: 54%; background: var(--color-hue-blue);"></div>
+              <div class="target" style="left: 100%;"></div>
+            </div>
+            <span class="vals"><span class="remain">2h10m / 4h00m</span> · 남음 1h50m</span>
+          </div>
+
+          <div class="cbar-row">
+            <span class="nm"><span class="swatch" style="background: var(--color-hue-purple);"></span>독서</span>
+            <div class="cbar">
+              <div class="fill" style="width: 75%; background: var(--color-hue-purple);"></div>
+              <div class="target" style="left: 100%;"></div>
+            </div>
+            <span class="vals"><span class="remain">0h45m / 1h00m</span> · 남음 15m</span>
+          </div>
+
+          <div class="cbar-row">
+            <span class="nm"><span class="swatch" style="background: var(--color-hue-teal);"></span>글쓰기</span>
+            <div class="cbar">
+              <div class="fill" style="width: 100%; background: var(--color-hue-teal);"></div>
+              <div class="over" style="left: 100%; width: 8%; background: oklch(from var(--color-hue-teal) l c h / 0.55);"></div>
+              <div class="target" style="left: 100%;"></div>
+            </div>
+            <span class="vals"><span>1h05m / 1h00m</span> · <span class="over-amt">+5m</span></span>
+          </div>
+
+          <div class="cbar-row">
+            <span class="nm"><span class="swatch" style="background: var(--color-hue-green);"></span>운동</span>
+            <div class="cbar">
+              <div class="fill" style="width: 100%; background: var(--color-hue-green);"></div>
+              <div class="target" style="left: 100%;"></div>
+            </div>
+            <span class="vals"><span class="met">1h00m / 1h00m</span> · 달성</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="summary">
+            합계 기록 <span class="strong">4h00m</span> · 미배정 <span class="strong">17h</span> (21h 중)
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="recent-title">최근 세션</div>
+          <div>
+            <div class="session-row">
+              <span class="time">09:00–10:30</span>
+              <span class="name"><span class="swatch" style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--color-hue-blue);margin-right:6px;vertical-align:middle;"></span>코딩</span>
+              <span class="dur">1h30m</span>
+              <span class="menu">⋯</span>
+            </div>
+            <div class="session-row">
+              <span class="time">10:30–11:15</span>
+              <span class="name"><span class="swatch" style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--color-hue-purple);margin-right:6px;vertical-align:middle;"></span>독서</span>
+              <span class="dur">0h45m</span>
+              <span class="menu">⋯</span>
+            </div>
+            <div class="session-row">
+              <span class="time">11:15–12:20</span>
+              <span class="name"><span class="swatch" style="display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--color-hue-blue);margin-right:6px;vertical-align:middle;"></span>코딩</span>
+              <span class="dur">1h05m</span>
+              <span class="menu">⋯</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>설계 노트.</strong> §7.1. <em>"합계 기록 4h00m · 미배정 17h (21h 중)"</em> 한 줄이 단일 활동 결정의 보상이다 —
+      겹치지 않는 세션들이 하루를 분할하므로 $\sum_a \text{spent}_a = \text{총 기록 시간}$ 이 성립하고,
+      "미배정"은 실제로 남은 분배 가능 양이다. 글쓰기 <code>+5m</code>과 운동 <code>달성</code> 라벨은
+      같은 색으로, 충족도 차이는 오직 채움 길이 + 눈금 + 텍스트로만 표현된다.
+    </div>
+  </section>
+
+  <!-- ============================== 04. TIMELINE OVERLAY ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">04</span>
+      <h2>Day 타임라인 + 기록 오버레이</h2>
+      <span class="hotkey">기록 설정 → 표시 토글</span>
+      <p>계획된 블록(실선)과 기록된 세션(반투명 밴드)을 같은 시간축 위에 겹쳐 그린다. plan vs actual을 한눈에.</p>
+    </header>
+
+    <div class="stage">
+      <div class="timeline-mock">
+        <div class="timeline-header">
+          <h3>오늘 · 09:00–13:00 (발췌)</h3>
+          <div class="timeline-legend">
+            <div class="item"><span class="sw" style="background: var(--color-hue-blue); opacity: 0.55;"></span>기록 (반투명)</div>
+            <div class="item"><span class="sw" style="background: oklch(from var(--color-hue-blue) l c h / 0.18); border: 1px solid oklch(from var(--color-hue-blue) l c h / 0.35);"></span>계획 블록</div>
+          </div>
+        </div>
+        <div class="timeline-body">
+          <div class="timeline-rail">
+            <span class="tick" style="top: 0%;">09:00</span>
+            <span class="tick" style="top: 25%;">10:00</span>
+            <span class="tick" style="top: 50%;">11:00</span>
+            <span class="tick" style="top: 75%;">12:00</span>
+            <span class="tick" style="top: 100%;">13:00</span>
+          </div>
+          <div class="timeline-canvas">
+            <!-- planned block: 코딩 09:00-11:00 (top 0% to 50%) -->
+            <div class="pl-block work" style="top: 2%; height: 48%;">
+              <span class="ttl">집중 작업 블록</span>
+              <span class="sub">09:00 · 2h</span>
+            </div>
+            <!-- planned block: 팀 스탠드업 11:00-11:15 (top 50% to ~52%) -->
+            <div class="pl-block meet" style="top: 51%; height: 6%;">
+              <span class="ttl">팀 스탠드업</span>
+              <span class="sub">11:00 · 15m</span>
+            </div>
+            <!-- planned: 점심 산책 12:00-12:30 (top 75% to 87.5%) -->
+            <div class="pl-block meet" style="top: 76%; height: 11%;">
+              <span class="ttl">점심 산책</span>
+              <span class="sub">12:00 · 30m</span>
+            </div>
+
+            <!-- recorded overlay band (left strip): 코딩 09:00-10:30 (top 0% to 37.5%) -->
+            <div class="rec-band work" style="top: 0%; height: 38%;"></div>
+            <!-- recorded: 독서 10:30-11:15 (top 37.5% to 52%) -->
+            <div class="rec-band read" style="top: 38%; height: 14%;"></div>
+            <!-- recorded: 코딩 11:15-12:20 (top 52% to 80%) — planned 점심 산책 but actually 코딩 -->
+            <div class="rec-band work" style="top: 52%; height: 28%;"></div>
+            <!-- recorded: 글쓰기 12:20-12:35 (top 80% to 84%) -->
+            <div class="rec-band write" style="top: 80%; height: 5%;"></div>
+          </div>
+        </div>
+        <p style="margin: 14px 0 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.6;">
+          표시만 한다. 두 장부를 자동으로 매칭/variance 점수화하지는 않는다 (§3.5, §13).
+          11:15부터 계획은 "산책"이지만 실제는 "코딩"이 기록됨 — 이 <strong>불일치</strong>가 보임으로써
+          계획이 실제와 어디서 어긋나는지 사용자가 자연스럽게 인지한다.
+        </p>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>설계 노트.</strong> §7.2. 이 한 화면이 새 축의 *정당성*이다 — 계획 tape 위에 기록 tape가 반투명으로 겹쳐 보일 때,
+      plan vs actual이 추상 개념이 아니라 시각적 사실이 된다. 토글 가능 (Preferences).
+    </div>
+  </section>
+
+  <!-- ============================== 05. TRAY ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">05</span>
+      <h2>트레이 메뉴</h2>
+      <p>메뉴바 아이콘 드롭다운. 기록 상태 정보 한 줄 + 전환 단축키 항목.</p>
+    </header>
+
+    <div class="stage">
+      <div>
+        <div class="stage-label">기록 중</div>
+        <div class="tray">
+          <div class="tray-row info">
+            <span>녹화 중: 코딩 (0:42)</span>
+          </div>
+          <div class="tray-sep"></div>
+          <div class="tray-row info">
+            <span>지금: 집중 작업 블록 · 32분 남음</span>
+          </div>
+          <div class="tray-sep"></div>
+          <div class="tray-row menu">
+            <span>OxiLine 열기</span>
+          </div>
+          <div class="tray-row menu">
+            <span>기록 전환…</span>
+            <span class="hk">⌘⇧A</span>
+          </div>
+          <div class="tray-row menu">
+            <span>빠른 추가…</span>
+            <span class="hk">⌘K</span>
+          </div>
+          <div class="tray-sep"></div>
+          <div class="tray-row menu">
+            <span>환경설정…</span>
+            <span class="hk">⌘,</span>
+          </div>
+          <div class="tray-row menu">
+            <span>✓ 로그인 시 자동 실행</span>
+          </div>
+          <div class="tray-sep"></div>
+          <div class="tray-row menu">
+            <span>OxiLine 종료</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>설계 노트.</strong> §7.4. 기존 트레이 메뉴 구조에 두 줄(녹화 중 / 지금)을 추가하고
+      "기록 전환… ⌘⇧A" 항목을 새 단축키로 노출. idle 상태에서는 "녹화 중" 행이 "기록 안 함"으로 바뀐다.
+    </div>
+  </section>
+
+  <!-- ============================== 06. DECISIONS ============================== -->
+  <section class="design-section">
+    <header class="design-header">
+      <span class="design-no">06</span>
+      <h2>설계 결정 — 돌아와서 확인 요청</h2>
+      <p>세 가지 결정을 대신 내렸다. 번복 가능하니 마음에 안 드는 게 있으면 알려달라.</p>
+    </header>
+
+    <div class="decisions">
+      <div class="decision">
+        <div class="q">결정 1</div>
+        <div class="ch">단일 활동(switch)을 v1 핵심으로</div>
+        <div class="why">
+          스크린타임/전환은 단일 전경 모델. 선택 = 현재 세션 닫고 새로 시작.
+          <strong>시간 분배</strong>가 수학적으로 성립한다 — 세션이 분할이므로 $\sum_a \text{spent}_a \le 24h$이고
+          "남은 시간"이 실제 분배 가능 양이 된다. 동시 추적(overlay)은 wall-clock 이중 집계로 예산 수학이 풀리므로
+          의식적 분기로 보류 (§13). v2에서 별도 회계 모델과 함께 다룬다.
+        </div>
+        <span class="tag">§3.2 single-active invariant</span>
+      </div>
+
+      <div class="decision">
+        <div class="q">결정 2</div>
+        <div class="ch">명명: record / activity / session</div>
+        <div class="why">
+          핵심 은유(<em>playhead / tape</em>)에 맞춰 <strong>record</strong>를 레이어/동사 이름으로 채택.
+          "consume"은 은유에 안 맞고, "track"은 모호하다.
+          단위 이름: <code>activity</code>(전환·예산 대상) + <code>session</code>(기록 구간, 1행).
+          상태: <em>active</em>(기록 중). 예산: <code>target_minutes_daily/weekly</code>. 충족도: <code>compliance</code>.
+        </div>
+        <span class="tag">§2 glossary</span>
+      </div>
+
+      <div class="decision">
+        <div class="q">결정 3</div>
+        <div class="ch">v1 범위: 타임라인 overlay 포함</div>
+        <div class="why">
+          전환 패널 + 충족도만으로 끝내면 새 축이 기존 tape에 *보이지 않는* 고아 기능이 된다.
+          Day 타임라인에 반투명 밴드로 기록을 겹치는 것까지 v1에 포함 — 사용자가 plan vs actual을
+          시각적으로 인지하는 순간이 통합의 핵심이다. 단순 표시(매칭/variance 계산 없음).
+          빼고 먼저 가고 싶으면 말해달라.
+        </div>
+        <span class="tag">§7.2 timeline overlay</span>
+      </div>
+    </div>
+
+    <div class="design-notes">
+      <strong>자동 결정의 제약.</strong> 비가역 결정을 피하려고 단일 활동/overlay 분기, 활성 세션 invariants,
+      예산의 중립성 모두를 <strong>어디서든</strong> 번복 가능한 형태로 디자인했다(데이터는 그대로 두고 start 의미론만 바꾸면 overlay 가능;
+      hue를 바꿔도 데이터 그대로). 그래도 마음에 안 들면 돌아와서 바꿔도 된다.
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  docs/superpowers/specs/2026-08-01-record-layer-design-mockups.html ·
+  render: Pretendard + JetBrains Mono via Google Fonts ·
+  design tokens: crates/oxiline-app/src/styles.css
+</footer>
+
+<script>
+  // Theme toggle (default light, persisted)
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const lbl = document.getElementById('theme-label');
+  const saved = localStorage.getItem('oxiline-record-mock-theme');
+  if (saved === 'dark') { root.classList.add('dark'); lbl.textContent = '라이트'; }
+  btn.addEventListener('click', () => {
+    const isDark = root.classList.toggle('dark');
+    lbl.textContent = isDark ? '라이트' : '다크';
+    localStorage.setItem('oxiline-record-mock-theme', isDark ? 'dark' : 'light');
+  });
+</script>
+</body>
+</html>
