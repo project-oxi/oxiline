@@ -261,4 +261,18 @@ impl L {
             Lang::En => "no records",
         }
     }
+    /// Generic resource label for a successful plan add.
+    pub fn plan_added(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "계획을 추가했어요",
+            Lang::En => "Plan added",
+        }
+    }
+    /// When `plan list` (bare/recurring) produced no rows.
+    pub fn plan_list_empty(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "계획이 없어요",
+            Lang::En => "no plans",
+        }
+    }
 }

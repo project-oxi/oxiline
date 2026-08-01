@@ -101,6 +101,11 @@ pub enum Command {
         #[command(subcommand)]
         action: Option<RecordAction>,
     },
+    /// Manage plans (OR choice-sets materialized into slots per date).
+    Plan {
+        #[command(subcommand)]
+        action: PlanAction,
+    },
     Doctor,
 }
 
@@ -384,4 +389,57 @@ pub enum RecordAction {
         #[arg(long, value_name = "FROM:TO")]
         range: Option<String>,
     },
+}
+
+/// Manage plans — recurring (`--days`) or one-shot (`--date`) OR choice-sets
+/// (`05-cli-spec.md` §5.4, plan group).
+#[derive(Subcommand)]
+pub enum PlanAction {
+    /// Add a plan. `--days` makes it recurring; `--date` makes it one-shot.
+    Add {
+        /// Start time as HH:MM (local). Defaults to the current minute.
+        #[arg(long, value_name = "HH:MM")]
+        at: Option<String>,
+        /// Duration in minutes.
+        #[arg(long, value_name = "MIN", default_value_t = 60)]
+        duration: u32,
+        /// Recurring days: comma-list `mon,tue,...`, `weekdays`, or `daily`.
+        /// Bit 0 = Monday … bit 6 = Sunday (matches `plan::slots_for_date`).
+        #[arg(long, value_name = "DAYS")]
+        days: Option<String>,
+        /// One-shot date YYYY-MM-DD (exclusive with `--days`).
+        #[arg(long, value_name = "DATE", conflicts_with = "days")]
+        date: Option<String>,
+        /// Optional slot title.
+        #[arg(long, value_name = "TEXT")]
+        title: Option<String>,
+        /// Comma-separated activity ids/names forming the OR choice-set.
+        #[arg(long, value_name = "A,B,C")]
+        options: String,
+    },
+    /// List plans: all, `--recurring` only, or materialized `--date` slots.
+    List {
+        #[arg(long, value_name = "DATE")]
+        date: Option<String>,
+        #[arg(long)]
+        recurring: bool,
+    },
+    /// Edit a plan by id. Omitted fields keep their current value.
+    Edit {
+        id: String,
+        #[arg(long, value_name = "HH:MM")]
+        at: Option<String>,
+        #[arg(long, value_name = "MIN")]
+        duration: Option<u32>,
+        #[arg(long, value_name = "DAYS")]
+        days: Option<String>,
+        #[arg(long, value_name = "DATE")]
+        date: Option<String>,
+        #[arg(long, value_name = "TEXT")]
+        title: Option<String>,
+        #[arg(long, value_name = "A,B,C")]
+        options: Option<String>,
+    },
+    /// Remove a plan by id (cascades its options).
+    Rm { id: String },
 }

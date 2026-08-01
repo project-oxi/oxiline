@@ -9,11 +9,11 @@ use std::process::ExitCode;
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
 use oxiline_core::{
-    CoreError, Result, activities, categories, record, reports, routine_groups, routines, settings, tasks, timeline, util,
+    CoreError, Result, activities, categories, plan, record, reports, routine_groups, routines, settings, tasks, timeline, util,
 };
 use serde_json::{Value, json};
 
-use cli::{ActivityAction, Cli, Command, GroupAction, RecordAction, RoutineAction, TaskAction};
+use cli::{ActivityAction, Cli, Command, GroupAction, PlanAction, RecordAction, RoutineAction, TaskAction};
 use lang::{L, Lang};
 
 fn main() -> ExitCode {
@@ -501,6 +501,7 @@ fn run(opts: Cli) -> Result<()> {
             Some(a) => handle_record(a, &conn, &opts)?,
             None => handle_record_bare(&conn, &opts)?,
         },
+        Command::Plan { action } => handle_plan(action, &conn, &opts)?,
         Command::Doctor => {
             let ver = oxiline_core::db::schema_version(&conn)? as i64;
             let cats = categories::list(&conn)?;
@@ -945,4 +946,186 @@ fn handle_record_bare(conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
     };
     say(record_state_output(json, l, &st));
     Ok(())
+}
+
+/// Dispatch `oxiline plan` subcommands (Task 10).
+fn handle_plan(action: &PlanAction, conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    match action {
+        PlanAction::Add {
+            at,
+            duration,
+            days,
+            date,
+            title,
+            options,
+        } => {
+            let start_minute = parse_at(at.as_deref())?.unwrap_or_else(util::now_minute_local);
+            if *duration == 0 || *duration > 1440 {
+                return Err(CoreError::InvalidArgument(format!(
+                    "--duration must be 1..=1440 minutes, got {duration}"
+                )));
+            }
+            let weekday_mask = parse_days_mask(days.as_deref(), date.as_deref())?;
+            let activity_ids = resolve_options(conn, options)?;
+            if opts.dry_run {
+                say(preview(
+                    json,
+                    l.plan_added(),
+                    &json!({
+                        "start_minute": start_minute,
+                        "duration_minute": duration,
+                        "weekday_mask": weekday_mask,
+                        "date": date,
+                        "title": title,
+                        "activity_ids": activity_ids,
+                        "dry_run": true,
+                    }),
+                ));
+                return Ok(());
+            }
+            let p = plan::create_plan(
+                conn,
+                oxiline_core::model::PlanInput {
+                    date: date.clone(),
+                    start_minute,
+                    duration_minute: *duration as u16,
+                    weekday_mask,
+                    title: title.clone(),
+                    activity_ids,
+                },
+            )?;
+            say(resource_out(json, l.plan_added(), &p));
+        }
+        PlanAction::List { date, recurring } => {
+            if let Some(d) = date {
+                let slots = plan::slots_for_date(conn, &resolve_date_arg(d)?)?;
+                if json {
+                    say(output::json_pretty(&slots));
+                } else {
+                    say(output::plan_slot_list_text(&slots));
+                }
+            } else {
+                let plans = plan::list_plans(conn, *recurring)?;
+                if json {
+                    say(output::json_pretty(&plans));
+                } else if plans.is_empty() {
+                    say(format!("({})\n", l.plan_list_empty()));
+                } else {
+                    say(output::plan_list_text(&plans));
+                }
+            }
+        }
+        PlanAction::Edit {
+            id,
+            at,
+            duration,
+            days,
+            date,
+            title,
+            options,
+        } => {
+            // update_plan assigns start_minute/duration_minute/weekday_mask
+            // DIRECTLY from PlanInput (only date/title merge; empty
+            // activity_ids preserves). So fetch the current plan and fill
+            // every omitted field from it — otherwise a single-field edit
+            // would zero out the time/duration/days.
+            let cur = plan::get_plan(conn, id)?;
+            let start_minute = parse_at(at.as_deref())?.unwrap_or(cur.start_minute);
+            let weekday_mask = if days.is_some() || date.is_some() {
+                parse_days_mask(days.as_deref(), date.as_deref())?
+            } else {
+                cur.weekday_mask
+            };
+            let activity_ids = match options.as_deref() {
+                Some(o) => resolve_options(conn, o)?,
+                None => vec![], // empty preserves existing options
+            };
+            let p = plan::update_plan(
+                conn,
+                &cur.id,
+                oxiline_core::model::PlanInput {
+                    date: date.clone().or(cur.date),
+                    start_minute,
+                    duration_minute: duration.unwrap_or(cur.duration_minute as u32) as u16,
+                    weekday_mask,
+                    title: title.clone().or(cur.title),
+                    activity_ids,
+                },
+            )?;
+            say(resource_out(json, "updated", &p));
+        }
+        PlanAction::Rm { id } => {
+            let removed_id = id.clone();
+            plan::delete_plan(conn, id)?;
+            say(if json {
+                json!({ "id": removed_id, "removed": true }).to_string()
+            } else {
+                format!("{}: {}", l.removed(), removed_id)
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Resolve a comma-separated `--options A,B,C` into activity ids.
+fn resolve_options(conn: &rusqlite::Connection, comma: &str) -> Result<Vec<String>> {
+    let mut ids = Vec::new();
+    for tok in comma.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        ids.push(activities::resolve_activity(conn, tok)?.id);
+    }
+    if ids.is_empty() {
+        return Err(CoreError::InvalidArgument(
+            "at least one --options activity is required".into(),
+        ));
+    }
+    Ok(ids)
+}
+
+/// Parse `--days`/`--date` into a `weekday_mask`. Bit 0 = Monday … bit 6 =
+/// Sunday (matches `plan::slots_for_date`'s `num_days_from_monday`). A
+/// one-shot `--date` yields mask 0 (unused); recurring needs `--days`.
+fn parse_days_mask(days: Option<&str>, date: Option<&str>) -> Result<u8> {
+    if date.is_some() {
+        return Ok(0);
+    }
+    let Some(spec) = days else {
+        return Err(CoreError::InvalidArgument(
+            "specify --days (mon,tue,…/weekdays/daily) or --date for a one-shot plan".into(),
+        ));
+    };
+    match spec.trim().to_ascii_lowercase().as_str() {
+        "weekdays" => return Ok(0b0011111),
+        "daily" => return Ok(0b1111111),
+        _ => {}
+    }
+    let mut mask: u8 = 0;
+    for tok in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        let bit = match tok.to_ascii_lowercase().as_str() {
+            "mon" => 0,
+            "tue" => 1,
+            "wed" => 2,
+            "thu" => 3,
+            "fri" => 4,
+            "sat" => 5,
+            "sun" => 6,
+            other => {
+                return Err(CoreError::InvalidArgument(format!(
+                    "unknown day '{other}' in --days (mon,tue,wed,thu,fri,sat,sun/weekdays/daily)"
+                )))
+            }
+        };
+        mask |= 1 << bit;
+    }
+    if mask == 0 {
+        return Err(CoreError::InvalidArgument("--days matched no days".into()));
+    }
+    Ok(mask)
 }

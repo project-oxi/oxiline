@@ -1,6 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Activity, Category, NowContext, NowItem, Record, RecordState, RoutineBlock, Task, TimelineItem};
+use oxiline_core::model::{Activity, Category, NowContext, NowItem, Plan, PlanSlot, Record, RecordState, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -191,6 +191,64 @@ pub fn activity_list_text(as_: &[Activity], inactive_label: &str) -> String {
         out.push('\n');
     }
     out
+}
+
+// ---- plan rendering -------------------------------------------------------
+
+/// Render a recurring/one-shot plan row (no option names — those live on slots).
+pub fn plan_text(p: &Plan) -> String {
+    let range = minute_range(Some(p.start_minute), Some(p.duration_minute));
+    let when = match &p.date {
+        Some(d) => d.clone(),
+        None => render_mask(p.weekday_mask),
+    };
+    let title = p
+        .title
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|t| format!("  {t}"))
+        .unwrap_or_default();
+    format!("● {range}  {when}{title}  id={id}", id = p.id)
+}
+
+pub fn plan_list_text(plans: &[Plan]) -> String {
+    let mut out = String::new();
+    for p in plans {
+        out.push_str(&plan_text(p));
+        out.push('\n');
+    }
+    out
+}
+
+/// Render materialized slots for a date: range + OR option names + resolution.
+pub fn plan_slot_list_text(slots: &[PlanSlot]) -> String {
+    let mut out = String::new();
+    for s in slots {
+        let range = minute_range(Some(s.start_minute), Some(s.duration_minute));
+        let names: Vec<&str> = s.options.iter().map(|a| a.name.as_str()).collect();
+        let mark = if s.is_resolved { "✔" } else { "○" };
+        out.push_str(&format!("{mark} {range}  {}\n", names.join(" / ")));
+    }
+    out
+}
+
+/// Human label for a weekday mask. Bit 0 = Monday (matches plan.rs).
+fn render_mask(mask: u8) -> String {
+    match mask {
+        0 => "one-shot".into(),
+        0b111_1111 => "daily".into(),
+        0b001_1111 => "weekdays".into(),
+        _ => {
+            const ABBR: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+            let mut out = Vec::new();
+            for b in 0..7u8 {
+                if mask & (1 << b) != 0 {
+                    out.push(ABBR[b as usize]);
+                }
+            }
+            out.join(",")
+        }
+    }
 }
 
 pub fn settings_text(map: &serde_json::Map<String, serde_json::Value>) -> String {
