@@ -10,6 +10,14 @@ use rusqlite::Connection;
 use tempfile::NamedTempFile;
 
 use oxiline_core::settings;
+/// Tiny convenience wrapper around `settings::set` that takes a raw JSON value
+/// (Task 7 brief: "wrapping `oxiline_core::settings::set(conn, key, value).unwrap()`").
+/// Used by `compliance_is_neutral_and_rounded` to seed the rounding increment.
+fn set_setting(conn: &Connection, key: &str, raw_json: &str) {
+    let value: serde_json::Value = serde_json::from_str(raw_json)
+        .unwrap_or_else(|_| serde_json::Value::String(raw_json.to_string()));
+    settings::set(conn, key, &value).unwrap();
+}
 
 fn db() -> (NamedTempFile, Connection) {
     let f = NamedTempFile::new().unwrap();
@@ -110,4 +118,59 @@ fn resolve_links_record_to_plan() {
         .record;
     let slot = oxiline_core::record::resolve_plan_for(&c, &rec).unwrap();
     assert_eq!(slot.unwrap().plan_id, p.id);
+}
+#[test]
+fn compliance_is_neutral_and_rounded() {
+    // Task 7 brief: a 42-minute weekly record must surface as 40 min (rounded
+    // to the 5-min increment) with `state = Under` and a ratio that matches
+    // `recorded / target`. No color or hue bias lives in core.
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(
+        &c,
+        oxiline_core::model::ActivityInput {
+            name: Some("코딩".into()),
+            target_minutes_weekly: Some(Some(1200)),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    // Record 42 min (rounds to 40) this week.
+    let s = Utc.with_ymd_and_hms(2026, 8, 3, 9, 0, 0).unwrap();
+    oxiline_core::record::start(&c, &a.id, s, "2026-08-03").unwrap();
+    oxiline_core::record::stop(&c, s + chrono::Duration::minutes(42), "2026-08-03").unwrap();
+    set_setting(&c, "record_rounding_minutes", "5");
+    let week =
+        oxiline_core::record::compliance(&c, oxiline_core::model::Scope::Week, s, "2026-08-03")
+            .unwrap();
+    let cm = week.iter().find(|x| x.activity.id == a.id).unwrap();
+    assert_eq!(cm.recorded_seconds, 40 * 60); // rounded (half-up: 2520 → 2400)
+    assert!(matches!(
+        cm.state,
+        oxiline_core::model::ComplianceState::Under
+    ));
+    assert_eq!(cm.ratio.unwrap(), (40.0 * 60.0) / (1200.0 * 60.0));
+    // Task 7 advisory: also assert `Scope::Today` so the live-state path used
+    // by `current`/`stop` (which call `compliance(Scope::Today, …)` to fill
+    // `RecordState.today`) can't regress silently. The space-vs-T bound bug
+    // surfaced here, not in the Week test — `2026-08-03` falls inside the
+    // same Monday week either way (so Weekly still rounded to 40 min), but
+    // Today only counted record when bounds used the T separator.
+    let today =
+        oxiline_core::record::compliance(&c, oxiline_core::model::Scope::Today, s, "2026-08-03")
+            .unwrap();
+    let cm_today = today.iter().find(|x| x.activity.id == a.id).unwrap();
+    assert_eq!(
+        cm_today.recorded_seconds,
+        40 * 60,
+        "Scope::Today must surface the 42-min record as 40 min (rounded)"
+    );
+    // Also lock `current`'s downstream path: `RecordState.today` is what
+    // the CLI `oxiline record` and the GUI sidebar consume.
+    let state = oxiline_core::record::current(&c, s, "2026-08-03").unwrap();
+    assert_eq!(
+        state.today.len(),
+        1,
+        "`current(...).today` should contain exactly one Compliance for the active activity"
+    );
+    assert_eq!(state.today[0].recorded_seconds, 40 * 60);
 }

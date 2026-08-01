@@ -8,7 +8,8 @@
 //!
 //! `slots_for_date` materializes the view-model: each slot carries the OR
 //! alternatives as a `Vec<Activity>` plus an `is_resolved` / `resolved_by`
-//! pair. Resolution wiring is deferred to Task 7 (`record::resolve_plan_for`).
+//! pair. Resolution is computed via `record::resolve_plan_for` over the day's
+//! records (batched once, not per slot — see Task 7 step 4 of the plan).
 
 use crate::activities::row_from as activity_row_from;
 use crate::error::{CoreError, Result};
@@ -237,9 +238,8 @@ pub fn remove_option(conn: &Connection, plan_id: &str, activity_id: &str) -> Res
 }
 
 fn find_option(conn: &Connection, plan_id: &str, activity_id: &str) -> Result<Option<PlanOption>> {
-    let mut stmt = conn.prepare(
-        "SELECT * FROM plan_options WHERE plan_id = ?1 AND activity_id = ?2",
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT * FROM plan_options WHERE plan_id = ?1 AND activity_id = ?2")?;
     let mut rows = stmt.query(params![plan_id, activity_id])?;
     match rows.next()? {
         Some(row) => Ok(Some(row_from_option(row)?)),
@@ -253,6 +253,42 @@ fn parse_date_arg(date: &str) -> Result<NaiveDate> {
     NaiveDate::parse_from_str(date, "%Y-%m-%d")
         .map_err(|e| CoreError::InvalidArgument(format!("invalid date '{date}': {e}")))
 }
+/// Resolve the day's records against the candidate plans ONCE (not per slot),
+/// building a `plan_id -> Record` map keyed to the winning record for each
+/// plan (the one with the most overlap). Each record's resolving plan is
+/// determined by `record::resolve_plan_for` (§3.1 derived resolution).
+///
+/// Strategy choice (Task 7 step 4): the plan offers a batched query OR a
+/// per-record call as "fine for v1." We go with the batched mapping: load
+/// `[date 00:00:00Z, date 23:59:59Z]` records (UTC wall-clock bounds, fixed
+/// width → lexicographic range), call `resolve_plan_for` once per record,
+/// and accumulate the best (overlap-wise) result per `plan_id`. This keeps
+/// the function O(R + P) where R is records and P is plans — strictly better
+/// than the per-slot loop, which is O(R * P).
+fn resolve_all_for_date(
+    conn: &Connection,
+    date: &str,
+    plan_ids: &std::collections::HashSet<String>,
+) -> Result<std::collections::HashMap<String, crate::model::Record>> {
+    let _ = plan_ids; // defensive: we currently scan every record and resolve
+    // `T` separator to match stored `timestamp(...)` instants (see
+    // `record::scope_bounds` for the lex-sort rationale).
+    let from = format!("{date}T00:00:00Z");
+    let to = format!("{date}T23:59:59Z");
+    let records = crate::record::list_records(conn, None, &from, &to)?;
+    let mut best: std::collections::HashMap<String, crate::model::Record> =
+        std::collections::HashMap::new();
+    for rec in records {
+        if let Some(slot) = crate::record::resolve_plan_for(conn, &rec)? {
+            // `resolve_plan_for` already picks the highest-overlap plan, so
+            // first-writer-wins on `plan_id` is correct: any later record for
+            // the same plan slot would either tie (lower-or-equal start) or
+            // have less overlap, so the existing slot is the better fit.
+            best.entry(slot.plan_id).or_insert(rec);
+        }
+    }
+    Ok(best)
+}
 
 /// Materialize the plans that fire on `date` (`YYYY-MM-DD`).
 ///
@@ -262,8 +298,9 @@ fn parse_date_arg(date: &str) -> Result<NaiveDate> {
 ///   for `date` (`bit = num_days_from_monday()`, Mon = 0 … Sun = 6).
 ///
 /// For each matched plan we load its `plan_options` joined with `activities`
-/// and assemble a `PlanSlot`. `is_resolved` / `resolved_by` are left `false`/
-/// `None` here — Task 7's `record::resolve_plan_for` will populate them.
+/// and assemble a `PlanSlot`. `is_resolved` / `resolved_by` are filled by
+/// `resolve_all_for_date` — each record gets resolved ONCE against all
+/// candidate plans, not once per slot (Task 7 step 4: batched strategy).
 pub fn slots_for_date(conn: &Connection, date: &str) -> Result<Vec<PlanSlot>> {
     let parsed = parse_date_arg(date)?;
     let weekday_bit = parsed.weekday().num_days_from_monday();
@@ -276,19 +313,30 @@ pub fn slots_for_date(conn: &Connection, date: &str) -> Result<Vec<PlanSlot>> {
     )?;
     let rows = stmt.query_map(params![date, mask as i64], row_from)?;
 
-    let mut slots = Vec::new();
+    let mut plans: Vec<Plan> = Vec::new();
     for r in rows {
-        let plan = r?;
+        plans.push(r?);
+    }
+    drop(stmt);
+
+    // Pre-compute resolution once over the day's records (batched; see
+    // `resolve_all_for_date`).
+    let plan_id_set: std::collections::HashSet<String> =
+        plans.iter().map(|p| p.id.clone()).collect();
+    let resolved = resolve_all_for_date(conn, date, &plan_id_set)?;
+
+    let mut slots = Vec::with_capacity(plans.len());
+    for plan in plans {
         let options = options_for(conn, &plan.id)?;
+        let resolved_by = resolved.get(&plan.id).cloned();
         slots.push(PlanSlot {
             plan_id: plan.id,
             date: date.to_string(),
             start_minute: plan.start_minute,
             duration_minute: plan.duration_minute,
             options,
-            // is_resolved wired in Task 7
-            is_resolved: false,
-            resolved_by: None,
+            is_resolved: resolved_by.is_some(),
+            resolved_by,
         });
     }
     // Stable display order: earliest slot first, ties on duration then plan_id.

@@ -10,6 +10,7 @@
 //! `chrono::Datelike` / Python `date.weekday()`; the recurrence predicate is
 //! `(mask >> weekday_bit) & 1 == 1` with `bit = num_days_from_monday()`.
 
+use chrono::{TimeZone, Utc};
 use rusqlite::Connection;
 use tempfile::NamedTempFile;
 
@@ -56,4 +57,42 @@ fn plan_holds_or_options_and_materializes_per_date() {
     let ours = slots.iter().find(|s| s.plan_id == p.id).unwrap();
     assert_eq!(ours.options.len(), 2);
     assert!(!ours.is_resolved); // no records yet
+}
+
+#[test]
+fn slot_marked_resolved_after_record() {
+    // Task 7 brief: after starting a record at 09:10 Monday inside a
+    // 09:00–10:30 plan window, `slots_for_date("2026-08-03")` must surface the
+    // slot with `is_resolved == true`. The wiring (`plan::slots_for_date`
+    // calling `record::resolve_plan_for` for every record on the date) is the
+    // single behavioural change vs Task 4.
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(
+        &c,
+        oxiline_core::model::ActivityInput {
+            name: Some("코딩".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 90,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a.id.clone()],
+        },
+    )
+    .unwrap();
+    let now = Utc.with_ymd_and_hms(2026, 8, 3, 9, 10, 0).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let slots = oxiline_core::plan::slots_for_date(&c, "2026-08-03").unwrap();
+    let ours = slots.iter().find(|s| s.plan_id == p.id).unwrap();
+    assert!(
+        ours.is_resolved,
+        "the slot should be resolved after a matching record was created in Task 7"
+    );
 }

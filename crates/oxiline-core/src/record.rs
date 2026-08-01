@@ -1,10 +1,20 @@
-//! Recording lifecycle: start, stop, and inspect the single active session.
+//! Recording lifecycle: start, stop, inspect, and aggregate the single active session.
+//!
+//! `compliance(scope, now, today)` (Task 7) is the neutral weekly/daily ratio view-model
+//! consumed by the CLI report and the sidebar/inspector in Plan 2. All four states
+//! (`Under`/`Met`/`Over`/`Unbudgeted`) share the activity's hue — there is **no**
+//! color logic in core; that's a GUI/Plan 2 concern (spec §3.6).
+//!
+//! `resolve_plan_for` (Task 6) is the §3.1 derived link from a record to its plan;
+//! `plan::slots_for_date` (Task 7) consumes it for the timetable view-model.
 
-use chrono::{DateTime, Timelike, Utc};
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use rusqlite::{Connection, params};
 
 use crate::error::{CoreError, Result};
-use crate::model::{ActiveSession, Record, RecordState};
+use crate::model::{
+    ActiveSession, Activity, Compliance, ComplianceState, Record, RecordState, Scope,
+};
 use crate::util::{self, new_id, round_duration};
 
 fn timestamp(now: DateTime<Utc>) -> String {
@@ -43,20 +53,25 @@ pub fn start(
     current(conn, now, today)
 }
 
-pub fn stop(conn: &Connection, now: DateTime<Utc>, _today: &str) -> Result<RecordState> {
+pub fn stop(conn: &Connection, now: DateTime<Utc>, today: &str) -> Result<RecordState> {
     let now_text = timestamp(now);
     conn.execute(
         "UPDATE records SET ended_at = ?1, updated_at = ?1 WHERE ended_at IS NULL",
         params![now_text],
     )?;
+    // `stop` clears the active session but still surfaces today's compliance
+    // (the sidebar / inspector needs it on `record stop` so the totals update
+    // without a follow-up read). Failures degrade to an empty list rather than
+    // masking the stop itself.
+    let today_compliance = compliance(conn, Scope::Today, now, today).unwrap_or_default();
     Ok(RecordState {
         active: None,
-        today: vec![],
+        today: today_compliance,
         generated_at: now_text,
     })
 }
 
-pub fn current(conn: &Connection, now: DateTime<Utc>, _today: &str) -> Result<RecordState> {
+pub fn current(conn: &Connection, now: DateTime<Utc>, today: &str) -> Result<RecordState> {
     let now_text = timestamp(now);
     let mut stmt = conn.prepare(
         "SELECT id, activity_id, started_at, ended_at, note
@@ -79,9 +94,9 @@ pub fn current(conn: &Connection, now: DateTime<Utc>, _today: &str) -> Result<Re
                      updated_at = ?1
                  WHERE id = ?2 AND ended_at IS NULL",
                 params![now_text, stale.id],
-        )?;
+            )?;
+        }
     }
-}
 
     let active = if let Some(record) = record {
         let activity = crate::activities::get_activity(conn, &record.activity_id)?;
@@ -99,9 +114,13 @@ pub fn current(conn: &Connection, now: DateTime<Utc>, _today: &str) -> Result<Re
         None
     };
 
+    // Task 7: populate `today` via `compliance`. Failures here are recovered
+    // (empty list) — `current` is the live-state read and must never error out
+    // because some unrelated row in the activities table misbehaved.
+    let today_compliance = compliance(conn, Scope::Today, now, today).unwrap_or_default();
     Ok(RecordState {
         active,
-        today: vec![],
+        today: today_compliance,
         generated_at: now_text,
     })
 }
@@ -266,7 +285,12 @@ pub fn resolve_plan_for(conn: &Connection, rec: &Record) -> Result<Option<crate:
 
         let plan_start = plan.start_minute as u32;
         let plan_end = plan_start + plan.duration_minute as u32;
-        let overlap = overlap_minutes(rec_start_min as u32, rec_end_min as u32, plan_start, plan_end);
+        let overlap = overlap_minutes(
+            rec_start_min as u32,
+            rec_end_min as u32,
+            plan_start,
+            plan_end,
+        );
         if overlap == 0 {
             continue;
         }
@@ -305,4 +329,179 @@ fn parse_utc(ts: &str) -> Result<DateTime<Utc>> {
     DateTime::parse_from_rfc3339(ts)
         .map(|dt| dt.with_timezone(&Utc))
         .map_err(|e| CoreError::Internal(format!("invalid timestamp '{ts}': {e}")))
+}
+
+// ---- Task 7: compliance (neutral, rounded, today/week) --------------------
+
+/// Compute the `[from, to]` ISO 8601 UTC bounds (lexicographic) used to scan
+/// records inside `scope`. For `Scope::Today` we pair `today` with full
+/// local-day bounds. For `Scope::Week` we anchor on the user's
+/// `week_starts_on` ("mon" / "sun") setting and walk 6 days forward.
+///
+/// Records store ISO 8601 UTC instants with fixed width, so a string-range
+/// compare in `list_records` is sufficient — no datetime conversion needed.
+fn scope_bounds(conn: &Connection, scope: &Scope, today: &str) -> (String, String) {
+    // Stored records use `YYYY-MM-DDTHH:MM:SSZ` (the `T` separator is part of
+    // the ISO 8601 instant format produced by `timestamp(...)`). Bounds must
+    // use the same separator so the lexicographic `BETWEEN` in `list_records`
+    // matches — `T` (0x54) > ` ` (0x20), so a space-separated bound like
+    // `2026-08-03 23:59:59Z` would lex-order BEFORE any T-separated record on
+    // the same date and silently exclude them.
+    match scope {
+        Scope::Today => (format!("{today}T00:00:00Z"), format!("{today}T23:59:59Z")),
+        Scope::Week => {
+            let week_start = week_start_date(conn, today);
+            let end_d = week_start + chrono::Duration::days(6);
+            let end_str = end_d.format("%Y-%m-%d").to_string();
+            (
+                format!("{}T00:00:00Z", week_start.format("%Y-%m-%d")),
+                format!("{end_str}T23:59:59Z"),
+            )
+        }
+    }
+}
+
+/// `reports::week_start_date`
+/// — we duplicate the four lines here rather than enlarging the API surface.
+/// If Plan 2 grows the need, lift the helper to a shared module.
+fn week_start_date(conn: &Connection, today: &str) -> NaiveDate {
+    let week_starts_on = crate::settings::get_string(conn, "week_starts_on", "mon");
+    let d = match NaiveDate::parse_from_str(today, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(_) => return NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch is valid"),
+    };
+    let offset = if week_starts_on == "sun" {
+        d.weekday().num_days_from_sunday() as i64
+    } else {
+        d.weekday().num_days_from_monday() as i64
+    };
+    d - chrono::Duration::days(offset)
+}
+
+/// Sum (rounded) record-overlap seconds for `activity` over the `[from, to]`
+/// window, returning the total in seconds.
+///
+/// "Overlap" means the **wall-clock seconds inside `[from, to]`** for each
+/// record, capped by the window on both ends, then snap-rounded to
+/// `record_rounding_minutes` (0 ⇒ exact seconds, no rounding).
+fn recorded_seconds_in_window(
+    conn: &Connection,
+    activity: &Activity,
+    from: &str,
+    to: &str,
+    now: DateTime<Utc>,
+) -> Result<u64> {
+    let increment = crate::settings::get_i64(conn, "record_rounding_minutes", 5).max(0) as u32;
+
+    let mut total_secs: u64 = 0;
+    let records = list_records(conn, Some(&activity.id), from, to)?;
+    for rec in &records {
+        // Skip still-open records that haven't started yet — `started_at`
+        // is the only boundary that matters here. Open records that started
+        // inside the window are capped to `now`.
+        let rec_started = rec.started_at.as_str();
+        if rec_started > to {
+            continue;
+        }
+        let rec_ended: &str = rec.ended_at.as_deref().unwrap_or_default();
+
+        let span_secs = match compute_span_secs(rec_started, rec_ended, from, to, now) {
+            Some(s) => s,
+            None => continue,
+        };
+        total_secs = total_secs.saturating_add(span_secs);
+    }
+    let _ = increment; // used after rounding below
+    let rounded = round_duration(total_secs, increment);
+    Ok(rounded)
+}
+
+/// Closed-record overlap seconds inside `[from, to]`. Open records (`None`)
+/// are capped at `now` (UTC). Returns `None` if the record contributes zero
+/// seconds inside the window (e.g. it falls entirely outside).
+fn compute_span_secs(
+    rec_started: &str,
+    rec_ended: &str,
+    from: &str,
+    to: &str,
+    now: DateTime<Utc>,
+) -> Option<u64> {
+    // Effective boundaries: `max(rec_started, from)`, capped at `to`, with
+    // open records anchoring on `now` for the upper bound.
+    let lo_str = if rec_started > from {
+        rec_started
+    } else {
+        from
+    };
+    let upper_bound = if rec_ended.is_empty() {
+        timestamp(now)
+    } else {
+        rec_ended.to_string()
+    };
+    let hi_str = if upper_bound.as_str() < to {
+        upper_bound.as_str()
+    } else {
+        to
+    };
+    if hi_str <= lo_str {
+        return None;
+    }
+    let lo = parse_utc(lo_str).ok()?;
+    let hi = parse_utc(hi_str).ok()?;
+    let dur = (hi - lo).num_seconds().max(0) as u64;
+    if dur == 0 { None } else { Some(dur) }
+}
+
+/// Per-activity compliance snapshot for the given scope. Each active activity
+/// gets exactly one `Compliance` row; inactive activities are skipped (they
+/// have no budget and shouldn't pollute the report). The list is sorted by
+/// activity name for deterministic output (CLI table layout).
+///
+/// **Neutrality (spec §3.6).** Every state shares the activity's own hue —
+/// `core` carries no color logic; the GUI maps `state` to the activity
+/// palette in Plan 2.
+pub fn compliance(
+    conn: &Connection,
+    scope: Scope,
+    now: DateTime<Utc>,
+    today: &str,
+) -> Result<Vec<Compliance>> {
+    let (from, to) = scope_bounds(conn, &scope, today);
+
+    let activities: Vec<Activity> = crate::activities::list_activities(conn, true)?;
+    let mut out: Vec<Compliance> = Vec::with_capacity(activities.len());
+
+    for activity in &activities {
+        let recorded = recorded_seconds_in_window(conn, activity, &from, &to, now)?;
+
+        let target_minutes = match scope {
+            Scope::Today => activity.target_minutes_daily,
+            Scope::Week => activity.target_minutes_weekly,
+        };
+        let target_seconds = target_minutes.map(|m| m as u64 * 60);
+
+        let ratio = match (recorded, target_seconds) {
+            (rec, Some(tgt)) if tgt > 0 => Some(rec as f64 / tgt as f64),
+            _ => None,
+        };
+        let remaining_seconds: Option<i64> = target_seconds.map(|tgt| tgt as i64 - recorded as i64);
+        let state = match (ratio, target_seconds) {
+            (None, _) => ComplianceState::Unbudgeted,
+            (Some(r), _) if r < 1.0 => ComplianceState::Under,
+            (Some(r), _) if r < 1.05 => ComplianceState::Met,
+            (Some(_), _) => ComplianceState::Over,
+        };
+
+        out.push(Compliance {
+            activity: activity.clone(),
+            recorded_seconds: recorded,
+            target_seconds,
+            ratio,
+            remaining_seconds,
+            state,
+        });
+    }
+
+    out.sort_by(|a, b| a.activity.name.cmp(&b.activity.name));
+    Ok(out)
 }
