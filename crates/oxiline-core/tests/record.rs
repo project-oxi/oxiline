@@ -18,6 +18,19 @@ fn db() -> (NamedTempFile, Connection) {
     (f, c)
 }
 
+fn activity_input(name: &str) -> oxiline_core::model::ActivityInput {
+    oxiline_core::model::ActivityInput {
+        name: Some(name.into()),
+        hue_label: None,
+        icon: None,
+        category_id: None,
+        target_minutes_daily: None,
+        target_minutes_weekly: None,
+        is_active: None,
+        sort_order: None,
+    }
+}
+
 #[test]
 fn v4_creates_record_tables() {
     let (_f, c) = db();
@@ -40,7 +53,6 @@ fn v4_creates_record_tables() {
     let _ = Utc.with_ymd_and_hms(2026, 8, 3, 9, 0, 0);
 }
 
-
 #[test]
 fn round_duration_snaps_half_up() {
     use oxiline_core::util::round_duration;
@@ -48,4 +60,25 @@ fn round_duration_snaps_half_up() {
     assert_eq!(round_duration(37 * 60 + 30, 5), 40 * 60); // 2250s -> 2400s (half-up at 37.5)
     assert_eq!(round_duration(42 * 60, 0), 42 * 60); // 0 disables
     assert_eq!(round_duration(0, 5), 0);
+}
+
+#[test]
+fn start_switches_single_active() {
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    let b = oxiline_core::activities::create_activity(&c, activity_input("독서")).unwrap();
+    let now = Utc.with_ymd_and_hms(2026, 8, 3, 9, 0, 0).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let switched_at = now + chrono::Duration::seconds(1);
+    oxiline_core::record::start(&c, &b.id, switched_at, "2026-08-03").unwrap();
+    let st = oxiline_core::record::current(&c, switched_at, "2026-08-03").unwrap();
+    assert_eq!(st.active.as_ref().unwrap().activity.id, b.id);
+    let open: i64 = c
+        .query_row(
+            "SELECT COUNT(*) FROM records WHERE ended_at IS NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(open, 1);
 }
