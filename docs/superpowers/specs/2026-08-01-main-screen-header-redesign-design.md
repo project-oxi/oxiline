@@ -58,7 +58,7 @@ immediately after the traffic-light clearance (utilizes the strip's left side):
 
 ```tsx
 <button onClick={goToToday} className="flex items-baseline gap-1.5 rounded px-1 hover:bg-surface-sunken" title={t("nav.today")}>
-  <span className="text-[20px] font-semibold font-display tracking-tight text-text">
+  <span className="text-[18px] font-semibold tracking-tight text-text">
     {lang === "ko" ? `${mm}월 ${dd}일` : titleDt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
   </span>
   <span className="text-[12px] font-medium text-text-muted">
@@ -163,7 +163,7 @@ component code, per the adherence fix):
 
 | Band | Content | Notes |
 |------|---------|-------|
-| Titlebar (drag) | lights(56px) · `‹` · `8월 1일` 20px SUITE + `토요일` 12px · `›` … icons | hero anchored after lights |
+| Titlebar (drag) | lights(56px) · `‹` · `8월 1일` 18px SUIT + `토요일` 12px · `›` … icons | hero anchored after lights |
 | Week strip | 7 day cells · today filled circle | §2.1 fix only |
 | View tabs | underline tabs, left-aligned, `border-b` | §6.10 |
 

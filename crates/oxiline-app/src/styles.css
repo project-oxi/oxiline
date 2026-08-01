@@ -188,6 +188,7 @@
   --tl-rail-width:   3px;
   --tl-spine-width:  1px;
   --tl-tick-color:   oklch(0% 0 0 / 0.06);
+  --shadow-today-node: 0 2px 8px oklch(0.45 0.14 250 / 0.35);
 }
 .dark {
   --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.30);
@@ -199,6 +200,7 @@
   --color-block-bg:     oklch(28% 0.016 265);
   --color-block-border: oklch(33% 0.015 265);
   --tl-tick-color:      oklch(100% 0 0 / 0.05);
+  --shadow-today-node: 0 2px 8px oklch(0.70 0.14 250 / 0.40);
 }
 
 /* ---- Tailwind utility exposure (@theme inline, §2.1) -------------------- */

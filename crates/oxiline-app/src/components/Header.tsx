@@ -51,17 +51,19 @@ export function Header() {
             className="flex items-baseline gap-1.5 rounded px-1 hover:bg-surface-sunken"
             title={t("nav.today")}
           >
-            <span className="max-[379px]:hidden text-[18px] font-semibold text-interactive-primary">
-              {yy}
-            </span>
-            <span className="text-[21px] font-bold tracking-tight font-display text-text">
+            <span className="text-[18px] font-semibold tracking-tight text-text">
               {lang === "ko"
                 ? `${mm}월 ${dd}일`
                 : titleDt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
-            <span className="text-[16px] font-medium text-text-subtle">
-              {lang === "ko" ? wdKo : titleDt.toLocaleDateString("en-US", { weekday: "short" })}
+            <span className="text-[12px] font-medium text-text-muted">
+              {lang === "ko"
+                ? wdKo + "요일"
+                : titleDt.toLocaleDateString("en-US", { weekday: "short" })}
             </span>
+            {yy !== Number(today.slice(0, 4)) && (
+              <span className="text-[11px] font-medium text-text-subtle">{yy}</span>
+            )}
           </button>
           <button
             className="rounded p-1 opacity-40 transition hover:bg-surface-sunken hover:opacity-100"
@@ -133,16 +135,11 @@ export function Header() {
                 {wdLabel}
               </span>
               <span
-                className="flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold transition"
-                style={{
-                  background: isToday ? "var(--color-interactive-primary)" : "transparent",
-                  color: isToday
-                    ? "var(--color-interactive-primary-foreground)"
-                    : "var(--color-text-muted)",
-                  boxShadow: isToday
-                    ? "0 2px 8px color-mix(in oklch, var(--color-interactive-primary) 35%, transparent)"
-                    : undefined,
-                }}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold transition ${
+                  isToday
+                    ? "bg-interactive-primary text-interactive-primary-foreground shadow-[var(--shadow-today-node)]"
+                    : "text-text-muted"
+                }`}
               >
                 {dayNum}
               </span>
@@ -156,22 +153,26 @@ export function Header() {
         })}
       </div>
 
-      {/* Row 3: segmented tabs */}
-      <div className="flex gap-0.5 rounded-lg bg-surface-sunken p-0.5">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            onClick={() => setView(tb.key)}
-            className="flex-1 rounded-md px-3 py-1.5 text-[13px] font-semibold transition"
-            style={{
-              background: view === tb.key ? "var(--color-surface-raised)" : "transparent",
-              color: view === tb.key ? "var(--color-text)" : "var(--color-text-muted)",
-              boxShadow: view === tb.key ? "var(--shadow-sm)" : undefined,
-            }}
-          >
-            {tb.label}
-          </button>
-        ))}
+      {/* Row 3: underline tabs (DESIGN.md §6.10) */}
+      <div role="tablist" className="flex gap-1 border-b border-line">
+        {tabs.map((tb) => {
+          const on = view === tb.key;
+          return (
+            <button
+              key={tb.key}
+              role="tab"
+              aria-selected={on}
+              onClick={() => setView(tb.key)}
+              className={`-mb-px border-b-2 px-3 py-2 text-[13px] transition ${
+                on
+                  ? "border-interactive-primary text-text font-semibold"
+                  : "border-transparent text-text-muted font-medium hover:text-text"
+              }`}
+            >
+              {tb.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
