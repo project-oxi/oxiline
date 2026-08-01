@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Header } from "./components/Header";
-import { DayTimeline } from "./components/DayTimeline";
+import { RecordTimeline } from "./components/RecordTimeline";
 import { BacklogView } from "./components/BacklogView";
 import { WeekView } from "./components/WeekView";
 import { ReportView } from "./components/ReportView";
@@ -81,7 +81,7 @@ export default function App() {
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex flex-1 flex-col overflow-hidden border-x border-border">
-            {view === "today" && <DayTimeline />}
+            {view === "today" && <RecordTimeline />}
             {view === "week" && <WeekView />}
             {view === "backlog" && <BacklogView />}
             {view === "report" && <ReportView />}
