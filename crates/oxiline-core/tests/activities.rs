@@ -160,3 +160,31 @@ fn update_activity_target_tri_state() {
     );
     assert_eq!(cleared.target_minutes_weekly, Some(1200));
 }
+
+#[test]
+fn delete_activity_refuses_with_history() {
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(
+        &c,
+        oxiline_core::model::ActivityInput {
+            name: Some("코딩".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    // Start a record so the activity has history; refuse-without-force must fail.
+    let now = chrono::Utc::now();
+    let today = now.format("%Y-%m-%d").to_string();
+    oxiline_core::record::start(&c, &a.id, now, &today).unwrap();
+
+    assert!(
+        oxiline_core::activities::delete_activity(&c, &a.id, false).is_err(),
+        "delete without --force must error when records exist"
+    );
+
+    // Force: records + activity gone in one transaction.
+    oxiline_core::activities::delete_activity(&c, &a.id, true).unwrap();
+    assert!(oxiline_core::activities::list_activities(&c, false)
+        .unwrap()
+        .is_empty());
+}

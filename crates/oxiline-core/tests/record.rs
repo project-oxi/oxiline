@@ -82,3 +82,32 @@ fn start_switches_single_active() {
         .unwrap();
     assert_eq!(open, 1);
 }
+
+#[test]
+fn resolve_links_record_to_plan() {
+    let (_f, c) = db();
+    let a = oxiline_core::activities::create_activity(&c, activity_input("코딩")).unwrap();
+    // Recurring plan: Monday 09:00–10:30 (start=540, duration=90), option "코딩".
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 90,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a.id.clone()],
+        },
+    )
+    .unwrap();
+    // 2026-08-03 is a Monday — start the record at 09:10Z, inside the window.
+    let now = Utc.with_ymd_and_hms(2026, 8, 3, 9, 10, 0).unwrap();
+    oxiline_core::record::start(&c, &a.id, now, "2026-08-03").unwrap();
+    let rec = oxiline_core::record::current(&c, now, "2026-08-03")
+        .unwrap()
+        .active
+        .unwrap()
+        .record;
+    let slot = oxiline_core::record::resolve_plan_for(&c, &rec).unwrap();
+    assert_eq!(slot.unwrap().plan_id, p.id);
+}

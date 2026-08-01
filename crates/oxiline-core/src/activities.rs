@@ -212,3 +212,38 @@ pub fn update_activity(
     conn.execute(&sql, params_with_id.as_slice())?;
     get_activity(conn, id)
 }
+
+/// Delete an activity. By default refuses when records exist (history is the
+/// product; see spec §11). `force=true` cascades the delete through records
+/// in a single transaction — the schema's `ON DELETE RESTRICT` is the DB-level
+/// backstop, this is the structured app-level guard.
+pub fn delete_activity(conn: &Connection, id: &str, force: bool) -> Result<()> {
+    let count: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM records WHERE activity_id = ?1",
+            params![id],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+
+    if count > 0 && !force {
+        return Err(CoreError::Conflict(format!(
+            "activity {} has {} record(s); refuse without --force",
+            id, count
+        )));
+    }
+
+    let tx = conn.unchecked_transaction()?;
+    if count > 0 {
+        tx.execute(
+            "DELETE FROM records WHERE activity_id = ?1",
+            params![id],
+        )?;
+    }
+    let n = tx.execute("DELETE FROM activities WHERE id = ?1", params![id])?;
+    if n == 0 {
+        return Err(CoreError::NotFound(format!("activity '{id}'")));
+    }
+    tx.commit()?;
+    Ok(())
+}
