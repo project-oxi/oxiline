@@ -225,4 +225,18 @@ impl L {
             Lang::En => "no active routines",
         }
     }
+    /// Generic resource label for a successful activity add.
+    pub fn activity_added(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "활동이 추가됐어요",
+            Lang::En => "Activity added",
+        }
+    }
+    /// Marker for an inactive activity row (list / show).
+    pub fn activity_inactive(&self) -> &'static str {
+        match self.0 {
+            Lang::Ko => "비활성",
+            Lang::En => "off",
+        }
+    }
 }

@@ -8,11 +8,12 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use oxiline_core::model::{TaskSource, TimelineItem};
-use oxiline_core::{CoreError, Result, util};
-use oxiline_core::{categories, reports, routine_groups, routines, settings, tasks, timeline};
+use oxiline_core::{
+    CoreError, Result, activities, categories, reports, routine_groups, routines, settings, tasks, timeline, util,
+};
 use serde_json::{Value, json};
 
-use cli::{Cli, Command, GroupAction, RoutineAction, TaskAction};
+use cli::{ActivityAction, Cli, Command, GroupAction, RoutineAction, TaskAction};
 use lang::{L, Lang};
 
 fn main() -> ExitCode {
@@ -377,6 +378,8 @@ fn run(opts: Cli) -> Result<()> {
             }
         },
 
+        Command::Activity { action } => handle_activity(action, &conn, &opts)?,
+
         Command::Settings { action } => match action {
             cli::SettingsAction::Get { key } => match key {
                 Some(k) => {
@@ -684,6 +687,150 @@ fn handle_group(action: &GroupAction, conn: &rusqlite::Connection, opts: &Cli) -
             let active = on.unwrap_or(!off.unwrap_or(true));
             let g = routine_groups::set_active(conn, id, active)?;
             say(resource_out(json, "toggled", &g));
+        }
+    }
+    Ok(())
+}
+/// Dispatch `oxiline activity` subcommands (Task 8).
+fn handle_activity(
+    action: &ActivityAction,
+    conn: &rusqlite::Connection,
+    opts: &Cli,
+) -> Result<()> {
+    let json = opts.json;
+    let lang = resolve_lang(conn, opts);
+    let l = L(lang);
+    let say = |body: String| {
+        if !opts.quiet {
+            println!("{body}");
+        }
+    };
+    match action {
+        ActivityAction::Add {
+            name,
+            daily,
+            weekly,
+            hue,
+            icon,
+            category,
+        } => {
+            let cat_id: Option<String> = match category.as_deref() {
+                Some(c) => Some(categories::resolve(conn, c)?.id),
+                None => None,
+            };
+            if opts.dry_run {
+                say(preview(
+                    json,
+                    l.activity_added(),
+                    &json!({
+                        "name": name,
+                        "target_minutes_daily": daily.and_then(|m| m.0),
+                        "target_minutes_weekly": weekly.and_then(|m| m.0),
+                        "hue_label": hue,
+                        "icon": icon,
+                        "category_id": cat_id,
+                        "dry_run": true,
+                    }),
+                ));
+                return Ok(());
+            }
+            // For add: any provided budget is SET. `--daily 0` translates to
+            // Some(None) which clears (no budget); positive N is Some(Some(n)).
+            // We use `and_then` to wrap the inner option exactly once.
+            let daily_inner: Option<Option<u32>> = daily.map(|m| m.0);
+            let weekly_inner: Option<Option<u32>> = weekly.map(|m| m.0);
+            let a = activities::create_activity(
+                conn,
+                oxiline_core::model::ActivityInput {
+                    name: Some(name.clone()),
+                    hue_label: hue.clone(),
+                    icon: icon.clone(),
+                    category_id: cat_id,
+                    target_minutes_daily: daily_inner,
+                    target_minutes_weekly: weekly_inner,
+                    is_active: None,
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, l.activity_added(), &a));
+        }
+        ActivityAction::List { active_only } => {
+            let list = activities::list_activities(conn, *active_only)?;
+            if json {
+                say(output::json_pretty(&list));
+            } else {
+                say(output::activity_list_text(&list, l.activity_inactive()));
+            }
+        }
+        ActivityAction::Show { id } => {
+            let a = activities::resolve_activity(conn, id)?;
+            if json {
+                say(output::json_pretty(&a));
+            } else {
+                say(output::activity_text(&a, l.activity_inactive()));
+            }
+        }
+        ActivityAction::Edit {
+            id,
+            name,
+            daily,
+            weekly,
+            hue,
+            icon,
+        } => {
+            // tri-state: outer Option<MinuteBudget> -> absent vs present;
+            // MinuteBudget.0 -> clear (None) vs set (Some(n)).
+            let daily_v = daily.map(|m| m.0);
+            let weekly_v = weekly.map(|m| m.0);
+            let resolved = activities::resolve_activity(conn, id)?;
+            let a = activities::update_activity(
+                conn,
+                &resolved.id,
+                oxiline_core::model::ActivityInput {
+                    name: name.clone(),
+                    hue_label: hue.clone(),
+                    icon: icon.clone(),
+                    category_id: None,
+                    target_minutes_daily: daily_v,
+                    target_minutes_weekly: weekly_v,
+                    is_active: None,
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, "updated", &a));
+        }
+        ActivityAction::Toggle { id, on, off } => {
+            if on == off {
+                return Err(CoreError::InvalidArgument(
+                    "use exactly one of --on / --off".into(),
+                ));
+            }
+            let resolved = activities::resolve_activity(conn, id)?;
+            let a = activities::update_activity(
+                conn,
+                &resolved.id,
+                oxiline_core::model::ActivityInput {
+                    name: None,
+                    hue_label: None,
+                    icon: None,
+                    category_id: None,
+                    target_minutes_daily: None,
+                    target_minutes_weekly: None,
+                    is_active: Some(*on || !*off),
+                    sort_order: None,
+                },
+            )?;
+            say(resource_out(json, "toggled", &a));
+        }
+        ActivityAction::Rm { id, force } => {
+            let resolved = activities::resolve_activity(conn, id)?;
+            let removed_id = resolved.id.clone();
+            activities::delete_activity(conn, &resolved.id, *force)?;
+            say(if json {
+                json!({ "id": removed_id, "removed": true }).to_string()
+            } else {
+                format!("{}: {}", l.removed(), removed_id)
+            });
         }
     }
     Ok(())

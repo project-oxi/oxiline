@@ -1,6 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Category, NowContext, NowItem, RoutineBlock, Task, TimelineItem};
+use oxiline_core::model::{Activity, Category, NowContext, NowItem, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -155,6 +155,40 @@ pub fn category_list_text(cats: &[Category]) -> String {
             "● {}  hue={:<6} id: {}{builtin}\n",
             c.name, c.color_hue, c.id
         ));
+    }
+    out
+}
+pub fn activity_text(a: &Activity, inactive_label: &str) -> String {
+    let off = if a.is_active { "" } else { " (" };
+    let closing = if a.is_active { "" } else { ")" };
+    let daily = a
+        .target_minutes_daily
+        .map(|m| format!("{m}m"))
+        .unwrap_or_else(|| "—".to_string());
+    let weekly = a
+        .target_minutes_weekly
+        .map(|m| format!("{m}m"))
+        .unwrap_or_else(|| "—".to_string());
+    let hue = a.hue_label.clone().unwrap_or_else(|| "—".to_string());
+    format!(
+        "● {name}{off}{off_label}{closing}  daily={daily}  weekly={weekly}  hue={hue}  icon={icon}  id={id}",
+        name = a.name,
+        off = off,
+        off_label = inactive_label,
+        closing = closing,
+        daily = daily,
+        weekly = weekly,
+        hue = hue,
+        icon = a.icon.clone().unwrap_or_else(|| "—".to_string()),
+        id = a.id,
+    )
+}
+
+pub fn activity_list_text(as_: &[Activity], inactive_label: &str) -> String {
+    let mut out = String::new();
+    for a in as_ {
+        out.push_str(&activity_text(a, inactive_label));
+        out.push('\n');
     }
     out
 }
