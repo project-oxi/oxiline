@@ -49,6 +49,21 @@ pub fn run() {
         commands::get_week_report,
         commands::get_range_report,
         commands::get_routine_streaks,
+        commands::list_activities,
+        commands::create_activity,
+        commands::resolve_activity,
+        commands::update_activity,
+        commands::delete_activity,
+        commands::start_record,
+        commands::stop_record,
+        commands::current_record_state,
+        commands::list_records,
+        commands::get_compliance,
+        commands::list_plans,
+        commands::create_plan,
+        commands::get_slots_for_date,
+        commands::update_plan,
+        commands::delete_plan,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

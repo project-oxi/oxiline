@@ -7,10 +7,13 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    CardSuggestion, Category, NowContext, RangeReport, RoutineBlock, RoutineStreak, Task,
+    Activity, ActivityInput, CardSuggestion, Category, Compliance, NowContext, Plan, PlanInput,
+    PlanSlot, RangeReport, Record, RecordState, RoutineBlock, RoutineStreak, Scope, Task,
     TimelineItem, WeekReport,
 };
-use oxiline_core::{cards, categories, reports, routines, settings, tasks, timeline, util};
+use oxiline_core::{
+    activities, cards, categories, plan, record, reports, routines, settings, tasks, timeline, util,
+};
 use serde_json::Value;
 use tauri::State;
 use tauri_plugin_notification::NotificationExt;
@@ -442,4 +445,107 @@ pub fn get_range_report(
 pub fn get_routine_streaks(state: State<AppState>) -> Result<Vec<RoutineStreak>, String> {
     let conn = state.conn();
     reports::routine_streaks(&conn, &util::today_local()).map_err(map_err)
+}
+
+
+// ---- recording layer: activities / plans / records (Plan 2 Task 2) --------
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_activities(state: State<AppState>, active_only: bool) -> Result<Vec<Activity>, String> {
+    activities::list_activities(&state.conn(), active_only).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn create_activity(state: State<AppState>, input: ActivityInput) -> Result<Activity, String> {
+    activities::create_activity(&state.conn(), input).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn resolve_activity(state: State<AppState>, query: String) -> Result<Activity, String> {
+    activities::resolve_activity(&state.conn(), &query).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn update_activity(state: State<AppState>, id: String, input: ActivityInput) -> Result<Activity, String> {
+    activities::update_activity(&state.conn(), &id, input).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_activity(state: State<AppState>, id: String, force: bool) -> Result<(), String> {
+    activities::delete_activity(&state.conn(), &id, force).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn start_record(state: State<AppState>, activity_id: String) -> Result<RecordState, String> {
+    let conn = state.conn();
+    record::start(&conn, &activity_id, chrono::Utc::now(), &util::today_local()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn stop_record(state: State<AppState>) -> Result<RecordState, String> {
+    let conn = state.conn();
+    record::stop(&conn, chrono::Utc::now(), &util::today_local()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn current_record_state(state: State<AppState>) -> Result<RecordState, String> {
+    let conn = state.conn();
+    record::current(&conn, chrono::Utc::now(), &util::today_local()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_records(
+    state: State<AppState>,
+    activity_id: Option<String>,
+    from: String,
+    to: String,
+) -> Result<Vec<Record>, String> {
+    let conn = state.conn();
+    record::list_records(&conn, activity_id.as_deref(), &from, &to).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_compliance(state: State<AppState>, scope: Scope) -> Result<Vec<Compliance>, String> {
+    let conn = state.conn();
+    record::compliance(&conn, scope, chrono::Utc::now(), &util::today_local()).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn list_plans(state: State<AppState>, recurring_only: bool) -> Result<Vec<Plan>, String> {
+    plan::list_plans(&state.conn(), recurring_only).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn create_plan(state: State<AppState>, input: PlanInput) -> Result<Plan, String> {
+    plan::create_plan(&state.conn(), input).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_slots_for_date(state: State<AppState>, date: String) -> Result<Vec<PlanSlot>, String> {
+    plan::slots_for_date(&state.conn(), &date).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn update_plan(state: State<AppState>, id: String, input: PlanInput) -> Result<Plan, String> {
+    plan::update_plan(&state.conn(), &id, input).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_plan(state: State<AppState>, id: String) -> Result<(), String> {
+    plan::delete_plan(&state.conn(), &id).map_err(map_err)
 }

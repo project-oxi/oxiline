@@ -4,14 +4,26 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  Activity,
+  ActivityInput,
   CardSuggestion,
   Category,
+  Compliance,
   NowContext,
+  Plan,
+  PlanInput,
+  PlanSlot,
+  RangeReport,
+  ActivityRecord,
+  RecordState,
   RoutineBlock,
   RoutineGroup,
+  RoutineStreak,
+  Scope,
   Settings,
   Task,
-  RangeReport, RoutineStreak, TimelineItem, WeekReport,
+  TimelineItem,
+  WeekReport,
 } from "../types";
 
 export const api = {
@@ -123,6 +135,34 @@ export const api = {
   getRangeReport: (from: string, to: string) =>
     invoke<RangeReport>("get_range_report", { from, to }),
   getRoutineStreaks: () => invoke<RoutineStreak[]>("get_routine_streaks"),
+  // recording — activities
+  listActivities: (activeOnly: boolean) =>
+    invoke<Activity[]>("list_activities", { activeOnly }),
+  createActivity: (input: ActivityInput) =>
+    invoke<Activity>("create_activity", { input }),
+  resolveActivity: (query: string) =>
+    invoke<Activity>("resolve_activity", { query }),
+  updateActivity: (id: string, input: ActivityInput) =>
+    invoke<Activity>("update_activity", { id, input }),
+  deleteActivity: (id: string, force: boolean) =>
+    invoke<void>("delete_activity", { id, force }),
+  // recording — records
+  startRecord: (activityId: string) =>
+    invoke<RecordState>("start_record", { activityId }),
+  stopRecord: () => invoke<RecordState>("stop_record"),
+  currentRecordState: () => invoke<RecordState>("current_record_state"),
+  listRecords: (activityId: string | null, from: string, to: string) =>
+    invoke<ActivityRecord[]>("list_records", { activityId, from, to }),
+  getCompliance: (scope: Scope) => invoke<Compliance[]>("get_compliance", { scope }),
+  // recording — plans
+  listPlans: (recurringOnly: boolean) =>
+    invoke<Plan[]>("list_plans", { recurringOnly }),
+  createPlan: (input: PlanInput) => invoke<Plan>("create_plan", { input }),
+  getSlotsForDate: (date: string) =>
+    invoke<PlanSlot[]>("get_slots_for_date", { date }),
+  updatePlan: (id: string, input: PlanInput) =>
+    invoke<Plan>("update_plan", { id, input }),
+  deletePlan: (id: string) => invoke<void>("delete_plan", { id }),
 
 };
 
