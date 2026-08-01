@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OxiLine — Final Mockup (Plan/Actual toggle)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUITE@2/fonts/variable/woff2/SUITE-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5/index.css">
+<style>
+  :root{
+    --p0:oklch(98.5% .004 95);--p50:oklch(95% .006 95);--p100:oklch(90% .007 95);--p700:oklch(35% .012 265);--p900:oklch(18% .015 265);--p950:oklch(13% .020 265);
+    --surface:var(--p0);--raised:oklch(100% 0 0);--sunken:var(--p50);--muted-bg:oklch(96% .005 265);
+    --text:var(--p900);--text-mu:var(--p700);--text-sub:oklch(48% .010 95);
+    --border:var(--p100);--border-str:oklch(82% .008 265);
+    --red:oklch(.75 .15 25);--amber:oklch(.75 .15 75);--green:oklch(.75 .13 145);--teal:oklch(.75 .12 195);--blue:oklch(.70 .14 250);--purple:oklch(.72 .15 310);
+    --primary:oklch(.45 .14 250);--primary-fg:oklch(98.5% .004 95);
+    --r-md:.5rem;--r-lg:.75rem;
+    --sh-sm:0 1px 2px oklch(0% 0 0 / .05);--sh-md:0 4px 8px -2px oklch(0% 0 0 / .08),0 2px 4px -1px oklch(0% 0 0 / .04);
+    --sh-lg:0 12px 24px -8px oklch(0% 0 0 / .14),0 4px 8px -2px oklch(0% 0 0 / .07);
+    --fs:"SUIT Variable","SUIT",system-ui,sans-serif;--fd:"SUITE Variable","SUITE",system-ui,sans-serif;--fm:"Geist Mono Variable","Geist Mono",ui-monospace,monospace;
+    color-scheme:light;
+  }
+  .dark{
+    --p100:oklch(28% .015 265);--surface:var(--p950);--raised:oklch(22% .016 265);--sunken:oklch(11% .018 265);--muted-bg:oklch(20% .012 265);
+    --text:var(--p0);--text-mu:oklch(75% .012 95);--text-sub:oklch(75% .012 265);
+    --border:oklch(28% .015 265);--border-str:oklch(40% .015 265);
+    --red:oklch(.78 .14 25);--amber:oklch(.78 .14 75);--green:oklch(.78 .12 145);--teal:oklch(.78 .11 195);--blue:oklch(.74 .13 250);--purple:oklch(.76 .14 310);
+    --primary:oklch(.70 .14 250);--primary-fg:oklch(15% .015 265);color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;font-family:var(--fs);background:#cfcdc6;color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5;padding:32px 24px 64px}
+  .page{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .bar{display:flex;align-items:center;justify-content:space-between;width:100%}
+  .cap{font-family:var(--fm);font-size:11px;color:#6b6a64}.cap b{color:#2a2925}
+  .tg{appearance:none;cursor:pointer;font-family:var(--fs);font-size:12px;font-weight:500;color:#4a4844;background:#e3e1da;border:1px solid #cfccc4;padding:6px 14px;border-radius:999px}
+  .app{container-type:inline-size;width:100%;background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:0 40px 80px -30px rgba(20,20,30,.4),0 10px 24px -10px rgba(20,20,30,.2);border:1px solid var(--border);display:flex;flex-direction:column;height:740px;position:relative}
+  .tb{height:42px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--raised);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:8}
+  .tl{display:flex;gap:7px;flex-shrink:0}.tl span{width:12px;height:12px;border-radius:50%}
+  .tl .r{background:var(--red)}.tl .y{background:var(--amber)}.tl .g{background:var(--green)}
+  .menu-btn{display:none;width:30px;height:30px;align-items:center;justify-content:center;border-radius:var(--r-md);border:none;background:transparent;color:var(--text-mu);cursor:pointer;font-size:15px}
+  .menu-btn:hover{background:var(--muted-bg)}
+  .sp{flex:1}
+  .date-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;border:1px solid var(--border);background:var(--sunken);cursor:pointer}
+  .date-pill b{font-family:var(--fd);font-weight:600;font-size:12.5px}
+  .date-pill .ch{color:var(--text-sub);font-size:11px}
+  .tb-right{display:flex;align-items:center;gap:10px;flex-shrink:0;font-size:12px;color:var(--text-sub)}
+  .kbd{font-family:var(--fm);font-size:10.5px;padding:2px 6px;border-radius:5px;border:1px solid var(--border);background:var(--sunken);color:var(--text-mu)}
+  /* date popover */
+  .dd{display:none;position:absolute;top:44px;left:50%;transform:translateX(-50%);background:var(--raised);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px;width:236px;z-index:20}
+  .dd.open{display:block}
+  .dd-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+  .dd-h .m{font-family:var(--fd);font-weight:600;font-size:13px}
+  .dd-nv{display:flex;gap:4px}.dd-nv button{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-mu);cursor:pointer}
+  .dd-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .dd-cal .d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:10.5px;color:var(--text-mu);border-radius:6px;position:relative}
+  .dd-cal .d.mt{color:var(--border-str)}
+  .dd-cal .d.td{background:var(--primary);color:var(--primary-fg);font-weight:600}
+  .dd-f{margin-top:10px;display:flex;justify-content:space-between;align-items:center}
+  .dd-f button{font-size:11px;color:var(--primary);font-weight:600;background:none;border:none;cursor:pointer}
+  .dd-f .pk{font-family:var(--fm);font-size:10px;color:var(--text-sub)}
+  .body{flex:1;display:flex;min-height:0;position:relative}
+  .pane{display:flex;flex-direction:column;min-height:0}
+  .sidebar{width:240px;border-right:1px solid var(--border);background:var(--raised);flex-shrink:0;overflow:auto}
+  .inspector{width:262px;border-left:1px solid var(--border);background:var(--raised);flex-shrink:0;overflow:auto}
+  .main{flex:1;background:var(--surface);position:relative;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+  .sec-h{padding:13px 15px 7px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-sub)}
+  .sec-h.fl{display:flex;justify-content:space-between;align-items:center}
+  .sec-h .hint{font-family:var(--fm);text-transform:none;letter-spacing:0;font-weight:400;font-size:10px}
+  /* now card */
+  .now{margin:6px 12px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px 13px}
+  .now-top{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .nd{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px oklch(from var(--blue) l c h / .16);animation:p 2.2s ease-in-out infinite}
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.55}}
+  @media(prefers-reduced-motion:reduce){.nd,.rtag .pd{animation:none}}
+  .now-tag{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:600}
+  .now-nm{font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .now-el{font-family:var(--fm);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:1px;display:flex;align-items:baseline;gap:7px}
+  .now-el .rnd{font-size:9px;font-weight:400;color:var(--text-sub)}
+  .now-meta{font-family:var(--fm);font-size:10.5px;color:var(--text-sub);margin-top:4px;line-height:1.5}
+  .now-meta b{color:var(--text-mu);font-weight:500}
+  .now-act{margin-top:9px;display:flex;gap:8px}
+  .btn{font-family:var(--fs);font-size:11.5px;font-weight:600;border-radius:999px;padding:6px 13px;cursor:pointer;border:1px solid transparent}
+  .btn.pri{background:var(--primary);color:var(--primary-fg)}
+  .btn.gh{background:var(--surface);color:var(--text-mu);border-color:var(--border)}
+  /* library */
+  .lib{padding:0 8px 10px}
+  .lr{padding:7px 8px;border-radius:var(--r-md);cursor:grab}
+  .lr:hover{background:var(--muted-bg)}
+  .lr-top{display:flex;align-items:center;gap:8px}
+  .lr .sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .lr .nm{font-size:12.5px;font-weight:500;flex:1}
+  .lr .tg2{font-family:var(--fm);font-size:9.5px;color:var(--text-sub)}
+  .lb{position:relative;height:4px;background:var(--sunken);border-radius:999px;margin-top:6px}
+  .lb .f{position:absolute;inset:0 auto 0 0;border-radius:999px}
+  .lb .tk{position:absolute;top:-2px;bottom:-2px;border-left:1px dashed var(--border-str)}
+  .lr .sub{font-family:var(--fm);font-size:9.5px;color:var(--text-sub);margin-top:4px}
+  .lib-add{margin:4px 8px 0;padding:7px;font-size:12px;color:var(--text-sub);border:1px dashed var(--border-str);border-radius:var(--r-md);text-align:center}
+
+  /* ===== TIMETABLE (B: toggle + two-lane 둘 다) ===== */
+  .tt-head{display:flex;align-items:center;gap:10px;padding:10px 14px 8px;border-bottom:1px solid var(--border);background:var(--surface)}
+  .tt-toggle{display:inline-flex;gap:2px;background:var(--sunken);border-radius:999px;padding:2px}
+  .tt-toggle button{font-family:var(--fs);font-size:11.5px;font-weight:500;color:var(--text-mu);background:none;border:none;padding:5px 13px;border-radius:999px;cursor:pointer}
+  .tt-toggle button.on{background:var(--raised);color:var(--text);box-shadow:var(--sh-sm)}
+  .tt-hint{font-family:var(--fm);font-size:10px;color:var(--text-sub);margin-left:auto}
+
+  .lanes-head{display:flex;padding:0 14px;height:22px;align-items:center;border-bottom:1px solid var(--border)}
+  .lh{font-family:var(--fm);font-size:9.5px;letter-spacing:.04em;color:var(--text-sub);text-transform:uppercase}
+  .lh.plan{width:50%}.lh.act{width:50%;text-align:right}
+  .main.mode-plan .lh.plan{width:100%}.main.mode-plan .lh.act{display:none}
+  .main.mode-act .lh.act{width:100%;text-align:left}.main.mode-act .lh.plan{display:none}
+
+  .tt-wrap{flex:1;overflow:auto}
+  .tt{position:relative;display:grid;grid-template-columns:46px 1fr;padding:8px 0 24px}
+  .rail{position:relative;border-right:1px solid var(--border)}
+  .rail .h{position:absolute;right:8px;font-family:var(--fm);font-size:10px;color:var(--text-sub);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+  .canvas{position:relative;margin:0 12px;height:340px}
+  .gl{position:absolute;left:0;right:0;border-top:1px solid var(--border);opacity:.5}
+  /* lanes */
+  .lane{position:absolute;top:0;bottom:0}
+  .lane.plan{left:0;width:calc(50% - 6px)}
+  .lane.act{left:50%;width:50%}
+  .ldiv{position:absolute;top:0;bottom:0;left:calc(50% - 6px);width:0;border-left:1px dashed var(--border-str);opacity:.7}
+  .main.mode-plan .lane.plan{width:100%}
+  .main.mode-plan .lane.act,.main.mode-plan .ldiv{display:none}
+  .main.mode-act .lane.act{left:0;width:100%}
+  .main.mode-act .lane.plan,.main.mode-act .ldiv{display:none}
+
+  /* plan: choice group (dashed, hollow dots) */
+  .choice{position:absolute;left:0;right:8px;border:1px dashed var(--border-str);border-radius:var(--r-md);background:transparent;overflow:hidden}
+  .ch-h{display:flex;align-items:center;justify-content:space-between;padding:3px 8px;background:var(--sunken);font-family:var(--fm);font-size:8.5px;color:var(--text-sub)}
+  .ch-h .or{color:var(--amber);font-weight:700}
+  .opt{display:flex;align-items:center;gap:6px;padding:3px 8px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--text-sub)}
+  .opt:first-of-type{border-top:none}
+  .opt .od{width:6px;height:6px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--c);background:transparent;flex-shrink:0}
+  .opt.picked{color:var(--text-mu);font-weight:500}
+  .opt.picked .od{background:var(--c);box-shadow:none}
+  .opt .nm{flex:1}
+  .opt .mk{font-family:var(--fm);font-size:8.5px;color:var(--text-sub)}
+
+  /* actual: solid recorded card */
+  .rec{position:absolute;left:8px;right:0;background:var(--raised);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-sm);padding:6px 10px;overflow:hidden}
+  .rec .cr{display:flex;align-items:center;gap:7px}
+  .rec .rd{width:7px;height:7px;border-radius:50%;background:var(--c)}
+  .rec .rnm{font-size:12px;font-weight:600}
+  .rec .rsb{font-family:var(--fm);font-size:9.5px;color:var(--text-mu);margin-top:1px}
+  .rec.past{opacity:.72}
+  .rec.recording{border-color:oklch(from var(--blue) l c h / .5)}
+  .rtag{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);font-weight:600;background:oklch(from var(--blue) l c h / .12);padding:1px 5px;border-radius:999px;margin-top:3px}
+  .rtag .pd{width:4px;height:4px;border-radius:50%;background:var(--blue);animation:p 2.2s ease-in-out infinite}
+  .nowline{position:absolute;left:-6px;right:-6px;border-top:1.5px solid var(--blue);z-index:6}
+  .nowline::before{content:"";position:absolute;left:-4px;top:-5px;width:9px;height:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px oklch(from var(--blue) l c h / .18)}
+  .nowline .nt{position:absolute;right:0;top:-16px;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--blue);background:var(--surface);padding:0 4px}
+
+  /* inspector */
+  .seg{display:inline-flex;gap:2px;background:var(--sunken);border-radius:999px;padding:2px;margin:0 14px 8px;align-self:flex-start}
+  .seg button{font-family:var(--fs);font-size:11px;font-weight:500;color:var(--text-mu);background:none;border:none;padding:5px 14px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:var(--raised);color:var(--text);box-shadow:var(--sh-sm)}
+  .ov{padding:2px 14px 8px}
+  .ov-r{padding:9px 0;border-bottom:1px solid var(--border)}
+  .ov-r:last-child{border-bottom:none}
+  .ov-top{display:flex;align-items:center;gap:8px}
+  .ov-top .sw{width:8px;height:8px;border-radius:2px}
+  .ov-top .nm{font-size:12px;font-weight:500;flex:1}
+  .ov-top .pct{font-family:var(--fm);font-size:11px;color:var(--text-mu)}
+  .ov-bar{position:relative;height:6px;background:var(--sunken);border-radius:999px;margin-top:6px}
+  .ov-bar .f{position:absolute;inset:0 auto 0 0;border-radius:999px}
+  .ov-bar .tk{position:absolute;top:-2px;bottom:-2px;border-left:1px dashed var(--border-str)}
+  .ov-sub{font-family:var(--fm);font-size:9.5px;color:var(--text-sub);margin-top:4px}
+  .total{padding:10px 13px;background:var(--sunken);margin:6px 14px 0;border-radius:var(--r-md);font-family:var(--fm);font-size:10.5px;color:var(--text-mu)}
+  .total b{color:var(--text);font-weight:600}
+  .log{padding:0 14px 12px}
+  .log-r{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border)}
+  .log-r:last-child{border-bottom:none}
+  .log-r .lt{font-family:var(--fm);font-size:9.5px;color:var(--text-sub)}
+  .log-r .ln{font-weight:500;display:flex;align-items:center;gap:6px}
+  .log-r .ln .sw{width:6px;height:6px;border-radius:2px}
+  .log-r .ld{font-family:var(--fm);font-size:9.5px;color:var(--text-mu)}
+
+  /* mobile bottom bar */
+  .now-bar{display:none;position:absolute;left:0;right:0;bottom:0;padding:9px 12px;background:var(--raised);border-top:1px solid var(--border);align-items:center;gap:9px;z-index:7}
+  .now-bar .nb-d{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:p 2.2s ease-in-out infinite}
+  .now-bar .nb-n{font-size:13px;font-weight:600;flex:1}
+  .now-bar .nb-e{font-family:var(--fm);font-size:14px;font-weight:500}
+
+  @container(max-width:880px){
+    .sidebar,.inspector{display:none}.menu-btn{display:flex}.now-bar{display:flex}
+    .tt{grid-template-columns:40px 1fr}.tb-right .kbd{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="bar">
+    <div class="cap"><b>OxiLine</b> · 최종 · 단일 타임라인 + [계획|실제|둘 다] 토글 · 계획(OR)=점선/hollow, 실제=실선/채움 · 두 렌으로 분리 · 주간 · 5분 반올림</div>
+    <button class="tg" id="tg">다크</button>
+  </div>
+
+  <div class="app" id="app">
+    <div class="tb">
+      <div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <button class="menu-btn">≡</button>
+      <div class="sp"></div>
+      <div class="date-pill" id="dp"><b>2026년 8월 1일 (금)</b><span class="ch">▾</span></div>
+      <div class="sp"></div>
+      <div class="tb-right"><span>빠른 추가</span><span class="kbd">⌘K</span><button class="menu-btn">▤</button></div>
+      <div class="dd" id="dd">
+        <div class="dd-h"><span class="m">2026년 8월</span><div class="dd-nv"><button>‹</button><button>›</button></div></div>
+        <div class="dd-cal">
+          <span class="d mt">27</span><span class="d mt">28</span><span class="d mt">29</span><span class="d mt">30</span><span class="d mt">31</span><span class="d td">1</span><span class="d">2</span>
+          <span class="d">3</span><span class="d">4</span><span class="d">5</span><span class="d">6</span><span class="d">7</span><span class="d">8</span><span class="d">9</span>
+          <span class="d">10</span><span class="d">11</span><span class="d">12</span><span class="d">13</span><span class="d">14</span><span class="d">15</span><span class="d">16</span>
+          <span class="d">17</span><span class="d">18</span><span class="d">19</span><span class="d">20</span><span class="d">21</span><span class="d">22</span><span class="d">23</span>
+        </div>
+        <div class="dd-f"><span class="pk">오늘 기록 3h55m</span><button>오늘로</button></div>
+      </div>
+    </div>
+
+    <div class="body">
+      <!-- SIDEBAR -->
+      <div class="pane sidebar">
+        <div class="now">
+          <div class="now-top"><span class="nd"></span><span class="now-tag">지금 녹화 중</span></div>
+          <div class="now-nm">코딩</div>
+          <div class="now-el">0:40 <span class="rnd">5분 단위 반올림</span></div>
+          <div class="now-meta"><b>오늘</b> 2h10m / 4h · <b>주간</b> 8h20m / 20h</div>
+          <div class="now-act"><button class="btn pri">전환</button><button class="btn gh">⏸ 멈춤</button></div>
+        </div>
+        <div class="sec-h fl"><span>활동 · 카드</span><span class="hint">드래그 → 배치</span></div>
+        <div class="lib">
+          <div class="lr"><div class="lr-top"><span class="sw" style="background:var(--blue)"></span><span class="nm">코딩</span><span class="tg2">주 20h</span></div><div class="lb"><div class="f" style="width:42%;background:var(--blue)"></div><div class="tk" style="left:100%"></div></div><div class="sub">8h20m · 남음 11h40m</div></div>
+          <div class="lr"><div class="lr-top"><span class="sw" style="background:var(--purple)"></span><span class="nm">독서</span><span class="tg2">주 5h</span></div><div class="lb"><div class="f" style="width:55%;background:var(--purple)"></div><div class="tk" style="left:100%"></div></div><div class="sub">2h45m · 남음 2h15m</div></div>
+          <div class="lr"><div class="lr-top"><span class="sw" style="background:var(--green)"></span><span class="nm">아침 운동</span><span class="tg2">주 2h30</span></div><div class="lb"><div class="f" style="width:100%;background:var(--green)"></div><div class="tk" style="left:100%"></div></div><div class="sub">2h30m · 달성</div></div>
+          <div class="lr"><div class="lr-top"><span class="sw" style="background:var(--teal)"></span><span class="nm">글쓰기</span><span class="tg2">주 3h</span></div><div class="lb"><div class="f" style="width:100%;background:var(--teal)"></div><div class="tk" style="left:100%"></div></div><div class="sub">3h10m · +10m</div></div>
+          <div class="lib-add">+ 활동 추가</div>
+        </div>
+      </div>
+
+      <!-- MAIN: timetable B -->
+      <div class="pane main mode-both" id="main">
+        <div class="tt-head">
+          <div class="tt-toggle" id="tog">
+            <button data-m="plan">계획</button>
+            <button data-m="act">실제</button>
+            <button data-m="both" class="on">둘 다</button>
+          </div>
+          <span class="tt-hint">계획은 OR(택1) · 실제는 기록</span>
+        </div>
+        <div class="lanes-head">
+          <span class="lh plan">계획 · 선택지</span>
+          <span class="lh act">실제 · 기록</span>
+        </div>
+        <div class="tt-wrap">
+          <div class="tt">
+            <div class="rail">
+              <span class="h" style="top:0">09:00</span><span class="h" style="top:60px">10:00</span><span class="h" style="top:120px">11:00</span>
+              <span class="h" style="top:180px">12:00</span><span class="h" style="top:240px">13:00</span><span class="h" style="top:300px">14:00</span>
+            </div>
+            <div class="canvas">
+              <div class="gl" style="top:60px"></div><div class="gl" style="top:120px"></div><div class="gl" style="top:180px"></div><div class="gl" style="top:240px"></div><div class="gl" style="top:300px"></div>
+              <div class="ldiv"></div>
+
+              <!-- PLAN lane: choice groups -->
+              <div class="lane plan">
+                <div class="choice" style="top:0">
+                  <div class="ch-h"><span>09:00 · 1h30</span><span class="or">OR</span></div>
+                  <div class="opt picked" style="--c:var(--blue)"><span class="od"></span><span class="nm">코딩</span><span class="mk">→실행</span></div>
+                  <div class="opt" style="--c:var(--purple)"><span class="od"></span><span class="nm">독서</span></div>
+                </div>
+                <div class="choice" style="top:96px">
+                  <div class="ch-h"><span>10:30 · 45m</span></div>
+                  <div class="opt picked" style="--c:var(--purple)"><span class="od"></span><span class="nm">독서</span><span class="mk">→실행</span></div>
+                </div>
+                <div class="choice" style="top:150px">
+                  <div class="ch-h"><span>11:15 · 2h00</span><span class="or">OR</span></div>
+                  <div class="opt picked" style="--c:var(--blue)"><span class="od"></span><span class="nm">코딩</span><span class="mk">→실행중</span></div>
+                  <div class="opt" style="--c:var(--teal)"><span class="od"></span><span class="nm">글쓰기</span></div>
+                  <div class="opt" style="--c:var(--green)"><span class="od"></span><span class="nm">운동</span></div>
+                </div>
+                <div class="choice" style="top:248px">
+                  <div class="ch-h"><span>12:30 · 1h00</span><span style="color:var(--text-sub)">예정</span></div>
+                  <div class="opt" style="--c:var(--teal)"><span class="od"></span><span class="nm">점심 식사</span></div>
+                </div>
+                <div class="choice" style="top:312px">
+                  <div class="ch-h"><span>14:00 · 15m</span><span style="color:var(--text-sub)">예정</span></div>
+                  <div class="opt" style="--c:var(--blue)"><span class="od"></span><span class="nm">스탠드업</span></div>
+                </div>
+              </div>
+
+              <!-- ACTUAL lane: solid recorded -->
+              <div class="lane act">
+                <div class="rec past" style="--c:var(--blue);top:0;height:90px"><div class="cr"><span class="rd"></span><span class="rnm">코딩</span></div><div class="rsb">09:00–10:30 · 1h30</div></div>
+                <div class="rec past" style="--c:var(--purple);top:90px;height:45px"><div class="cr"><span class="rd"></span><span class="rnm">독서</span></div><div class="rsb">10:30–11:15 · 45m</div></div>
+                <div class="rec recording" style="--c:var(--blue);top:135px;height:40px"><div class="cr"><span class="rd"></span><span class="rnm">코딩</span></div><div class="rsb">11:15–</div><span class="rtag"><span class="pd"></span>0:40</span></div>
+                <div class="nowline" style="top:175px"><span class="nt">11:55</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="now-bar"><span class="nb-d"></span><span class="nb-n">코딩</span><span class="nb-e">0:40</span><button class="btn pri">전환</button></div>
+      </div>
+
+      <!-- INSPECTOR -->
+      <div class="pane inspector">
+        <div class="sec-h">충족도</div>
+        <div class="seg"><button class="on">주간</button><button>오늘</button></div>
+        <div class="ov">
+          <div class="ov-r"><div class="ov-top"><span class="sw" style="background:var(--blue)"></span><span class="nm">코딩</span><span class="pct">42%</span></div><div class="ov-bar"><div class="f" style="width:42%;background:var(--blue)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">8h20m / 20h · 남음 11h40m</div></div>
+          <div class="ov-r"><div class="ov-top"><span class="sw" style="background:var(--purple)"></span><span class="nm">독서</span><span class="pct">55%</span></div><div class="ov-bar"><div class="f" style="width:55%;background:var(--purple)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">2h45m / 5h · 남음 2h15m</div></div>
+          <div class="ov-r"><div class="ov-top"><span class="sw" style="background:var(--teal)"></span><span class="nm">글쓰기</span><span class="pct">106%</span></div><div class="ov-bar"><div class="f" style="width:100%;background:var(--teal)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">3h10m / 3h · +10m</div></div>
+          <div class="ov-r"><div class="ov-top"><span class="sw" style="background:var(--green)"></span><span class="nm">아침 운동</span><span class="pct">100%</span></div><div class="ov-bar"><div class="f" style="width:100%;background:var(--green)"></div><div class="tk" style="left:100%"></div></div><div class="ov-sub">2h30m / 2h30m · 달성</div></div>
+        </div>
+        <div class="total">이번 주 기록 <b>16h45m</b> · 목표 <b>30h30m</b></div>
+        <div class="sec-h">최근 세션</div>
+        <div class="log">
+          <div class="log-r"><span class="ln"><span class="sw" style="background:var(--blue)"></span>코딩</span><span><span class="lt">09:00</span> · <span class="ld">1h30</span></span></div>
+          <div class="log-r"><span class="ln"><span class="sw" style="background:var(--purple)"></span>독서</span><span><span class="lt">10:30</span> · <span class="ld">45m</span></span></div>
+          <div class="log-r"><span class="ln"><span class="sw" style="background:var(--blue)"></span>코딩</span><span><span class="lt">11:15</span> · <span class="ld">0:40 ▶</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="align-self:flex-start">토글(계획/실제/둘 다)을 눌러보세요. 둘 다 = 좌(계획·점선·hollow) / 우(실제·실선·채움) 두 렌으로 명확 분리. OR 선택지 중 실제로 한 것이 같은 시간행에서 짝지어 보임.</div>
+</div>
+
+<script>
+  document.getElementById('tg').onclick=(e)=>{const d=document.documentElement.classList.toggle('dark');e.target.textContent=d?'라이트':'다크'};
+  const main=document.getElementById('main');
+  document.getElementById('tog').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    document.querySelectorAll('#tog button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    main.classList.remove('mode-plan','mode-act','mode-both');main.classList.add('mode-'+b.dataset.m);
+  });
+  const dd=document.getElementById('dd');
+  document.getElementById('dp').addEventListener('click',e=>{e.stopPropagation();dd.classList.toggle('open')});
+  document.addEventListener('click',()=>dd.classList.remove('open'));
+</script>
+</body>
+</html>

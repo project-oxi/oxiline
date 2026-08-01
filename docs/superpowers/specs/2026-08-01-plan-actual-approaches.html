@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OxiLine — Plan vs Actual (OR plans)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUITE@2/fonts/variable/woff2/SUITE-Variable.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@5/index.css">
+<style>
+  :root{
+    --p0:oklch(98.5% .004 95); --p50:oklch(95% .006 95); --p100:oklch(90% .007 95);
+    --p700:oklch(35% .012 265); --p900:oklch(18% .015 265); --p950:oklch(13% .020 265);
+    --surface:var(--p0); --raised:oklch(100% 0 0); --sunken:var(--p50); --muted-bg:oklch(96% .005 265);
+    --text:var(--p900); --text-mu:var(--p700); --text-sub:oklch(48% .010 95);
+    --border:var(--p100); --border-str:oklch(82% .008 265);
+    --red:oklch(.75 .15 25); --amber:oklch(.75 .15 75); --green:oklch(.75 .13 145);
+    --teal:oklch(.75 .12 195); --blue:oklch(.70 .14 250); --purple:oklch(.72 .15 310);
+    --primary:oklch(.45 .14 250); --primary-fg:oklch(98.5% .004 95);
+    --r-md:.5rem; --r-lg:.75rem;
+    --sh-sm:0 1px 2px oklch(0% 0 0 / .05); --sh-md:0 4px 8px -2px oklch(0% 0 0 / .08),0 2px 4px -1px oklch(0% 0 0 / .04);
+    --fs:"SUIT Variable","SUIT",system-ui,sans-serif; --fd:"SUITE Variable","SUITE",system-ui,sans-serif;
+    --fm:"Geist Mono Variable","Geist Mono",ui-monospace,monospace;
+    color-scheme:light;
+  }
+  .dark{
+    --p100:oklch(28% .015 265); --surface:var(--p950); --raised:oklch(22% .016 265);
+    --sunken:oklch(11% .018 265); --muted-bg:oklch(20% .012 265);
+    --text:var(--p0); --text-mu:oklch(75% .012 95); --text-sub:oklch(75% .012 265);
+    --border:oklch(28% .015 265); --border-str:oklch(40% .015 265);
+    --red:oklch(.78 .14 25); --amber:oklch(.78 .14 75); --green:oklch(.78 .12 145);
+    --teal:oklch(.78 .11 195); --blue:oklch(.74 .13 250); --purple:oklch(.76 .14 310);
+    --primary:oklch(.70 .14 250); --primary-fg:oklch(15% .015 265);
+    color-scheme:dark;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;font-family:var(--fs);background:#cfcdc6;color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5;padding:36px 24px 72px}
+  .page{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .bar{display:flex;align-items:center;justify-content:space-between;width:100%}
+  .cap{font-family:var(--fm);font-size:11px;color:#6b6a64}.cap b{color:#2a2925}
+  .tg{appearance:none;cursor:pointer;font-family:var(--fs);font-size:12px;font-weight:500;color:#4a4844;background:#e3e1da;border:1px solid #cfccc4;padding:6px 14px;border-radius:999px}
+  .app{width:100%;background:var(--surface);border-radius:14px;overflow:hidden;box-shadow:0 30px 60px -28px rgba(20,20,30,.38),0 8px 18px -8px rgba(20,20,30,.16);border:1px solid var(--border)}
+  .tb{height:40px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--raised);border-bottom:1px solid var(--border)}
+  .tl{display:flex;gap:7px}.tl span{width:11px;height:11px;border-radius:50%}
+  .tl .r{background:var(--red)}.tl .y{background:var(--amber)}.tl .g{background:var(--green)}
+  .tb .ttl{flex:1;text-align:center;font-family:var(--fd);font-weight:600;font-size:12.5px}
+  .tb .ttl s{text-decoration:none;color:var(--text-sub);font-weight:400;font-family:var(--fm);font-size:11px;margin-left:8px}
+  .body{padding:18px 18px 22px}
+  .ahead{display:flex;align-items:baseline;gap:10px;margin:0 0 4px}
+  .ahead .n{font-family:var(--fd);font-weight:600;font-size:15px}
+  .ahead .t{font-size:11px;color:var(--text-sub)}
+  .why{font-size:12px;color:var(--text-mu);margin:0 0 14px;line-height:1.6;max-width:90ch}
+  .why b{color:var(--text)}
+
+  /* shared timetable bits */
+  .rail{position:relative;border-right:1px solid var(--border);width:46px;flex-shrink:0}
+  .rail .h{position:absolute;right:8px;font-family:var(--fm);font-size:10px;color:var(--text-sub);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+  .canvas{position:relative;flex:1}
+  .gl{position:absolute;left:0;right:0;border-top:1px solid var(--border);opacity:.5}
+  .nowline{position:absolute;left:-6px;right:-6px;border-top:1.5px solid var(--blue);z-index:6}
+  .nowline::before{content:"";position:absolute;left:-4px;top:-5px;width:9px;height:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px oklch(from var(--blue) l c h / .18)}
+  .nowline .nt{position:absolute;right:0;top:-16px;font-family:var(--fm);font-size:9.5px;font-weight:600;color:var(--blue);background:var(--surface);padding:0 4px}
+
+  /* choice card (OR group) */
+  .choice{position:absolute;left:0;right:0;background:var(--raised);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-sm);overflow:hidden}
+  .ch-head{display:flex;align-items:center;justify-content:space-between;padding:4px 9px;background:var(--sunken);font-family:var(--fm);font-size:9px;color:var(--text-sub)}
+  .ch-head .or{color:var(--amber);font-weight:700;letter-spacing:.04em}
+  .ch-head .res{color:var(--blue);font-weight:600}
+  .opt{display:flex;align-items:center;gap:7px;padding:4px 9px;border-top:1px solid var(--border);font-size:11px}
+  .opt:first-of-type{border-top:none}
+  .opt .d{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .opt.done{color:var(--text);font-weight:600}
+  .opt.done .d{background:var(--c)}
+  .opt.not{color:var(--text-sub)}
+  .opt.not .d{background:transparent;box-shadow:inset 0 0 0 1px var(--border-str)}
+  .opt .nm{flex:1}
+  .opt .dur{font-family:var(--fm);font-size:9.5px;color:var(--text-sub)}
+  .opt.done .dur{color:var(--text-mu)}
+  .opt .tag{font-family:var(--fm);font-size:8.5px;color:var(--text-sub)}
+
+  /* recorded solid card */
+  .rec{position:absolute;left:0;right:0;background:var(--raised);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-sm);padding:6px 10px;overflow:hidden}
+  .rec .cr{display:flex;align-items:center;gap:7px}
+  .rec .d{width:7px;height:7px;border-radius:50%;background:var(--c)}
+  .rec .nm{font-size:12px;font-weight:600}
+  .rec .sb{font-family:var(--fm);font-size:9.5px;color:var(--text-mu);margin-top:1px}
+  .rec.recording{border-color:oklch(from var(--blue) l c h / .5)}
+  .rtag{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);font-weight:600;background:oklch(from var(--blue) l c h / .12);padding:1px 5px;border-radius:999px;margin-top:3px}
+  .rtag .pd{width:4px;height:4px;border-radius:50%;background:var(--blue);animation:p 2.2s ease-in-out infinite}
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.5}}
+  @media(prefers-reduced-motion:reduce){.rtag .pd{animation:none}}
+
+  /* ghost (plan option, unchosen) for overlay mode */
+  .ghost{position:absolute;left:0;right:0;border:1px dashed var(--border-str);border-radius:var(--r-md);padding:4px 9px;background:transparent;color:var(--text-sub);font-size:11px;display:flex;align-items:center;gap:7px}
+  .ghost .d{width:6px;height:6px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--c)}
+
+  .legend{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-family:var(--fm);font-size:10px;color:var(--text-sub)}
+  .legend .it{display:flex;align-items:center;gap:6px}
+  .legend .sw{width:14px;height:10px;border-radius:3px}
+
+  .seg{display:inline-flex;gap:2px;background:var(--sunken);border-radius:999px;padding:2px}
+  .seg button{font-family:var(--fs);font-size:11px;font-weight:500;color:var(--text-mu);background:none;border:none;padding:5px 14px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:var(--raised);color:var(--text);box-shadow:var(--sh-sm)}
+
+  /* split (A) */
+  .split{display:grid;grid-template-columns:46px 1fr 1fr;gap:0}
+  .split .col-h{font-family:var(--fm);font-size:9.5px;color:var(--text-sub);text-align:center;padding:0 0 8px;letter-spacing:.04em}
+  .split .gap{border-left:1px dashed var(--border-str)}
+  .conn{position:absolute;border-top:1px dashed oklch(from var(--blue) l c h / .35);z-index:1}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="bar">
+    <div class="cap"><b>OxiLine</b> · 계획(OR) vs 실제 기록 — 세 접근 · 같은 하루 데이터</div>
+    <button class="tg" id="tg">다크</button>
+  </div>
+
+  <!-- ============ A — SPLIT PANES (계획 | 실제) ============ -->
+  <div class="app">
+    <div class="tb"><div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="ttl">A · 두 Pane 분할<s>계획 ↔ 실제, 동기화된 시간축</s></div></div>
+    <div class="body">
+      <p class="why"><b>계획 pane(좌)</b>엔 OR 선택지를, <b>실제 pane(우)</b>엔 기록된 단일 흐름을. 같은 시간축으로 나란히 비교 — "09:00엔 코딩/독서 중 택1이었고, 코딩을 했네." 비교가 가장 선명하지만 폭을 두 쪽으로 쓴다.</p>
+      <div class="split" style="height:360px">
+        <div class="rail">
+          <span class="h" style="top:0">09:00</span><span class="h" style="top:60px">10:00</span><span class="h" style="top:120px">11:00</span>
+          <span class="h" style="top:180px">12:00</span><span class="h" style="top:240px">13:00</span><span class="h" style="top:300px">14:00</span>
+        </div>
+        <div style="position:relative;padding:0 10px">
+          <div class="col-h">계획 (OR 선택지)</div>
+          <div class="canvas" style="height:330px">
+            <div class="gl" style="top:60px"></div><div class="gl" style="top:120px"></div><div class="gl" style="top:180px"></div><div class="gl" style="top:240px"></div><div class="gl" style="top:300px"></div>
+            <!-- 09:00 choice {코딩,독서} -->
+            <div class="choice" style="top:0;width:calc(100% - 20px)">
+              <div class="ch-head"><span>09:00 · 1h30</span><span class="or">OR · 택1</span></div>
+              <div class="opt not" style="--c:var(--blue)"><span class="d"></span><span class="nm">코딩</span><span class="tag">→ 실행됨</span></div>
+              <div class="opt not" style="--c:var(--purple)"><span class="d"></span><span class="nm">독서</span></div>
+            </div>
+            <!-- 10:30 독서 (single, no OR) -->
+            <div class="choice" style="top:90px;width:calc(100% - 20px)">
+              <div class="ch-head"><span>10:30 · 45m</span></div>
+              <div class="opt not" style="--c:var(--purple)"><span class="d"></span><span class="nm">독서</span><span class="tag">→ 실행됨</span></div>
+            </div>
+            <!-- 11:15 choice {코딩,글쓰기,운동} -->
+            <div class="choice" style="top:135px;width:calc(100% - 20px)">
+              <div class="ch-head"><span>11:15 · 2h00</span><span class="or">OR · 택1</span></div>
+              <div class="opt not" style="--c:var(--blue)"><span class="d"></span><span class="nm">코딩</span><span class="tag">→ 실행중</span></div>
+              <div class="opt not" style="--c:var(--teal)"><span class="d"></span><span class="nm">글쓰기</span></div>
+              <div class="opt not" style="--c:var(--green)"><span class="d"></span><span class="nm">운동</span></div>
+            </div>
+            <!-- 12:30 점심 future -->
+            <div class="choice" style="top:210px;width:calc(100% - 20px)">
+              <div class="ch-head"><span>12:30 · 1h00</span></div>
+              <div class="opt not" style="--c:var(--teal)"><span class="d"></span><span class="nm">점심 식사</span></div>
+            </div>
+            <div class="choice" style="top:300px;width:calc(100% - 20px)">
+              <div class="ch-head"><span>14:00 · 15m</span></div>
+              <div class="opt not" style="--c:var(--blue)"><span class="d"></span><span class="nm">팀 스탠드업</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;padding:0 10px" class="gap">
+          <div class="col-h">실제 (기록)</div>
+          <div class="canvas" style="height:330px">
+            <div class="gl" style="top:60px"></div><div class="gl" style="top:120px"></div><div class="gl" style="top:180px"></div><div class="gl" style="top:240px"></div><div class="gl" style="top:300px"></div>
+            <div class="rec" style="--c:var(--blue);top:0;height:90px;width:calc(100% - 20px);opacity:.78"><div class="cr"><span class="d"></span><span class="nm">코딩</span></div><div class="sb">09:00–10:30 · 기록 1h30</div></div>
+            <div class="rec" style="--c:var(--purple);top:90px;height:45px;width:calc(100% - 20px);opacity:.78"><div class="cr"><span class="d"></span><span class="nm">독서</span></div><div class="sb">10:30–11:15 · 45m</div></div>
+            <div class="rec recording" style="--c:var(--blue);top:135px;height:40px;width:calc(100% - 20px)"><div class="cr"><span class="d"></span><span class="nm">코딩</span></div><div class="sb">11:15–</div><span class="rtag"><span class="pd"></span>녹화중 0:40</span></div>
+            <div class="nowline" style="top:175px"><span class="nt">11:55</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="it"><span class="sw" style="background:var(--raised);border:1px solid var(--border)"></span>실행/기록</span>
+        <span class="it"><span class="sw" style="background:var(--sunken)"></span>선택지(OR)</span>
+        <span class="it">과거는 양쪽 다, 미래는 계획만</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ B — TOGGLE [계획|실제|둘 다] ============ -->
+  <div class="app">
+    <div class="tb"><div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="ttl">B · 단일 타임라인 + 토글<s>계획 / 실제 / 둘 다</s></div></div>
+    <div class="body">
+      <p class="why">하나의 캔버스. <b>[둘 다]</b> 모면 계획 선택지(점선 ghost) 위에 실제 기록(실선)이 올라간다 — 코딩이 "선택지였고 + 실제로 했다"가 한 자리에. 절약되는 폭 대신 모드 전환 기억 부담. "둘 다"가 기본값이면 부담 감소.</p>
+      <div class="seg" style="margin-bottom:14px"><button>계획</button><button>실제</button><button class="on">둘 다</button></div>
+      <div style="display:grid;grid-template-columns:46px 1fr;height:360px">
+        <div class="rail">
+          <span class="h" style="top:0">09:00</span><span class="h" style="top:60px">10:00</span><span class="h" style="top:120px">11:00</span>
+          <span class="h" style="top:180px">12:00</span><span class="h" style="top:240px">13:00</span><span class="h" style="top:300px">14:00</span>
+        </div>
+        <div class="canvas" style="margin:0 8px;height:330px">
+          <div class="gl" style="top:60px"></div><div class="gl" style="top:120px"></div><div class="gl" style="top:180px"></div><div class="gl" style="top:240px"></div><div class="gl" style="top:300px"></div>
+
+          <!-- 09:00: ghost options 코딩(behind solid), 독서(beside) -->
+          <div class="ghost" style="--c:var(--purple);top:2px;height:24px;left:0;right:55%"><span class="d"></span>독서 <span style="margin-left:auto;font-family:var(--fm);font-size:9px">안 함</span></div>
+          <div class="rec" style="--c:var(--blue);top:0;height:90px;left:42%;right:0;opacity:.85"><div class="cr"><span class="d"></span><span class="nm">코딩</span></div><div class="sb">09:00–10:30 · 1h30</div></div>
+
+          <!-- 10:30 독서 -->
+          <div class="rec" style="--c:var(--purple);top:90px;height:45px;left:0;right:0;opacity:.82"><div class="cr"><span class="d"></span><span class="nm">독서</span></div><div class="sb">10:30–11:15 · 45m</div></div>
+
+          <!-- 11:15: ghost options + solid recording -->
+          <div class="ghost" style="--c:var(--teal);top:137px;height:20px;left:0;right:55%"><span class="d"></span>글쓰기</div>
+          <div class="ghost" style="--c:var(--green);top:158px;height:20px;left:0;right:55%"><span class="d"></span>운동</div>
+          <div class="rec recording" style="--c:var(--blue);top:135px;height:40px;left:42%;right:0"><div class="cr"><span class="d"></span><span class="nm">코딩</span></div><div class="sb">11:15–</div><span class="rtag"><span class="pd"></span>0:40</span></div>
+          <div class="nowline" style="top:175px"><span class="nt">11:55</span></div>
+
+          <!-- future: 점심, 스탠드업 (ghost = planned, not yet done) -->
+          <div class="ghost" style="--c:var(--teal);top:210px;height:56px;left:0;right:0"><span class="d"></span>점심 식사 <span style="margin-left:auto;font-family:var(--fm);font-size:9px">12:30 예정</span></div>
+          <div class="ghost" style="--c:var(--blue);top:300px;height:24px;left:0;right:0"><span class="d"></span>팀 스탠드업 <span style="margin-left:auto;font-family:var(--fm);font-size:9px">14:00</span></div>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="it"><span class="sw" style="background:var(--raised);border:1px solid var(--border)"></span>실제 기록(실선)</span>
+        <span class="it"><span class="sw" style="background:transparent;border:1px dashed var(--border-str)"></span>계획 선택지(ghost)</span>
+        <span class="it">미래는 전부 ghost</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ C — CHOICE CARDS (OR 1급, 통합) ============ -->
+  <div class="app">
+    <div class="tb"><div class="tl"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="ttl">C · 선택 카드<s>OR가 구조 — 선택지 + 결과가 한 카드에</s></div></div>
+    <div class="body">
+      <p class="why">토글·분할 없이, <b>시간대 자체가 '선택(OR) 카드'</b>. 선택지를 나열하고 실제로 한 것을 표시. "9시엔 코딩·독서 중 코딩을 1h30 했고, 11시엔 코딩·글쓰기·운동 중 코딩 하는 중." OR 의미가 가장 정직하게 드러나고, 과거/미래가 같은 컴포넌트로 자연스럽게 이어진다.</p>
+      <div style="display:grid;grid-template-columns:46px 1fr;height:400px">
+        <div class="rail">
+          <span class="h" style="top:0">09:00</span><span class="h" style="top:70px">10:00</span><span class="h" style="top:140px">11:00</span>
+          <span class="h" style="top:210px">12:00</span><span class="h" style="top:280px">13:00</span><span class="h" style="top:350px">14:00</span>
+        </div>
+        <div class="canvas" style="margin:0 8px;height:370px">
+          <div class="gl" style="top:70px"></div><div class="gl" style="top:140px"></div><div class="gl" style="top:210px"></div><div class="gl" style="top:280px"></div><div class="gl" style="top:350px"></div>
+
+          <!-- 09:00 choice: 코딩 done, 독서 not -->
+          <div class="choice" style="top:0;width:100%">
+            <div class="ch-head"><span>09:00–10:30</span><span class="res">코딩으로 기록 · 1h30</span></div>
+            <div class="opt done" style="--c:var(--blue)"><span class="d"></span><span class="nm">코딩</span><span class="dur">1h30 ✓</span></div>
+            <div class="opt not" style="--c:var(--purple)"><span class="d"></span><span class="nm">독서</span><span class="dur">—</span></div>
+          </div>
+          <!-- 10:30 single -->
+          <div class="choice" style="top:92px;width:100%">
+            <div class="ch-head"><span>10:30–11:15</span><span class="res">독서 · 45m</span></div>
+            <div class="opt done" style="--c:var(--purple)"><span class="d"></span><span class="nm">독서</span><span class="dur">45m ✓</span></div>
+          </div>
+          <!-- 11:15 choice: 코딩 recording, 글쓰기/운동 not -->
+          <div class="choice" style="top:148px;width:100%">
+            <div class="ch-head"><span>11:15–13:15</span><span class="or">OR · 진행중</span></div>
+            <div class="opt done" style="--c:var(--blue)"><span class="d"></span><span class="nm">코딩</span><span class="dur">0:40 ▶</span></div>
+            <div class="opt not" style="--c:var(--teal)"><span class="d"></span><span class="nm">글쓰기</span><span class="dur">—</span></div>
+            <div class="opt not" style="--c:var(--green)"><span class="d"></span><span class="nm">운동</span><span class="dur">—</span></div>
+          </div>
+          <div class="nowline" style="top:188px"><span class="nt">11:55</span></div>
+
+          <!-- future choice 12:30 점심 (single, open) -->
+          <div class="choice" style="top:232px;width:100%">
+            <div class="ch-head"><span>12:30–13:30</span><span style="color:var(--text-sub)">예정</span></div>
+            <div class="opt not" style="--c:var(--teal)"><span class="d"></span><span class="nm">점심 식사</span></div>
+          </div>
+          <div class="choice" style="top:302px;width:100%">
+            <div class="ch-head"><span>14:00 · 15m</span><span style="color:var(--text-sub)">예정</span></div>
+            <div class="opt not" style="--c:var(--blue)"><span class="d"></span><span class="nm">팀 스탠드업</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="it"><span class="sw" style="background:var(--raised);border:1px solid var(--border)"></span>실행한 선택지</span>
+        <span class="it"><span class="sw" style="background:transparent;box-shadow:inset 0 0 0 1px var(--border-str)"></span>안 한 대안</span>
+        <span class="it">미래 = 아직 열린 선택</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="align-self:flex-start">A=비교 선명도 · B=폭 절약(토글) · C=OR 정직성(통합). 네 판단에 맡김 — 고르면 그 방향으로 전체 화면으로 밀고 스펙 정리.</div>
+</div>
+<script>
+  document.getElementById('tg').addEventListener('click',()=>{const d=document.documentElement.classList.toggle('dark');event.target.textContent=d?'라이트':'다크'});
+</script>
+</body>
+</html>
