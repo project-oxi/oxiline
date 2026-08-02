@@ -26,8 +26,8 @@ export function DndProvider({ children }: { children: ReactNode }) {
   // plain rectIntersection ranks by intersection area, so the large timeline
   // would always win over a small card — making drop-to-merge impossible.
   // Prefer the plan-slot when present so the card "captures" the pointer.
-  // Scoped to activity draggables only: backlog/block must keep resolving to
-  // the timeline droppable so their update path keeps a valid `date`.
+  // Scoped to activity draggables only — non-activity drops fall through to
+  // rectIntersection so they resolve against the timeline droppable.
   const nestedCollision: CollisionDetection = (args) => {
     if (args.active.data.current?.kind !== "activity") return rectIntersection(args);
     const collisions = rectIntersection(args);

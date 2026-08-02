@@ -46,13 +46,9 @@ function formatHotkey(acc: string): string {
 /** Static in-app shortcut rows for the §7.10 reference table. */
 const SHORTCUT_ROWS: { key: string; actionKey: string; scopeKey: string }[] = [
   { key: "⌘K", actionKey: "settings.actPalette", scopeKey: "settings.scopeApp" },
-  { key: "⌘N", actionKey: "settings.actNewTask", scopeKey: "settings.scopeMain" },
   { key: "⌘,", actionKey: "settings.actPrefs", scopeKey: "settings.scopeMain" },
   { key: "T", actionKey: "settings.actToday", scopeKey: "settings.scopeViews" },
   { key: "← / →", actionKey: "settings.actPrevNext", scopeKey: "settings.scopeDay" },
-  { key: "1 / 2 / 3", actionKey: "settings.actTabs", scopeKey: "settings.scopeMain" },
-  { key: "Enter", actionKey: "settings.actToggle", scopeKey: "settings.scopeList" },
-  { key: "⌫", actionKey: "settings.actDelete", scopeKey: "settings.scopeList" },
   { key: "Esc", actionKey: "settings.actClose", scopeKey: "settings.scopeGlobal" },
 ];
 
@@ -231,7 +227,7 @@ export function Preferences() {
                 <span className="h-3 w-3 rounded-full" style={{ background: categoryColor(c.color_hue) }} />
                 <span className="flex-1 text-[13px]">{c.name}</span>
                 {!c.is_builtin && (
-                  <button className="text-[11px] text-status-error hover:underline" onClick={() => delCat.mutate(c.id)}>{t("routine.delete")}</button>
+                  <button className="text-[11px] text-status-error hover:underline" onClick={() => delCat.mutate(c.id)}>{t("common.delete")}</button>
                 )}
               </li>
             ))}
@@ -239,7 +235,7 @@ export function Preferences() {
           <div className="flex items-center gap-2">
             <span className="h-7 w-7 shrink-0 rounded-[var(--input-radius)]" style={{ background: categoryColor(catHue) }} aria-hidden />
             <input type="range" min={0} max={360} value={catHue} onChange={(e) => setCatHue(Number(e.target.value))} className="flex-1" />
-            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("routine.name")} className="w-28 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
+            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("settings.categoryName")} className="w-28 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" />
             <button
               className="rounded bg-interactive-primary px-2 py-1 text-[12px] text-interactive-primary-foreground"
               onClick={() => { if (catName.trim()) { createCat.mutate({ name: catName.trim(), hue: catHue, icon: null }); setCatName(""); } }}

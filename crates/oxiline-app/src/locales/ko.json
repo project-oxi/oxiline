@@ -1,6 +1,5 @@
 {
   "app": { "name": "OxiLine", "tagline": "하루는 흐릅니다. OxiLine은 그 흐름을 보여줍니다." },
-  "nav": { "today": "오늘", "week": "주간", "backlog": "백로그", "report": "리포트" },
   "weekdays": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금", "sat": "토", "sun": "일" },
   "weekdayFull": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금", "sat": "토", "sun": "일" },
   "dayPresets": { "daily": "매일", "weekdays": "평일", "weekends": "주말" },
@@ -15,11 +14,6 @@
     "more": "더 보기",
     "overlapTitle": "이 시간의 다른 일정"
   },
-  "backlog": {
-    "title": "백로그",
-    "empty": "아직 정해지지 않은 할일이 없어요. ⌘K로 빠르게 추가해보세요.",
-    "scheduleToday": "오늘로 예약"
-  },
   "hud": {
     "now": "지금",
     "next": "다음",
@@ -33,29 +27,6 @@
     "hint": "Enter로 녹화 · @HH:MM으로 예약",
     "noMatch": "일치하는 항목이 없어요",
     "title": "빠른 추가"
-  },
-  "routine": {
-    "title": "루틴 관리",
-    "add": "추가",
-    "edit": "수정",
-    "delete": "삭제",
-    "pause": "일시정지",
-    "resume": "재개",
-    "name": "이름",
-    "at": "시작 시각",
-    "duration": "소요 시간(분)",
-    "days": "반복 요일",
-    "category": "카테고리",
-    "empty": "루틴이 없어요. 추가 버튼으로 하루의 뼈대를 만들어보세요.",
-    "template": "템플릿 (반복 없음)"
-  },
-  "task": {
-    "addTitle": "할일 추가",
-    "title": "제목",
-    "save": "저장",
-    "cancel": "취소",
-    "delete": "삭제",
-    "skipToday": "오늘만 건너뛰기"
   },
   "settings": {
     "title": "환경설정",
@@ -73,7 +44,6 @@
     "workloadWarning": "워크로드 경고 임계값(분, 0=끔)",
     "shortcut": "단축키",
     "globalHotkey": "전역 단축키",
-    "recordKey": "눌러서 기록",
     "hudDuration": "HUD 표시 시간(초)",
     "data": "데이터",
     "dbPath": "데이터베이스 경로",
@@ -82,25 +52,21 @@
     "version": "버전",
     "livesInMenubar": "창을 닫아도 OxiLine은 메뉴바에서 계속 실행됩니다.",
     "categories": "카테고리",
+    "categoryName": "이름",
     "scKey": "단축키",
     "scAction": "동작",
     "scScope": "범위",
     "actHud": "플로팅 HUD 표시",
     "actPalette": "커맨드 팔레트 / 빠른 추가",
-    "actNewTask": "새 할일 (현재 보는 날짜에)",
     "actPrefs": "환경설정 열기",
     "actToday": "오늘로 이동",
     "actPrevNext": "이전 / 다음 날",
-    "actTabs": "오늘 / 주간 / 백로그 전환",
-    "actToggle": "완료 토글",
-    "actDelete": "삭제 (루틴이면 오늘만 건너뛰기)",
     "actClose": "팔레트 / 패널 닫기",
     "scopeGlobal": "전역 (앱 밖에서도)",
     "scopeApp": "앱 내 전역",
     "scopeMain": "메인 창",
-    "scopeViews": "Day / Week 뷰",
-    "scopeDay": "Day 뷰",
-    "scopeList": "리스트 / 타임라인"
+    "scopeViews": "메인 뷰",
+    "scopeDay": "날짜 이동"
   },
   "onboarding": {
     "welcome": "환영합니다",
@@ -114,49 +80,14 @@
     "done": "시작하기"
   },
   "common": { "add": "추가", "close": "닫기", "minutes": "{{n}}분", "hour": "시", "delete": "삭제" },
-  "week": {
-    "title": "주간",
-    "today": "오늘",
-    "workload": "{{n}}분",
-    "empty": "비어 있음"
-  },
   "notifications": {
     "section": "알림",
-    "enable": "블록 시작 전 알림 보내기",
-    "enableHelp": "다음 항목이 곧 시작될 때 macOS 알림을 보냅니다",
+    "enable": "계획 시작 전 알림 보내기",
+    "enableHelp": "다음 계획이 곧 시작될 때 macOS 알림을 보냅니다",
     "leadMinutes": "몇 분 전",
     "requestPermission": "권한 요청",
     "openSystemSettings": "macOS 시스템 설정 열기",
     "granted": "권한 허용됨",
     "denied": "권한 거부됨 — 시스템 설정에서 켜주세요"
-  },
-  "routineGroup": {
-    "sidebar": "그룹",
-    "addGroup": "그룹 추가",
-    "deleteGroup": "그룹 삭제",
-    "noGroup": "그룹 없음",
-    "unGrouped": "분류 안 됨"
-  },
-  "a11y": {
-    "done": "완료",
-    "undone": "완료 해제",
-    "markedDone": "완료로 표시",
-    "skipped": "오늘만 건너뜀",
-    "deleted": "삭제됨",
-    "resized": "길이를 {{n}}분으로 바꿨어요"
-  },
-  "report": {
-    "thisWeek": "이번 주",
-    "prevWeek": "저번 주",
-    "rate": "완료율",
-    "done": "완료",
-    "skipped": "건너뜀",
-    "notRecorded": "체크인 없음",
-    "upcoming": "예정",
-    "categories": "카테고리",
-    "streaks": "루틴 연속",
-    "days": "일",
-    "loading": "불러오는 중…",
-    "empty": "아직 기록이 없어요"
   }
 }

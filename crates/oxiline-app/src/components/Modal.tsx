@@ -1,6 +1,6 @@
 //! Reusable modal/dialog wrapper: backdrop + focus trap + dialog semantics +
 //! Escape-to-close + focus restoration. Replaces the hand-rolled overlay
-//! pattern duplicated across Preferences / RoutineManager / Onboarding /
+//! pattern duplicated across Preferences / Onboarding /
 //! CommandPalette (`08-roadmap.md` Phase 2 — 접근성 감사).
 
 import { useRef, type ReactNode, type CSSProperties } from "react";

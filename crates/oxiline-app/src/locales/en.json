@@ -1,6 +1,5 @@
 {
   "app": { "name": "OxiLine", "tagline": "A day flows. OxiLine shows the flow." },
-  "nav": { "today": "Today", "week": "Week", "backlog": "Backlog", "report": "Report" },
   "weekdays": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
   "weekdayFull": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun" },
   "dayPresets": { "daily": "Daily", "weekdays": "Weekdays", "weekends": "Weekends" },
@@ -15,11 +14,6 @@
     "more": "more",
     "overlapTitle": "Other items at this time"
   },
-  "backlog": {
-    "title": "Backlog",
-    "empty": "No undated tasks yet. Press ⌘K to add one.",
-    "scheduleToday": "Schedule for today"
-  },
   "hud": {
     "now": "now",
     "next": "next",
@@ -33,29 +27,6 @@
     "hint": "Enter to record · @HH:MM to schedule",
     "noMatch": "No matches",
     "title": "Quick add"
-  },
-  "routine": {
-    "title": "Routines",
-    "add": "Add",
-    "edit": "Edit",
-    "delete": "Delete",
-    "pause": "Pause",
-    "resume": "Resume",
-    "name": "Name",
-    "at": "Start time",
-    "duration": "Duration (min)",
-    "days": "Repeat on",
-    "category": "Category",
-    "empty": "No routines yet. Add one to build the skeleton of your day.",
-    "template": "Template (no repeat)"
-  },
-  "task": {
-    "addTitle": "Add task",
-    "title": "Title",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "skipToday": "Skip today"
   },
   "settings": {
     "title": "Preferences",
@@ -73,7 +44,6 @@
     "workloadWarning": "Workload warning threshold (min, 0=off)",
     "shortcut": "Shortcuts",
     "globalHotkey": "Global shortcut",
-    "recordKey": "Press to record",
     "hudDuration": "HUD duration (s)",
     "data": "Data",
     "dbPath": "Database path",
@@ -82,25 +52,21 @@
     "version": "Version",
     "livesInMenubar": "OxiLine keeps running in the menu bar even after you close the window.",
     "categories": "Categories",
+    "categoryName": "Name",
     "scKey": "Key",
     "scAction": "Action",
     "scScope": "Scope",
     "actHud": "Show floating HUD",
     "actPalette": "Command palette / quick add",
-    "actNewTask": "New task (on viewed date)",
     "actPrefs": "Open preferences",
     "actToday": "Jump to today",
     "actPrevNext": "Previous / next day",
-    "actTabs": "Switch Today / Week / Backlog",
-    "actToggle": "Toggle complete",
-    "actDelete": "Delete (skip if routine)",
     "actClose": "Close palette / panel",
     "scopeGlobal": "Global (outside app)",
     "scopeApp": "In-app global",
     "scopeMain": "Main window",
-    "scopeViews": "Day / Week views",
-    "scopeDay": "Day view",
-    "scopeList": "List / timeline"
+    "scopeViews": "Main view",
+    "scopeDay": "Day navigation"
   },
   "onboarding": {
     "welcome": "Welcome",
@@ -114,49 +80,14 @@
     "done": "Get started"
   },
   "common": { "add": "Add", "close": "Close", "minutes": "{{n}} min", "hour": "h", "delete": "Delete" },
-  "week": {
-    "title": "Week",
-    "today": "Today",
-    "workload": "{{n}} min",
-    "empty": "Empty"
-  },
   "notifications": {
     "section": "Notifications",
-    "enable": "Notify me before a block starts",
-    "enableHelp": "Show a macOS notification when the next block is about to start",
+    "enable": "Notify me before a plan starts",
+    "enableHelp": "Show a macOS notification when the next plan is about to start",
     "leadMinutes": "Minutes before",
     "requestPermission": "Request permission",
     "openSystemSettings": "Open macOS System Settings",
     "granted": "Permission granted",
     "denied": "Permission denied — enable in System Settings"
-  },
-  "routineGroup": {
-    "sidebar": "Groups",
-    "addGroup": "Add group",
-    "deleteGroup": "Delete group",
-    "noGroup": "No group",
-    "unGrouped": "Ungrouped"
-  },
-  "a11y": {
-    "done": "done",
-    "undone": "undone",
-    "markedDone": "marked done",
-    "skipped": "skipped for today",
-    "deleted": "deleted",
-    "resized": "Duration set to {{n}} minutes"
-  },
-  "report": {
-    "thisWeek": "This week",
-    "prevWeek": "Last week",
-    "rate": "Completion",
-    "done": "Done",
-    "skipped": "Skipped",
-    "notRecorded": "No check-in",
-    "upcoming": "Upcoming",
-    "categories": "Categories",
-    "streaks": "Streaks",
-    "days": "d",
-    "loading": "Loading…",
-    "empty": "No records yet"
   }
 }
