@@ -23,15 +23,12 @@ pub fn show(app: &AppHandle) {
         return;
     };
 
-    // Fresh context for the HUD body (same calc as `oxiline now`).
-    let state = app.state::<AppState>();
-    if let Ok(ctx) = oxiline_core::timeline::get_now_context(
-        &state.conn(),
-        oxiline_core::util::now_minute_local(),
-    ) {
-        let _ = hud.emit("oxiline://now", &ctx);
-    }
+    // No payload: the HUD fetches its own live state via React Query hooks
+    // (recordState / slots / compliance). It listens on "oxiline://hud-show"
+    // to know when to invalidate + refetch.
+    let _ = hud.emit("oxiline://hud-show", ());
 
+    let state = app.state::<AppState>();
     position_top_center(&hud);
     let _ = hud.show();
 

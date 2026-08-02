@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { listen } from "@tauri-apps/api/event";
 import "./styles.css";
-import { onNowUpdate } from "./lib/api";
 import { OxideBar } from "./components/OxideBar";
-import { useCategories, useTimeline } from "./hooks";
+import { useCategories, useTimeline, useRecordState, useSlots, useCompliance } from "./hooks";
 import { todayStr } from "./lib/store";
-import type { NowContext } from "./types";
+import { currentSlot, nextSlot } from "./lib/now-next";
+import { hmm, hueVar } from "./lib/record-format";
 import { applyTheme, type ThemeMode } from "./lib/theme";
 
 function minuteToHHMM(min: number): string {
@@ -21,19 +22,25 @@ function syncTheme() {
 }
 
 function HudCard() {
-  const [ctx, setCtx] = useState<NowContext | null>(null);
   const catsQ = useCategories();
   const tlQ = useTimeline(todayStr());
+  const stateQ = useRecordState();
+  const slotsQ = useSlots(todayStr());
+  const weekQ = useCompliance("week");
+  const qc = useQueryClient();
 
+  // Refresh on show — the Rust side emits "oxiline://hud-show" each time the
+  // global shortcut fires, so the queries (recordState / slots / compliance)
+  // re-fetch and the card reflects the latest state even though the window
+  // was hidden rather than reloaded.
   useEffect(() => {
-    const un = onNowUpdate((c) => {
-      setCtx(c);
-      syncTheme();
+    const un = listen("oxiline://hud-show", () => {
+      void qc.invalidateQueries();
     });
     return () => {
-      void un.then((fn) => fn());
+      void un.then((f) => f());
     };
-  }, []);
+  }, [qc]);
 
   // Keep the HUD's theme in lock-step with the main window: sync once on mount
   // (the main window mirrors the DB theme into localStorage during boot, which
@@ -48,8 +55,13 @@ function HudCard() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const current = ctx?.current ?? null;
-  const next = ctx?.next ?? null;
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const active = stateQ.data?.active ?? null;
+  const cur = currentSlot(slotsQ.data ?? [], nowMin);
+  const nxt = nextSlot(slotsQ.data ?? [], nowMin);
+  const weekComp = active
+    ? (weekQ.data ?? []).find((c) => c.activity.id === active.activity.id)
+    : undefined;
 
   return (
     <div className="h-screen w-screen p-2.5">
@@ -69,23 +81,49 @@ function HudCard() {
         />
 
         <div className="flex-1">
-          {current ? (
+          {active ? (
+            <div>
+              <div className="text-[15px] font-semibold leading-tight text-text">
+                <span aria-hidden style={{ color: hueVar(active.activity.hue_label) }}>● </span>
+                {active.activity.name}
+              </div>
+              {(weekComp?.target_seconds ?? 0) > 0 ? (
+                <div className="mt-1.5">
+                  <div className="flex items-baseline justify-between text-[12px]">
+                    <span className="text-text-muted">
+                      {hmm(active.elapsed_seconds)} 경과
+                    </span>
+                    <span className="font-mono text-text-subtle">
+                      {hmm(weekComp!.recorded_seconds)}/{hmm(weekComp!.target_seconds!)}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1 h-1 overflow-hidden rounded-full"
+                    style={{ background: "var(--color-surface-sunken)" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, Math.round((weekComp!.ratio ?? 0) * 100))}%`,
+                        background: hueVar(active.activity.hue_label),
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-1 text-[12px] text-text-muted">
+                  {hmm(active.elapsed_seconds)} 경과
+                </div>
+              )}
+            </div>
+          ) : cur ? (
             <div>
               <div className="text-[11px] font-medium uppercase text-text-subtle">
-                지금 · now
+                지금 예정
               </div>
               <div className="text-[15px] font-semibold leading-tight text-text">
-                {current.title}
-              </div>
-              <div className="mt-0.5 flex items-baseline justify-between">
-                <span className="font-mono text-[13px] text-text-muted">
-                  {current.start_minute != null ? minuteToHHMM(current.start_minute) : ""}
-                </span>
-                {current.remaining_minute != null && (
-                  <span className="font-mono text-[20px] text-interactive-primary">
-                    {current.remaining_minute}분 남음
-                  </span>
-                )}
+                {cur.options[0]?.name ?? "계획"}
+                {cur.options.length > 1 ? " OR" : ""}
               </div>
             </div>
           ) : (
@@ -100,17 +138,13 @@ function HudCard() {
           )}
         </div>
 
-        {next ? (
+        {nxt ? (
           <div className="border-t border-border pt-1.5 text-[12px] text-text-muted">
-            다음 · {next.title}{" "}
+            다음 · {nxt.options[0]?.name ?? "계획"}
+            {nxt.options.length > 1 ? " OR" : ""}{" "}
             <span className="font-mono text-text-subtle">
-              {next.start_minute != null ? minuteToHHMM(next.start_minute) : ""}
-              {next.starts_in_minute != null ? ` (${next.starts_in_minute}분 후)` : ""}
+              {minuteToHHMM(nxt.start_minute)} ({nxt.start_minute - nowMin}분 후)
             </span>
-          </div>
-        ) : !current ? (
-          <div className="text-[12px] text-text-subtle">
-            오늘 예정된 일이 모두 끝났어요
           </div>
         ) : null}
       </div>
