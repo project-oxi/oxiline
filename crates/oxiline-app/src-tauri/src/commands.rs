@@ -7,7 +7,7 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    Activity, ActivityInput, CardSuggestion, Category, Compliance, NowContext, Plan, PlanInput,
+    Activity, ActivityInput, CardSuggestion, Category, Compliance, Plan, PlanInput,
     PlanOption, PlanSlot, RangeReport, Record, RecordState, RoutineBlock, RoutineStreak, Scope, Task,
     TimelineItem, WeekReport,
 };
@@ -209,12 +209,6 @@ pub fn delete_routine(state: State<AppState>, id: String) -> Result<(), String> 
 #[specta::specta]
 pub fn get_timeline(state: State<AppState>, date: String) -> Result<Vec<TimelineItem>, String> {
     timeline::get_timeline_for_date(&state.conn(), &date).map_err(map_err)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_now_context(state: State<AppState>) -> Result<NowContext, String> {
-    timeline::get_now_context(&state.conn(), util::now_minute_local()).map_err(map_err)
 }
 
 // ---- tasks ----

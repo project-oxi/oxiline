@@ -116,29 +116,27 @@ pub struct TimelineItem {
     pub origin_routine_block_id: Option<String>,
 }
 
-/// "What is happening now" context shared by the HUD and `oxiline now`
-/// (`05-cli-spec.md` §5.2). `current` is the in-progress item (if any); `next`
-/// is the closest future item today.
+/// "What is happening now + next" derived from the recording layer (active
+/// record + plan slots). `current` is the in-progress thing — an active record
+/// (priority) or the plan slot containing now; `next` is the closest future
+/// plan slot. Shared by the notifier, tray, and `oxiline now`.
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct NowItem {
-    pub id: String,
-    pub is_virtual: bool,
-    pub title: String,
-    pub start_minute: Option<u16>,
-    pub duration_minute: Option<u16>,
-    pub category_id: Option<String>,
-    /// Minutes remaining in the current item (only for `current`).
-    pub remaining_minute: Option<i64>,
-    /// Minutes until the item starts (only for `next`).
-    pub starts_in_minute: Option<i64>,
+pub struct NowSummary {
+    pub current: Option<NowEntry>,
+    pub next: Option<NowEntry>,
 }
 
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct NowContext {
-    pub current: Option<NowItem>,
-    pub next: Option<NowItem>,
-    pub generated_at_minute: u16,
-    pub generated_at: String,
+pub struct NowEntry {
+    pub id: String,
+    pub title: String,
+    /// Slot start (local minute-of-day). `None` for an open-ended record.
+    pub start_minute: Option<u16>,
+    /// Minutes until the entry starts (only for `next`).
+    pub starts_in_minute: Option<i64>,
+    /// Minutes until the slot ends (only for a `current` plan slot; a record
+    /// is open-ended so this is `None`).
+    pub remaining_minute: Option<i64>,
 }
 
 /// A reusable card signature for quick-add autocomplete (`cards::suggest`).

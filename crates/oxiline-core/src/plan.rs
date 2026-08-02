@@ -13,9 +13,9 @@
 
 use crate::activities::row_from as activity_row_from;
 use crate::error::{CoreError, Result};
-use crate::model::{Activity, Plan, PlanInput, PlanOption, PlanSlot};
+use crate::model::{Activity, NowSummary, NowEntry, Plan, PlanInput, PlanOption, PlanSlot};
 use crate::util;
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Utc};
 use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 
 /// Map a `plans` row into a `Plan` (8 columns). `start_minute` /
@@ -418,4 +418,62 @@ fn options_for(conn: &Connection, plan_id: &str) -> Result<Vec<Activity>> {
         out.push(r?);
     }
     Ok(out)
+}
+
+/// Recording-native "what's happening now + next". `current` is the active
+/// record (priority — the ground truth of what the user is doing) or, failing
+/// that, the unresolved plan slot whose window contains `now_minute`; `next`
+/// is the closest future unresolved plan slot today. Replaces the legacy
+/// task/routine `timeline::get_now_context`. Shared by the notifier, the tray
+/// menu, and the `oxiline now` CLI command.
+pub fn now_summary(conn: &Connection, now_minute: u16) -> Result<NowSummary> {
+    let date = util::today_local();
+    let now = Utc::now();
+    let slots = slots_for_date(conn, &date)?;
+
+    let current = if let Some(s) = crate::record::current(conn, now, &date)?.active {
+        Some(NowEntry {
+            id: s.record.id,
+            title: s.activity.name,
+            start_minute: None,
+            starts_in_minute: None,
+            remaining_minute: None, // open-ended record
+        })
+    } else {
+        slots
+            .iter()
+            .find(|slot| {
+                !slot.is_resolved
+                    && now_minute >= slot.start_minute
+                    && now_minute < slot.start_minute + slot.duration_minute
+            })
+            .map(|slot| {
+                let end = slot.start_minute as i64 + slot.duration_minute as i64;
+                NowEntry {
+                    id: slot.plan_id.clone(),
+                    title: first_option_title(slot),
+                    start_minute: Some(slot.start_minute),
+                    starts_in_minute: None,
+                    remaining_minute: Some(end - now_minute as i64),
+                }
+            })
+    };
+
+    let next = slots
+        .iter()
+        .filter(|slot| !slot.is_resolved && slot.start_minute > now_minute)
+        .min_by_key(|slot| slot.start_minute)
+        .map(|slot| NowEntry {
+            id: slot.plan_id.clone(),
+            title: first_option_title(slot),
+            start_minute: Some(slot.start_minute),
+            starts_in_minute: Some(slot.start_minute as i64 - now_minute as i64),
+            remaining_minute: None,
+        });
+
+    Ok(NowSummary { current, next })
+}
+
+fn first_option_title(slot: &PlanSlot) -> String {
+    slot.options.first().map(|a| a.name.clone()).unwrap_or_default()
 }

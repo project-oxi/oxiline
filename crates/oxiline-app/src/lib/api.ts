@@ -9,7 +9,6 @@ import type {
   CardSuggestion,
   Category,
   Compliance,
-  NowContext,
   Plan,
   PlanOption,
   PlanInput,
@@ -70,7 +69,6 @@ export const api = {
   // timeline
   getTimeline: (date: string) =>
     invoke<TimelineItem[]>("get_timeline", { date }),
-  getNowContext: () => invoke<NowContext>("get_now_context"),
 
   // tasks
   listBacklog: () => invoke<Task[]>("list_backlog"),
@@ -180,7 +178,4 @@ export function onOpenPreferences(cb: () => void): Promise<UnlistenFn> {
 }
 export function onOpenQuickAdd(cb: () => void): Promise<UnlistenFn> {
   return listen("oxiline://open-quick-add", () => cb());
-}
-export function onNowUpdate(cb: (ctx: NowContext) => void): Promise<UnlistenFn> {
-  return listen<NowContext>("oxiline://now", (e) => cb(e.payload));
 }

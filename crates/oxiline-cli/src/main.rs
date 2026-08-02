@@ -57,7 +57,7 @@ fn run(opts: Cli) -> Result<()> {
 
     match &opts.cmd {
         Command::Now => {
-            let ctx = timeline::get_now_context(&conn, util::now_minute_local())?;
+            let ctx = plan::now_summary(&conn, util::now_minute_local())?;
             if json {
                 say(output::json_pretty(&ctx));
             } else {

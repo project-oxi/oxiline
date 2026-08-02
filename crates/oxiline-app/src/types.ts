@@ -78,24 +78,6 @@ export interface CardSuggestion {
   last_used_at: string | null;
 }
 
-export interface NowItem {
-  id: string;
-  is_virtual: boolean;
-  title: string;
-  start_minute: number | null;
-  duration_minute: number | null;
-  category_id: string | null;
-  remaining_minute: number | null;
-  starts_in_minute: number | null;
-}
-
-export interface NowContext {
-  current: NowItem | null;
-  next: NowItem | null;
-  generated_at_minute: number;
-  generated_at: string;
-}
-
 export type Settings = Record<string, unknown>;
 
 // ---- reports (habit streak / weekly report) ----

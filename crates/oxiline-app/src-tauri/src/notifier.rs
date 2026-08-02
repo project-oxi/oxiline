@@ -46,7 +46,7 @@ pub fn spawn_scheduler(app: AppHandle) {
                 last_now_minute = now_minute;
 
                 let lead = oxiline_core::settings::get_i64(&conn, "notification_lead_minutes", 5);
-                let Ok(ctx) = oxiline_core::timeline::get_now_context(&conn, now_minute as u16)
+                let Ok(ctx) = oxiline_core::plan::now_summary(&conn, now_minute as u16)
                 else {
                     continue;
                 };

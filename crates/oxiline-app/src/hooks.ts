@@ -11,7 +11,6 @@ export const qk = {
   routines: (activeOnly: boolean) => ["routines", activeOnly] as const,
   backlog: ["backlog"] as const,
   cardSuggestions: ["cardSuggestions"] as const,
-  now: ["now"] as const,
   settings: ["settings"] as const,
   weekReport: ["weekReport"] as const,
   slots: (date: string) => ["slots", date] as const,
@@ -78,10 +77,6 @@ export function useTimelineRange(from: string, to: string) {
       return results;
     },
   });
-}
-
-export function useNowContext() {
-  return useQuery({ queryKey: qk.now, queryFn: api.getNowContext });
 }
 
 export function useSettings() {

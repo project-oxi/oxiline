@@ -1,6 +1,6 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Activity, Category, Compliance, NowContext, NowItem, Plan, PlanSlot, Record, RecordState, RoutineBlock, Task, TimelineItem};
+use oxiline_core::model::{Activity, Category, Compliance, NowEntry, NowSummary, Plan, PlanSlot, Record, RecordState, RoutineBlock, Task, TimelineItem};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -81,8 +81,8 @@ pub fn task_text(task: &Task) -> String {
     format!("{status} {} {range}\n  id: {}", task.title, task.id)
 }
 
-pub fn now_text(lang: L, ctx: &NowContext) -> String {
-    let fmt_now = |n: &NowItem, label: &str| -> String {
+pub fn now_text(lang: L, ctx: &NowSummary) -> String {
+    let fmt_now = |n: &NowEntry, label: &str| -> String {
         let time = n.start_minute.map(util::minute_to_hhmm).unwrap_or_default();
         format!("  {label} · {} ({})", n.title, time)
     };

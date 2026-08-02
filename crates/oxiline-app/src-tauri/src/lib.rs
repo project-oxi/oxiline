@@ -24,7 +24,6 @@ pub fn run() {
         commands::set_routine_active,
         commands::delete_routine,
         commands::get_timeline,
-        commands::get_now_context,
         commands::list_backlog,
         commands::create_task,
         commands::update_task,

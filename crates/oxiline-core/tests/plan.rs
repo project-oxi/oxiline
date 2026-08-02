@@ -328,3 +328,67 @@ fn add_options_concurrent_unique_sort_order() {
         assert!(seen.insert(o), "duplicate sort_order {o}");
     }
 }
+
+fn today_str() -> String {
+    oxiline_core::util::today_local()
+}
+
+fn one_shot_plan(c: &Connection, aid: &str, start: u16, dur: u16) -> oxiline_core::model::Plan {
+    oxiline_core::plan::create_plan(
+        c,
+        oxiline_core::model::PlanInput {
+            date: Some(today_str()),
+            start_minute: start,
+            duration_minute: dur,
+            weekday_mask: 0,
+            title: None,
+            activity_ids: vec![aid.to_string()],
+        },
+    )
+    .unwrap()
+}
+
+#[test]
+fn now_summary_next_when_before_slot() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "코딩");
+    one_shot_plan(&c, &a.id, 600, 60); // 10:00–11:00
+    let s = oxiline_core::plan::now_summary(&c, 500).unwrap(); // 8:20, before slot
+    assert!(s.current.is_none(), "no current before any slot");
+    let next = s.next.expect("next slot");
+    assert_eq!(next.title, "코딩");
+    assert_eq!(next.starts_in_minute, Some(100)); // 600 - 500
+}
+
+#[test]
+fn now_summary_current_slot_remaining() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "코딩");
+    one_shot_plan(&c, &a.id, 600, 60); // 10:00–11:00
+    let s = oxiline_core::plan::now_summary(&c, 610).unwrap(); // 10:10, within slot
+    let cur = s.current.expect("current slot");
+    assert_eq!(cur.title, "코딩");
+    assert_eq!(cur.remaining_minute, Some(50)); // 660 - 610
+    assert!(s.next.is_none(), "sole slot is current, no next");
+}
+
+#[test]
+fn now_summary_active_record_priority_over_slot() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "코딩");
+    one_shot_plan(&c, &a.id, 600, 60); // slot 코딩 at 10:00–11:00
+    let b = mk_activity(&c, "독서");
+    let _ = oxiline_core::record::start(&c, &b.id, chrono::Utc::now(), &today_str()).unwrap();
+    let s = oxiline_core::plan::now_summary(&c, 610).unwrap(); // within slot, but recording
+    let cur = s.current.expect("current");
+    assert_eq!(cur.title, "독서"); // active record wins over the slot
+    assert_eq!(cur.remaining_minute, None); // open-ended record
+}
+
+#[test]
+fn now_summary_empty_when_no_plans_or_records() {
+    let (_f, c) = db();
+    let s = oxiline_core::plan::now_summary(&c, 500).unwrap();
+    assert!(s.current.is_none());
+    assert!(s.next.is_none());
+}
