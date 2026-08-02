@@ -13,8 +13,9 @@
  */
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { useActivities, useDayRecords, useSettings, useSlots } from "../hooks";
+import { useActivities, useDayRecords, useResizePlan, useSettings, useSlots } from "../hooks";
 import { todayStr, useUi } from "../lib/store";
+import { resizeDuration } from "../lib/resize";
 import type { ActivityRecord, PlanSlot } from "../types";
 
 type Mode = "plan" | "act" | "both";
@@ -162,12 +163,14 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
     id: `plan-${s.plan_id}`,
     data: { kind: "plan-slot", planId: s.plan_id },
   });
+  const [dragDur, setDragDur] = useState<number | null>(null);
+  const resize = useResizePlan();
   const top = (s.start_minute - dayStartMin) * PX_PER_MIN;
-  const height = s.duration_minute * PX_PER_MIN;
+  const height = (dragDur ?? s.duration_minute) * PX_PER_MIN;
   return (
     <div
       ref={setNodeRef}
-      className={`absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 ${isOver ? "ring-2 ring-interactive-primary" : ""}`}
+      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 ${isOver ? "ring-2 ring-interactive-primary" : ""}`}
       style={{ top, height }}
     >
       <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
@@ -191,6 +194,23 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
           );
         })}
       </div>
+      <div
+        className="absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 transition group-hover:opacity-100"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          const startY = e.clientY;
+          const startDur = s.duration_minute;
+          (e.currentTarget as Element).setPointerCapture(e.pointerId);
+          const move = (ev: PointerEvent) => setDragDur(resizeDuration(startDur, (ev.clientY - startY) / PX_PER_MIN));
+          const up = (_ev: PointerEvent) => {
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+            setDragDur((h) => { if (h != null) resize.mutate({ planId: s.plan_id, durationMinute: h }); return null; });
+          };
+          window.addEventListener("pointermove", move);
+          window.addEventListener("pointerup", up);
+        }}
+      />
     </div>
   );
 }
