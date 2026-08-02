@@ -64,6 +64,8 @@ pub fn run() {
         commands::get_slots_for_date,
         commands::update_plan,
         commands::delete_plan,
+        commands::add_plan_option,
+        commands::resize_plan,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

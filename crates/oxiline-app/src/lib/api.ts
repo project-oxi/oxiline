@@ -11,6 +11,7 @@ import type {
   Compliance,
   NowContext,
   Plan,
+  PlanOption,
   PlanInput,
   PlanSlot,
   RangeReport,
@@ -163,6 +164,10 @@ export const api = {
   updatePlan: (id: string, input: PlanInput) =>
     invoke<Plan>("update_plan", { id, input }),
   deletePlan: (id: string) => invoke<void>("delete_plan", { id }),
+  addPlanOption: (planId: string, activityId: string) =>
+    invoke<PlanOption>("add_plan_option", { planId, activityId }),
+  resizePlan: (planId: string, durationMinute: number) =>
+    invoke<Plan>("resize_plan", { planId, durationMinute }),
 
 };
 

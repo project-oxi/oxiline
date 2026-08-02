@@ -8,7 +8,7 @@
 
 use oxiline_core::model::{
     Activity, ActivityInput, CardSuggestion, Category, Compliance, NowContext, Plan, PlanInput,
-    PlanSlot, RangeReport, Record, RecordState, RoutineBlock, RoutineStreak, Scope, Task,
+    PlanOption, PlanSlot, RangeReport, Record, RecordState, RoutineBlock, RoutineStreak, Scope, Task,
     TimelineItem, WeekReport,
 };
 use oxiline_core::{
@@ -548,4 +548,24 @@ pub fn update_plan(state: State<AppState>, id: String, input: PlanInput) -> Resu
 #[specta::specta]
 pub fn delete_plan(state: State<AppState>, id: String) -> Result<(), String> {
     plan::delete_plan(&state.conn(), &id).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn add_plan_option(
+    state: State<AppState>,
+    plan_id: String,
+    activity_id: String,
+) -> Result<PlanOption, String> {
+    plan::add_option(&state.conn(), &plan_id, &activity_id).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn resize_plan(
+    state: State<AppState>,
+    plan_id: String,
+    duration_minute: u16,
+) -> Result<Plan, String> {
+    plan::resize_plan(&state.conn(), &plan_id, duration_minute).map_err(map_err)
 }

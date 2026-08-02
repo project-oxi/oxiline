@@ -303,6 +303,30 @@ export function useCreatePlan() {
   });
 }
 
+export function useAddPlanOption() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { planId: string; activityId: string }) =>
+      api.addPlanOption(args.planId, args.activityId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+    },
+  });
+}
+
+export function useResizePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { planId: string; durationMinute: number }) =>
+      api.resizePlan(args.planId, args.durationMinute),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+    },
+  });
+}
+
 /** ISO window [date-1 00:00Z, date+1 23:59Z] for a local `date` (YYYY-MM-DD). */
 function windowFor(date: string): { from: string; to: string } {
   const [y, m, d] = date.split("-").map(Number);

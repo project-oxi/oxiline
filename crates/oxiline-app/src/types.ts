@@ -181,6 +181,14 @@ export interface Plan {
   sort_order: number;
 }
 
+/** One alternative within a plan (mirrors `oxiline_core::model::PlanOption`). */
+export interface PlanOption {
+  id: string;
+  plan_id: string;
+  activity_id: string;
+  sort_order: number;
+}
+
 export interface PlanInput {
   date?: string | null;
   start_minute: number;
