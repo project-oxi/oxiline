@@ -11,6 +11,7 @@ interface UiState {
   routineManagerOpen: boolean;
   onboardingOpen: boolean;
   paletteDate: string | null;
+  selectedActivityIds: string[];
   setDate: (d: string) => void;
   setView: (v: View) => void;
   setPaletteOpen: (b: boolean) => void;
@@ -19,6 +20,8 @@ interface UiState {
   setRoutineManagerOpen: (b: boolean) => void;
   setOnboardingOpen: (b: boolean) => void;
   setPaletteDate: (d: string | null) => void;
+  toggleActivitySelect: (id: string, additive: boolean) => void;
+  clearActivitySelection: () => void;
   shiftDate: (days: number) => void;
   goToToday: () => void;
 }
@@ -48,6 +51,7 @@ export const useUi = create<UiState>((set) => ({
   routineManagerOpen: false,
   onboardingOpen: false,
   paletteDate: null,
+  selectedActivityIds: [],
   setDate: (d) => set({ date: d }),
   setView: (v) => set({ view: v }),
   setPaletteOpen: (b) => set({ paletteOpen: b }),
@@ -56,6 +60,15 @@ export const useUi = create<UiState>((set) => ({
   setRoutineManagerOpen: (b) => set({ routineManagerOpen: b }),
   setOnboardingOpen: (b) => set({ onboardingOpen: b }),
   setPaletteDate: (d) => set({ paletteDate: d }),
+  toggleActivitySelect: (id, additive) =>
+    set((state) => ({
+      selectedActivityIds: additive
+        ? state.selectedActivityIds.includes(id)
+          ? state.selectedActivityIds.filter((selectedId) => selectedId !== id)
+          : [...state.selectedActivityIds, id]
+        : [id],
+    })),
+  clearActivitySelection: () => set({ selectedActivityIds: [] }),
   shiftDate: (days) => set((s) => ({ date: shift(s.date, days) })),
   goToToday: () => set({ date: todayStr() }),
 }));

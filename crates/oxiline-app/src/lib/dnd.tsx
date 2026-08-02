@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { useAddPlanOption, useCreatePlan, useUpdateTask } from "../hooks";
 import { api } from "./api";
+import { useUi } from "./store";
 
 export const SNAP_MINUTES = 5;
 
@@ -17,6 +18,7 @@ export function DndProvider({ children }: { children: ReactNode }) {
   const upd = useUpdateTask();
   const createPlan = useCreatePlan();
   const addOption = useAddPlanOption();
+  const clearActivitySelection = useUi((state) => state.clearActivitySelection);
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 8 },
@@ -90,6 +92,7 @@ export function DndProvider({ children }: { children: ReactNode }) {
           activity_ids: activityIds,
         });
       }
+      clearActivitySelection();
     }
   }
 

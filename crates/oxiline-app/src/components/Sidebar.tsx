@@ -5,10 +5,10 @@
  *   2. ActivityLibrary — each active activity with a neutral weekly bar
  *      (target tick, 남음/달성/+Xm), drag source for Task 7.
  */
-import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import { useActivities, useCompliance, useRecordState, useStopRecord } from "../hooks";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
-import { useDraggable } from "@dnd-kit/core";
+import { useUi } from "../lib/store";
 import type { Activity, Compliance } from "../types";
 
 export function Sidebar() {
@@ -81,20 +81,9 @@ function ActivityLibrary() {
   const weekQ = useCompliance("week");
   const byId = new Map(weekQ.data?.map((c) => [c.activity.id, c]));
   const activities = activitiesQ.data ?? [];
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  function handleSelect(id: string, additive: boolean) {
-    if (additive) {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
-    } else {
-      setSelected(new Set([id]));
-    }
-  }
+  const selectedActivityIds = useUi((state) => state.selectedActivityIds);
+  const toggleActivitySelect = useUi((state) => state.toggleActivitySelect);
+  const clearActivitySelection = useUi((state) => state.clearActivitySelection);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -110,7 +99,7 @@ function ActivityLibrary() {
         <div
           className="flex flex-col gap-2"
           onPointerDown={(e) => {
-            if (e.target === e.currentTarget) setSelected(new Set());
+            if (e.target === e.currentTarget) clearActivitySelection();
           }}
         >
           {activities.map((a) => (
@@ -118,8 +107,7 @@ function ActivityLibrary() {
               key={a.id}
               activity={a}
               compliance={byId.get(a.id)}
-              selectedSet={selected}
-              onSelect={handleSelect}
+              onSelect={toggleActivitySelect}
             />
           ))}
         </div>
@@ -131,16 +119,15 @@ function ActivityLibrary() {
 function DraggableActivity({
   activity,
   compliance,
-  selectedSet,
   onSelect,
 }: {
   activity: Activity;
   compliance?: Compliance;
-  selectedSet: Set<string>;
   onSelect: (id: string, additive: boolean) => void;
 }) {
-  const isSelected = selectedSet.has(activity.id);
-  const ids = isSelected && selectedSet.size > 0 ? [...selectedSet] : [activity.id];
+  const selectedActivityIds = useUi((state) => state.selectedActivityIds);
+  const isSelected = selectedActivityIds.includes(activity.id);
+  const ids = isSelected && selectedActivityIds.length > 0 ? selectedActivityIds : [activity.id];
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `activity-${activity.id}`,
     data: { kind: "activity", activityIds: ids },
@@ -172,8 +159,8 @@ function DraggableActivity({
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: hueVar(activity.hue_label) }} />
           {activity.name}
-          {selectedSet.size > 1 && isSelected && (
-            <span className="rounded bg-interactive-primary px-1 text-[9px] font-semibold text-text-inverse">{selectedSet.size}</span>
+          {selectedActivityIds.length > 1 && isSelected && (
+            <span className="rounded bg-interactive-primary px-1 text-[9px] font-semibold text-text-inverse">{selectedActivityIds.length}</span>
           )}
         </span>
         <span className="text-[10px] text-text-subtle">
