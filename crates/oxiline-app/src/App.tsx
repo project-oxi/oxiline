@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { Header } from "./components/Header";
 import { RecordTimeline } from "./components/RecordTimeline";
-import { BacklogView } from "./components/BacklogView";
-import { WeekView } from "./components/WeekView";
-import { ReportView } from "./components/ReportView";
-import { RoutineManager } from "./components/RoutineManager";
 import { CommandPalette } from "./components/CommandPalette";
 import { Preferences } from "./components/Preferences";
 import { Onboarding } from "./components/Onboarding";
@@ -50,7 +46,6 @@ function useGlobalKeys() {
       if (e.key === "Escape") {
         ui.setPaletteOpen(false);
         ui.setPreferencesOpen(false);
-        ui.setRoutineManagerOpen(false);
         return;
       }
       if (e.key === "t" || e.key === "T") {
@@ -59,14 +54,6 @@ function useGlobalKeys() {
         ui.shiftDate(-1);
       } else if (e.key === "ArrowRight") {
         ui.shiftDate(1);
-      } else if (e.key === "1") {
-        ui.setView("today");
-      } else if (e.key === "2") {
-        ui.setView("week");
-      } else if (e.key === "3") {
-        ui.setView("backlog");
-      } else if (e.key === "4") {
-        ui.setView("report");
       }
     };
     window.addEventListener("keydown", handler);
@@ -78,7 +65,6 @@ import { DndProvider } from "./lib/dnd";
 
 export default function App() {
   useGlobalKeys();
-  const view = useUi((s) => s.view);
 
   return (
     <div className="flex h-screen flex-col bg-surface">
@@ -87,10 +73,7 @@ export default function App() {
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex flex-1 flex-col overflow-hidden border-x border-border">
-            {view === "today" && <RecordTimeline />}
-            {view === "week" && <WeekView />}
-            {view === "backlog" && <BacklogView />}
-            {view === "report" && <ReportView />}
+            <RecordTimeline />
           </main>
           <Inspector />
         </div>
@@ -99,7 +82,6 @@ export default function App() {
       <CommandPalette />
       <ActivitySwitcher />
       <Preferences />
-      <RoutineManager />
       <Onboarding />
     </div>
   );

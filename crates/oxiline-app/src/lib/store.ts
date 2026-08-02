@@ -1,23 +1,18 @@
 import { create } from "zustand";
 
-export type View = "today" | "week" | "backlog" | "report";
 
 interface UiState {
   date: string; // YYYY-MM-DD selected day
-  view: View;
   paletteOpen: boolean;
   preferencesOpen: boolean;
   switcherOpen: boolean;
-  routineManagerOpen: boolean;
   onboardingOpen: boolean;
   paletteDate: string | null;
   selectedActivityIds: string[];
   setDate: (d: string) => void;
-  setView: (v: View) => void;
   setPaletteOpen: (b: boolean) => void;
   setPreferencesOpen: (b: boolean) => void;
   setSwitcherOpen: (b: boolean) => void;
-  setRoutineManagerOpen: (b: boolean) => void;
   setOnboardingOpen: (b: boolean) => void;
   setPaletteDate: (d: string | null) => void;
   toggleActivitySelect: (id: string, additive: boolean) => void;
@@ -44,20 +39,16 @@ function shift(dateStr: string, days: number): string {
 
 export const useUi = create<UiState>((set) => ({
   date: todayStr(),
-  view: "today",
   paletteOpen: false,
   preferencesOpen: false,
   switcherOpen: false,
-  routineManagerOpen: false,
   onboardingOpen: false,
   paletteDate: null,
   selectedActivityIds: [],
   setDate: (d) => set({ date: d }),
-  setView: (v) => set({ view: v }),
   setPaletteOpen: (b) => set({ paletteOpen: b }),
   setPreferencesOpen: (b) => set({ preferencesOpen: b }),
   setSwitcherOpen: (b) => set({ switcherOpen: b }),
-  setRoutineManagerOpen: (b) => set({ routineManagerOpen: b }),
   setOnboardingOpen: (b) => set({ onboardingOpen: b }),
   setPaletteDate: (d) => set({ paletteDate: d }),
   toggleActivitySelect: (id, additive) =>

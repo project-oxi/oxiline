@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, Settings as SettingsIcon, Layers } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Settings as SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useActivities, useRecordsRange } from "../hooks";
 import { useUi, todayStr, shift } from "../lib/store";
@@ -10,7 +10,7 @@ import { monthBounds, monthGrid, shiftMonth } from "../lib/calendar";
 
 export function Header() {
   const { t, i18n } = useTranslation();
-  const { date, view, setView, setDate, shiftDate, setPaletteOpen, setPreferencesOpen, setRoutineManagerOpen } = useUi();
+  const { date, setDate, shiftDate, setPaletteOpen, setPreferencesOpen } = useUi();
   const actsQ = useActivities(false);
   const lang = i18n.language?.startsWith("en") ? "en" : "ko";
 
@@ -45,13 +45,6 @@ export function Header() {
   const monthRecs = useRecordsRange(bounds.from, bounds.to).data ?? [];
   const hueById = new Map((actsQ.data ?? []).map((a) => [a.id, a.hue_label] as const));
   const [calYy, calMm] = calMonth.split("-").map(Number);
-
-  const tabs: { key: typeof view; label: string }[] = [
-    { key: "today", label: t("nav.today") },
-    { key: "week", label: t("nav.week") },
-    { key: "backlog", label: t("nav.backlog") },
-    { key: "report", label: t("nav.report") },
-  ];
 
   // Date title parts
   const [yy, mm, dd] = date.split("-").map(Number);
@@ -93,7 +86,7 @@ export function Header() {
                   <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shiftMonth(calMonth, -1))} aria-label="이전 달">‹</button>
                   <span className="min-w-0 flex-1 text-center text-[13px] font-semibold text-text">{calYy}년 {calMm}월</span>
                   <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shiftMonth(calMonth, 1))} aria-label="다음 달">›</button>
-                  <button className="ml-1 rounded px-2 py-1 text-[11px] font-medium text-interactive-primary hover:bg-surface-sunken" onClick={() => { setCalMonth(today); setDate(today); setView("today"); setCalOpen(false); }}>오늘</button>
+                  <button className="ml-1 rounded px-2 py-1 text-[11px] font-medium text-interactive-primary hover:bg-surface-sunken" onClick={() => { setCalMonth(today); setDate(today); setCalOpen(false); }}>오늘</button>
                 </div>
                 <div className="date-popover-grid mb-1 text-center text-[10px] font-semibold text-text-subtle">
                   {["월", "화", "수", "목", "금", "토", "일"].map((label) => <span key={label}>{label}</span>)}
@@ -104,7 +97,7 @@ export function Header() {
                     const isOtherMonth = cell.slice(0, 7) !== calMonth.slice(0, 7);
                     const isToday = cell === today;
                     const isSelected = cell === date;
-                    return <button key={cell} className={`date-popover-cell transition hover:bg-surface-sunken ${isOtherMonth ? "text-text-subtle/40" : "text-text-muted"} ${isToday ? "bg-interactive-primary text-interactive-primary-foreground" : ""} ${isSelected ? "ring-2 ring-interactive-primary ring-offset-1 ring-offset-surface-raised" : ""}`} onClick={() => { setDate(cell); setView("today"); setCalOpen(false); }} aria-label={cell} aria-current={isToday ? "date" : undefined}>
+                    return <button key={cell} className={`date-popover-cell transition hover:bg-surface-sunken ${isOtherMonth ? "text-text-subtle/40" : "text-text-muted"} ${isToday ? "bg-interactive-primary text-interactive-primary-foreground" : ""} ${isSelected ? "ring-2 ring-interactive-primary ring-offset-1 ring-offset-surface-raised" : ""}`} onClick={() => { setDate(cell); setCalOpen(false); }} aria-label={cell} aria-current={isToday ? "date" : undefined}>
                       <span>{Number(cell.slice(8, 10))}</span>
                       <span className="flex h-1.5 items-center gap-0.5">{hues.map((hue, index) => <span key={index} className="h-1 w-1 rounded-full" style={{ background: hueVar(hue) }} />)}</span>
                     </button>;
@@ -123,14 +116,6 @@ export function Header() {
         </div>
 
         <div data-tauri-drag-region className="flex items-center gap-1">
-          <button
-            className="rounded p-1.5 hover:bg-surface-sunken"
-            onClick={() => setRoutineManagerOpen(true)}
-            aria-label={t("routine.title")}
-            title={t("routine.title")}
-          >
-            <Layers size={16} />
-          </button>
           <button
             className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setPaletteOpen(true)}
@@ -167,7 +152,6 @@ export function Header() {
               key={dStr}
               onClick={() => {
                 setDate(dStr);
-                setView("today");
               }}
               className="flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition hover:bg-surface-sunken"
             >
@@ -190,28 +174,6 @@ export function Header() {
                   <span key={i} className="h-1 w-1 rounded-full" style={{ background: hueVar(h) }} />
                 ))}
               </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Row 3: underline tabs (DESIGN.md §6.10) */}
-      <div role="tablist" className="flex gap-1 border-b border-line">
-        {tabs.map((tb) => {
-          const on = view === tb.key;
-          return (
-            <button
-              key={tb.key}
-              role="tab"
-              aria-selected={on}
-              onClick={() => setView(tb.key)}
-              className={`-mb-px border-b-2 px-3 py-2 text-[13px] transition ${
-                on
-                  ? "border-interactive-primary text-text font-semibold"
-                  : "border-transparent text-text-muted font-medium hover:text-text"
-              }`}
-            >
-              {tb.label}
             </button>
           );
         })}
