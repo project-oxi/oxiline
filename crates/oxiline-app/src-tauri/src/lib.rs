@@ -64,7 +64,7 @@ pub fn run() {
         commands::get_slots_for_date,
         commands::update_plan,
         commands::delete_plan,
-        commands::add_plan_option,
+        commands::add_plan_options,
         commands::resize_plan,
     ]);
 

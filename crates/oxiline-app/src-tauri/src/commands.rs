@@ -552,12 +552,12 @@ pub fn delete_plan(state: State<AppState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn add_plan_option(
+pub fn add_plan_options(
     state: State<AppState>,
     plan_id: String,
-    activity_id: String,
-) -> Result<PlanOption, String> {
-    plan::add_option(&state.conn(), &plan_id, &activity_id).map_err(map_err)
+    activity_ids: Vec<String>,
+) -> Result<Vec<PlanOption>, String> {
+    plan::add_options(&state.conn(), &plan_id, &activity_ids).map_err(map_err)
 }
 
 #[tauri::command]
