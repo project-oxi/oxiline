@@ -154,3 +154,177 @@ fn resize_plan_rejects_zero_and_missing() {
     assert!(oxiline_core::plan::resize_plan(&c, &p.id, 0).is_err());
     assert!(oxiline_core::plan::resize_plan(&c, "nope", 30).is_err());
 }
+
+fn sort_orders(c: &Connection, plan_id: &str) -> Vec<i32> {
+    c.prepare("SELECT sort_order FROM plan_options WHERE plan_id = ?1 ORDER BY sort_order")
+        .unwrap()
+        .query_map(rusqlite::params![plan_id], |r| r.get::<_, i32>(0))
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect()
+}
+
+#[test]
+fn add_options_monotonic_unique_and_dedups_existing() {
+    let (_f, c) = db();
+    let a1 = mk_activity(&c, "a1");
+    let a2 = mk_activity(&c, "a2");
+    let a3 = mk_activity(&c, "a3");
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a1.id.clone()],
+        },
+    )
+    .unwrap(); // a1 = order 0
+    let out = oxiline_core::plan::add_options(
+        &c,
+        &p.id,
+        &[a2.id.clone(), a3.id.clone(), a1.id.clone()],
+    )
+    .unwrap();
+    // (a) return: input order, existing-or-new, one row per unique input
+    assert_eq!(out.len(), 3);
+    assert_eq!(out[0].activity_id, a2.id);
+    assert_eq!(out[0].sort_order, 1);
+    assert_eq!(out[1].activity_id, a3.id);
+    assert_eq!(out[1].sort_order, 2);
+    assert_eq!(out[2].activity_id, a1.id);
+    assert_eq!(out[2].sort_order, 0);
+    // (b) DB set: monotonic, unique, a1 single row
+    assert_eq!(sort_orders(&c, &p.id), vec![0, 1, 2]);
+}
+
+#[test]
+fn add_options_dedups_within_input() {
+    let (_f, c) = db();
+    let a4 = mk_activity(&c, "a4");
+    let a5 = mk_activity(&c, "a5");
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a4.id.clone()],
+        },
+    )
+    .unwrap(); // a4 = order 0
+    let out = oxiline_core::plan::add_options(
+        &c,
+        &p.id,
+        &[a4.id.clone(), a4.id.clone(), a5.id.clone()],
+    )
+    .unwrap();
+    assert_eq!(out.len(), 2); // within-input dup collapsed
+    assert_eq!(out[0].activity_id, a4.id); // existing
+    assert_eq!(out[0].sort_order, 0);
+    assert_eq!(out[1].activity_id, a5.id); // new
+    assert_eq!(out[1].sort_order, 1);
+    assert_eq!(sort_orders(&c, &p.id), vec![0, 1]);
+}
+
+#[test]
+fn add_options_empty_is_noop() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "a");
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a.id.clone()],
+        },
+    )
+    .unwrap();
+    let out = oxiline_core::plan::add_options(&c, &p.id, &[]).unwrap();
+    assert!(out.is_empty());
+    assert_eq!(sort_orders(&c, &p.id), vec![0]); // unchanged
+}
+
+#[test]
+fn add_options_missing_plan_is_not_found() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "a");
+    let err = oxiline_core::plan::add_options(&c, "nope", &[a.id]).unwrap_err();
+    assert!(matches!(err, oxiline_core::CoreError::NotFound(_)));
+}
+
+#[test]
+fn add_options_concurrent_unique_sort_order() {
+    use std::sync::Arc;
+    use std::thread;
+    // Multiple pooled-style connections hammer add_options on the SAME plan in
+    // parallel. Under BEGIN IMMEDIATE the write lock is held during the MAX
+    // read → every sort_order globally unique, zero errors (busy_timeout waits).
+    // A DEFERRED txn would let two connections read the same MAX and insert
+    // duplicate sort_orders (or hit SQLITE_BUSY_SNAPSHOT) — fails under DEFERRED.
+    let f = NamedTempFile::new().unwrap();
+    let setup = oxiline_core::open_and_migrate(f.path()).unwrap();
+    oxiline_core::settings::ensure_defaults(&setup).unwrap();
+    let a0 = mk_activity(&setup, "seed");
+    let p = oxiline_core::plan::create_plan(
+        &setup,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a0.id.clone()],
+        },
+    )
+    .unwrap();
+
+    const THREADS: usize = 4;
+    const PER_THREAD: usize = 25;
+    let mut buckets: Vec<Vec<String>> = Vec::with_capacity(THREADS);
+    for t in 0..THREADS {
+        let mut bucket = Vec::with_capacity(PER_THREAD);
+        for k in 0..PER_THREAD {
+            bucket.push(mk_activity(&setup, &format!("t{t}-k{k}")).id.clone());
+        }
+        buckets.push(bucket);
+    }
+    // One connection per thread (mirrors the r2d2 pool; busy_timeout/WAL set per conn).
+    let conns: Vec<Connection> = (0..THREADS)
+        .map(|_| oxiline_core::open_and_migrate(f.path()).unwrap())
+        .collect();
+    let plan_id = Arc::new(p.id.clone());
+
+    let handles: Vec<_> = conns
+        .into_iter()
+        .zip(buckets.into_iter())
+        .map(|(conn, bucket)| {
+            let plan_id = Arc::clone(&plan_id);
+            thread::spawn(move || -> Result<(), String> {
+                for aid in bucket {
+                    oxiline_core::plan::add_options(&conn, &plan_id, std::slice::from_ref(&aid))
+                        .map_err(|e| e.to_string())?;
+                }
+                Ok(())
+            })
+        })
+        .collect();
+
+    for h in handles {
+        h.join().unwrap().expect("add_options errored under concurrency");
+    }
+
+    let orders = sort_orders(&setup, &p.id);
+    assert_eq!(orders.len(), 1 + THREADS * PER_THREAD, "row count mismatch");
+    let mut seen = std::collections::HashSet::new();
+    for &o in &orders {
+        assert!(seen.insert(o), "duplicate sort_order {o}");
+    }
+}

@@ -16,7 +16,7 @@ use crate::error::{CoreError, Result};
 use crate::model::{Activity, Plan, PlanInput, PlanOption, PlanSlot};
 use crate::util;
 use chrono::{Datelike, NaiveDate};
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, Transaction, TransactionBehavior, params};
 
 /// Map a `plans` row into a `Plan` (8 columns). `start_minute` /
 /// `duration_minute` are `u16` and `weekday_mask` is `u8` in the model, but
@@ -212,33 +212,68 @@ pub fn delete_plan(conn: &Connection, id: &str) -> Result<()> {
     Ok(())
 }
 
-/// Append an OR alternative to a plan with `sort_order = MAX + 1`. If the
-/// activity is already an option, this is a no-op and returns the existing row.
-pub fn add_option(conn: &Connection, plan_id: &str, activity_id: &str) -> Result<PlanOption> {
-    // Surface NotFound for unknown plans before computing sort_order.
-    let _ = get_plan(conn, plan_id)?;
-    if let Some(existing) = find_option(conn, plan_id, activity_id)? {
-        return Ok(existing);
+/// Append OR alternatives to a plan in ONE `BEGIN IMMEDIATE` transaction. The
+/// write lock is acquired at `BEGIN`, BEFORE the `MAX(sort_order)` read, so the
+/// read sees the latest committed state and no other pooled connection can
+/// interleave a write between the read and the commit. `activity_ids` keep
+/// their input order; already-linked activities (and repeats within the input)
+/// are skipped — the returned `Vec<PlanOption>` holds one row per *unique
+/// input* in input order (existing-or-new). `sort_order` continues from
+/// `MAX + 1`, assigned monotonically inside the locked transaction. Empty
+/// input short-circuits to an empty `Vec` without touching the DB.
+pub fn add_options(
+    conn: &Connection,
+    plan_id: &str,
+    activity_ids: &[String],
+) -> Result<Vec<PlanOption>> {
+    if activity_ids.is_empty() {
+        return Ok(Vec::new());
     }
-    let id = util::new_id();
-    let next_order: i32 = conn
-        .query_row(
-            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM plan_options WHERE plan_id = ?1",
-            params![plan_id],
-            |r| r.get(0),
-        )
-        .unwrap_or(0);
-    conn.execute(
-        "INSERT INTO plan_options (id, plan_id, activity_id, sort_order)
-         VALUES (?1, ?2, ?3, ?4)",
-        params![id, plan_id, activity_id, next_order],
-    )?;
-    conn.query_row(
-        "SELECT * FROM plan_options WHERE id = ?",
-        params![id],
-        row_from_option,
-    )
-    .map_err(CoreError::from)
+    // Surface NotFound for unknown plans before opening a transaction.
+    let _ = get_plan(conn, plan_id)?;
+    // BEGIN IMMEDIATE: RESERVED (write) lock at `BEGIN`, BEFORE the MAX read.
+    // (unchecked_transaction() is the Deferred flavor and would race: the MAX
+    // read runs on a stale WAL snapshot without the lock, so two pooled
+    // connections can read the same MAX and insert duplicate sort_orders.)
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
+    let existing: Vec<PlanOption> = tx
+        .prepare("SELECT * FROM plan_options WHERE plan_id = ?1 ORDER BY sort_order")?
+        .query_map(params![plan_id], row_from_option)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut by_activity: std::collections::HashMap<&str, PlanOption> =
+        std::collections::HashMap::new();
+    for opt in &existing {
+        by_activity.insert(opt.activity_id.as_str(), opt.clone());
+    }
+    // existing is ordered by sort_order ASC → last row is the max.
+    let mut next_order: i32 = existing.last().map(|o| o.sort_order + 1).unwrap_or(0);
+    let mut out: Vec<PlanOption> = Vec::with_capacity(activity_ids.len());
+    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    for aid in activity_ids {
+        let aid_str = aid.as_str();
+        if !seen.insert(aid_str) {
+            continue; // duplicate within input — keep first occurrence
+        }
+        if let Some(existing_opt) = by_activity.get(aid_str) {
+            out.push(existing_opt.clone());
+            continue; // already an option — no INSERT
+        }
+        let id = util::new_id();
+        tx.execute(
+            "INSERT INTO plan_options (id, plan_id, activity_id, sort_order)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![id, plan_id, aid_str, next_order],
+        )?;
+        out.push(PlanOption {
+            id,
+            plan_id: plan_id.to_string(),
+            activity_id: aid_str.to_string(),
+            sort_order: next_order,
+        });
+        next_order += 1;
+    }
+    tx.commit()?;
+    Ok(out)
 }
 
 /// Remove an OR alternative. Missing plan or missing option surfaces as
@@ -255,16 +290,6 @@ pub fn remove_option(conn: &Connection, plan_id: &str, activity_id: &str) -> Res
         )));
     }
     Ok(())
-}
-
-fn find_option(conn: &Connection, plan_id: &str, activity_id: &str) -> Result<Option<PlanOption>> {
-    let mut stmt =
-        conn.prepare("SELECT * FROM plan_options WHERE plan_id = ?1 AND activity_id = ?2")?;
-    let mut rows = stmt.query(params![plan_id, activity_id])?;
-    match rows.next()? {
-        Some(row) => Ok(Some(row_from_option(row)?)),
-        None => Ok(None),
-    }
 }
 
 /// Parse a `YYYY-MM-DD` string into a `NaiveDate`. Invalid input becomes
