@@ -1,34 +1,39 @@
 import { useMemo } from "react";
-import type { Category, TimelineItem } from "../types";
-import { categoryById, categoryColorMuted } from "../lib/colors";
+import type { Activity, ActivityRecord } from "../types";
+import { hueVar } from "../lib/record-format";
+import { isoLocal } from "../lib/record-time";
 
 interface Props {
-  items: TimelineItem[];
-  categories: Category[];
+  records: ActivityRecord[];
+  activities: Activity[];
   dayStartMin: number;
   totalMin: number;
   onClickMinute?: (minute: number) => void;
   compact?: boolean;
 }
 
-/** Oxide Bar — a day compressed into one horizontal mini-map (§6.6). */
-export function OxideBar({ items, categories, dayStartMin, totalMin, onClickMinute, compact }: Props) {
+/** Oxide Bar — a day compressed into one horizontal mini-map (§6.6). Segments
+ * are actual records (what happened), colored by each record's activity hue. */
+export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMinute, compact }: Props) {
   const nowMin = useMemo(() => {
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
   }, []);
 
-  const segs = items
-    .filter((i) => !i.is_skipped && i.start_minute != null && i.duration_minute != null)
-    .map((i) => {
-      const cat = categoryById(categories, i.category_id);
-      return {
-        left: ((i.start_minute! - dayStartMin) / totalMin) * 100,
-        width: (i.duration_minute! / totalMin) * 100,
-        color: categoryColorMuted(cat?.color_hue ?? null),
-        done: i.is_done,
-      };
-    });
+  const hueById = useMemo(
+    () => new Map(activities.map((a) => [a.id, a.hue_label] as const)),
+    [activities],
+  );
+
+  const segs = records.map((r) => {
+    const start = isoLocal(r.started_at).minute;
+    const end = r.ended_at ? isoLocal(r.ended_at).minute : nowMin;
+    return {
+      left: ((start - dayStartMin) / totalMin) * 100,
+      width: (Math.max(1, end - start) / totalMin) * 100,
+      color: hueVar(hueById.get(r.activity_id) ?? null),
+    };
+  });
 
   const nowPct = ((nowMin - dayStartMin) / totalMin) * 100;
 
@@ -51,7 +56,7 @@ export function OxideBar({ items, categories, dayStartMin, totalMin, onClickMinu
             left: `${Math.max(0, s.left)}%`,
             width: `${Math.max(0.5, s.width)}%`,
             background: s.color,
-            opacity: s.done ? 0.5 : 0.85,
+            opacity: 0.85,
           }}
         />
       ))}

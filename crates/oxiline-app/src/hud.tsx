@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { listen } from "@tauri-apps/api/event";
 import "./styles.css";
 import { OxideBar } from "./components/OxideBar";
-import { useCategories, useTimeline, useRecordState, useSlots, useCompliance } from "./hooks";
+import { useActivities, useCompliance, useDayRecords, useRecordState, useSlots } from "./hooks";
 import { todayStr } from "./lib/store";
 import { currentSlot, nextSlot } from "./lib/now-next";
 import { hmm, hueVar } from "./lib/record-format";
@@ -22,8 +22,8 @@ function syncTheme() {
 }
 
 function HudCard() {
-  const catsQ = useCategories();
-  const tlQ = useTimeline(todayStr());
+  const actsQ = useActivities(false);
+  const recsQ = useDayRecords(todayStr());
   const stateQ = useRecordState();
   const slotsQ = useSlots(todayStr());
   const weekQ = useCompliance("week");
@@ -73,8 +73,8 @@ function HudCard() {
         }}
       >
         <OxideBar
-          items={tlQ.data ?? []}
-          categories={catsQ.data ?? []}
+          records={recsQ.data ?? []}
+          activities={actsQ.data ?? []}
           dayStartMin={5 * 60}
           totalMin={21 * 60}
           compact

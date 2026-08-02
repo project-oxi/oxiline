@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Search, Settings as SettingsIcon, Layers } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useTimelineRange, useCategories } from "../hooks";
+import { useActivities, useRecordsRange } from "../hooks";
 import { useUi, todayStr, shift } from "../lib/store";
-import { categoryById, categoryColor } from "../lib/colors";
+import { hueVar } from "../lib/record-format";
+import { isoLocal } from "../lib/record-time";
+import type { ActivityRecord } from "../types";
 import { monthBounds, monthGrid, shiftMonth } from "../lib/calendar";
 
 export function Header() {
   const { t, i18n } = useTranslation();
   const { date, view, setView, setDate, shiftDate, setPaletteOpen, setPreferencesOpen, setRoutineManagerOpen } = useUi();
-  const catsQ = useCategories();
+  const actsQ = useActivities(false);
   const lang = i18n.language?.startsWith("en") ? "en" : "ko";
 
   const [calOpen, setCalOpen] = useState(false);
@@ -36,13 +38,12 @@ export function Header() {
   const mondayOffset = dow === 0 ? -6 : 1 - dow;
   const monday = shift(date, mondayOffset);
   const sunday = shift(monday, 6);
-  const weekQ = useTimelineRange(monday, sunday);
-  const weekCols = weekQ.data ?? [];
-  const categories = catsQ.data ?? [];
   const today = todayStr();
   const bounds = monthBounds(calMonth);
-  const monthQ = useTimelineRange(bounds.from, bounds.to);
-  const byDate = new Map((monthQ.data ?? []).map((column) => [column.date, column.items] as const));
+  const weekDates = Array.from({ length: 7 }, (_, i) => shift(monday, i));
+  const weekRecs = useRecordsRange(monday, sunday).data ?? [];
+  const monthRecs = useRecordsRange(bounds.from, bounds.to).data ?? [];
+  const hueById = new Map((actsQ.data ?? []).map((a) => [a.id, a.hue_label] as const));
   const [calYy, calMm] = calMonth.split("-").map(Number);
 
   const tabs: { key: typeof view; label: string }[] = [
@@ -99,13 +100,13 @@ export function Header() {
                 </div>
                 <div className="date-popover-grid">
                   {monthGrid(calMonth).map((cell) => {
-                    const hues = [...new Set((byDate.get(cell) ?? []).filter((item) => !item.is_skipped).map((item) => categoryById(categories, item.category_id)?.color_hue ?? null))].slice(0, 5);
+                    const hues = dateHues(monthRecs, cell, hueById);
                     const isOtherMonth = cell.slice(0, 7) !== calMonth.slice(0, 7);
                     const isToday = cell === today;
                     const isSelected = cell === date;
                     return <button key={cell} className={`date-popover-cell transition hover:bg-surface-sunken ${isOtherMonth ? "text-text-subtle/40" : "text-text-muted"} ${isToday ? "bg-interactive-primary text-interactive-primary-foreground" : ""} ${isSelected ? "ring-2 ring-interactive-primary ring-offset-1 ring-offset-surface-raised" : ""}`} onClick={() => { setDate(cell); setView("today"); setCalOpen(false); }} aria-label={cell} aria-current={isToday ? "date" : undefined}>
                       <span>{Number(cell.slice(8, 10))}</span>
-                      <span className="flex h-1.5 items-center gap-0.5">{hues.map((hue, index) => <span key={index} className="h-1 w-1 rounded-full" style={{ background: categoryColor(hue) }} />)}</span>
+                      <span className="flex h-1.5 items-center gap-0.5">{hues.map((hue, index) => <span key={index} className="h-1 w-1 rounded-full" style={{ background: hueVar(hue) }} />)}</span>
                     </button>;
                   })}
                 </div>
@@ -151,7 +152,7 @@ export function Header() {
 
       {/* Row 2: week strip */}
       <div className="flex gap-1 pb-2.5">
-        {weekCols.map(({ date: dStr, items }) => {
+        {weekDates.map((dStr) => {
           const [cy, cm, cdd] = dStr.split("-").map(Number);
           const cdt = new Date(cy, cm - 1, cdd);
           const dayNum = cdt.getDate();
@@ -160,13 +161,7 @@ export function Header() {
               ? ["일", "월", "화", "수", "목", "금", "토"][cdt.getDay()]
               : cdt.toLocaleDateString("en-US", { weekday: "narrow" });
           const isToday = dStr === today;
-          const hues = [
-            ...new Set(
-              items
-                .filter((i) => !i.is_skipped)
-                .map((i) => categoryById(categories, i.category_id)?.color_hue ?? null),
-            ),
-          ].slice(0, 5);
+          const hues = dateHues(weekRecs, dStr, hueById);
           return (
             <button
               key={dStr}
@@ -192,7 +187,7 @@ export function Header() {
               </span>
               <span className="flex h-1.5 items-center gap-0.5">
                 {hues.map((h, i) => (
-                  <span key={i} className="h-1 w-1 rounded-full" style={{ background: categoryColor(h) }} />
+                  <span key={i} className="h-1 w-1 rounded-full" style={{ background: hueVar(h) }} />
                 ))}
               </span>
             </button>
@@ -223,4 +218,16 @@ export function Header() {
       </div>
     </div>
   );
+}
+
+function dateHues(
+  records: ActivityRecord[],
+  dateStr: string,
+  hueById: Map<string, string | null>,
+): (string | null)[] {
+  const hues = new Set<string | null>();
+  for (const r of records) {
+    if (isoLocal(r.started_at).date === dateStr) hues.add(hueById.get(r.activity_id) ?? null);
+  }
+  return [...hues].slice(0, 5);
 }

@@ -5,7 +5,6 @@ import { useUi } from "./lib/store";
 import type { Scope } from "./types";
 
 export const qk = {
-  timeline: (date: string) => ["timeline", date] as const,
   timelineRange: (from: string, to: string) => ["timeline-range", from, to] as const,
   categories: ["categories"] as const,
   routines: (activeOnly: boolean) => ["routines", activeOnly] as const,
@@ -27,10 +26,6 @@ export function useCategories() {
 
 export function useWeekReport() {
   return useQuery({ queryKey: qk.weekReport, queryFn: api.getWeekReport });
-}
-
-export function useTimeline(date: string) {
-  return useQuery({ queryKey: qk.timeline(date), queryFn: () => api.getTimeline(date) });
 }
 
 export function useRoutines(activeOnly = false) {
@@ -186,13 +181,11 @@ export function useDeleteCategory() {
 
 export function useSetSetting() {
   const qc = useQueryClient();
-  const { date } = useUi();
   return useMutation({
     mutationFn: ({ key, value }: { key: string; value: string }) =>
       api.setSetting(key, value),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.settings });
-      qc.invalidateQueries({ queryKey: qk.timeline(date) });
     },
   });
 }
@@ -259,6 +252,17 @@ export function useDayRecords(date: string) {
   return useQuery({
     queryKey: qk.dayRecords(date),
  queryFn: () => api.listRecords(null, win.from, win.to),
+  });
+}
+
+/** Records across a date range — one query covering [start of `from`, end of
+ * `to`]; callers group by local date for per-day markers. */
+export function useRecordsRange(from: string, to: string) {
+  const fromWin = windowFor(from);
+  const toWin = windowFor(to);
+  return useQuery({
+    queryKey: ["records-range", from, to],
+    queryFn: () => api.listRecords(null, fromWin.from, toWin.to),
   });
 }
 
