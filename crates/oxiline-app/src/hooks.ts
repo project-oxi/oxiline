@@ -303,11 +303,11 @@ export function useCreatePlan() {
   });
 }
 
-export function useAddPlanOption() {
+export function useAddPlanOptions() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { planId: string; activityId: string }) =>
-      api.addPlanOption(args.planId, args.activityId),
+    mutationFn: (args: { planId: string; activityIds: string[] }) =>
+      api.addPlanOptions(args.planId, args.activityIds),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["slots"] });
       qc.invalidateQueries({ queryKey: ["plans"] });

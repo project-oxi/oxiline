@@ -7,7 +7,7 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { ReactNode } from "react";
-import { useAddPlanOption, useCreatePlan, useUpdateTask } from "../hooks";
+import { useAddPlanOptions, useCreatePlan, useUpdateTask } from "../hooks";
 import { api } from "./api";
 import { useUi } from "./store";
 
@@ -17,7 +17,7 @@ export const SNAP_MINUTES = 5;
 export function DndProvider({ children }: { children: ReactNode }) {
   const upd = useUpdateTask();
   const createPlan = useCreatePlan();
-  const addOption = useAddPlanOption();
+  const addOptions = useAddPlanOptions();
   const clearActivitySelection = useUi((state) => state.clearActivitySelection);
 
   const pointerSensor = useSensor(PointerSensor, {
@@ -81,7 +81,7 @@ export function DndProvider({ children }: { children: ReactNode }) {
       const activityIds = (data as { activityIds: string[] }).activityIds;
       if (overData.kind === "plan-slot") {
         const planId = (overData as { planId: string }).planId;
-        activityIds.forEach((aid) => addOption.mutate({ planId, activityId: aid }));
+        addOptions.mutate({ planId, activityIds });
       } else {
         createPlan.mutate({
           date: overData.date as string,
