@@ -96,3 +96,61 @@ fn slot_marked_resolved_after_record() {
         "the slot should be resolved after a matching record was created in Task 7"
     );
 }
+
+fn mk_activity(c: &Connection, name: &str) -> oxiline_core::model::Activity {
+    oxiline_core::activities::create_activity(
+        c,
+        oxiline_core::model::ActivityInput { name: Some(name.into()), ..Default::default() },
+    )
+    .unwrap()
+}
+
+#[test]
+fn resize_plan_updates_duration_only() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "코딩");
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a.id.clone()],
+        },
+    )
+    .unwrap();
+    let r = oxiline_core::plan::resize_plan(&c, &p.id, 120).unwrap();
+    assert_eq!(r.duration_minute, 120);
+    assert_eq!(r.start_minute, 9 * 60); // unchanged
+    assert_eq!(r.weekday_mask, 0b0000001); // unchanged
+    // options preserved + slot reflects new duration
+    let s = oxiline_core::plan::slots_for_date(&c, "2026-08-03")
+        .unwrap()
+        .into_iter()
+        .find(|s| s.plan_id == p.id)
+        .unwrap();
+    assert_eq!(s.duration_minute, 120);
+    assert_eq!(s.options.len(), 1);
+}
+
+#[test]
+fn resize_plan_rejects_zero_and_missing() {
+    let (_f, c) = db();
+    let a = mk_activity(&c, "코딩");
+    let p = oxiline_core::plan::create_plan(
+        &c,
+        oxiline_core::model::PlanInput {
+            date: None,
+            start_minute: 9 * 60,
+            duration_minute: 60,
+            weekday_mask: 0b0000001,
+            title: None,
+            activity_ids: vec![a.id.clone()],
+        },
+    )
+    .unwrap();
+    assert!(oxiline_core::plan::resize_plan(&c, &p.id, 0).is_err());
+    assert!(oxiline_core::plan::resize_plan(&c, "nope", 30).is_err());
+}

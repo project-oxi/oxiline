@@ -182,6 +182,26 @@ pub fn update_plan(conn: &Connection, id: &str, input: PlanInput) -> Result<Plan
     tx.commit()?;
     get_plan(conn, id)
 }
+/// Resize a plan's duration in place. Only `duration_minute` changes; start,
+/// weekday, title and the OR option set are untouched (unlike `update_plan`,
+/// which reassigns start/weekday directly from `PlanInput`). `0` is rejected
+/// as a defensive floor — callers clamp to a sensible minimum (e.g. 15 min).
+pub fn resize_plan(conn: &Connection, id: &str, duration_minute: u16) -> Result<Plan> {
+    if duration_minute == 0 {
+        return Err(CoreError::InvalidArgument(
+            "duration_minute must be greater than 0".into(),
+        ));
+    }
+    let now = util::now_iso();
+    let n = conn.execute(
+        "UPDATE plans SET duration_minute = ?1, updated_at = ?2 WHERE id = ?3",
+        params![duration_minute as i64, now, id],
+    )?;
+    if n == 0 {
+        return Err(CoreError::NotFound(format!("plan '{id}'")));
+    }
+    get_plan(conn, id)
+}
 /// DELETE a plan. The schema's `ON DELETE CASCADE` removes the plan_options
 /// rows; missing plan id surfaces as `NotFound`.
 pub fn delete_plan(conn: &Connection, id: &str) -> Result<()> {
