@@ -93,36 +93,6 @@ impl L {
             Lang::En => "min",
         }
     }
-    pub fn backlog(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "백로그",
-            Lang::En => "Backlog",
-        }
-    }
-    pub fn empty_backlog(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "아직 정해지지 않은 할일이 없어요.",
-            Lang::En => "No undated tasks yet.",
-        }
-    }
-    pub fn empty_timeline(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "오늘 예정된 일이 없어요.",
-            Lang::En => "Nothing scheduled.",
-        }
-    }
-    pub fn task_added(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "할일을 추가했어요",
-            Lang::En => "Task added",
-        }
-    }
-    pub fn routine_added(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "루틴을 추가했어요",
-            Lang::En => "Routine added",
-        }
-    }
     pub fn category_added(&self) -> &'static str {
         match self.0 {
             Lang::Ko => "카테고리를 추가했어요",
@@ -135,40 +105,10 @@ impl L {
             Lang::En => "removed",
         }
     }
-    pub fn done(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "완료했어요",
-            Lang::En => "done",
-        }
-    }
-    pub fn undone(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "완료를 취소했어요",
-            Lang::En => "undone",
-        }
-    }
-    pub fn skipped(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "오늘만 건너뛰었어요",
-            Lang::En => "skipped for today",
-        }
-    }
     pub fn hud_signal(&self) -> &'static str {
         match self.0 {
             Lang::Ko => "HUD 표시를 요청했어요 (실행 중인 GUI가 있으면 표시됩니다)",
             Lang::En => "HUD show requested (displays if a GUI is running)",
-        }
-    }
-    pub fn report_day(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "일",
-            Lang::En => "d",
-        }
-    }
-    pub fn report_no_routines(&self) -> &'static str {
-        match self.0 {
-            Lang::Ko => "활성 루틴 없음",
-            Lang::En => "no active routines",
         }
     }
     /// Generic resource label for a successful activity add.
