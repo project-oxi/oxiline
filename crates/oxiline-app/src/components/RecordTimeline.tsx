@@ -200,15 +200,25 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
           e.stopPropagation();
           const startY = e.clientY;
           const startDur = s.duration_minute;
+          const durRef = { current: startDur };
           (e.currentTarget as Element).setPointerCapture(e.pointerId);
-          const move = (ev: PointerEvent) => setDragDur(resizeDuration(startDur, (ev.clientY - startY) / PX_PER_MIN));
-          const up = (_ev: PointerEvent) => {
+          const move = (ev: PointerEvent) => {
+            const next = resizeDuration(startDur, (ev.clientY - startY) / PX_PER_MIN);
+            durRef.current = next;
+            setDragDur(next);
+          };
+          const finish = () => {
             window.removeEventListener("pointermove", move);
-            window.removeEventListener("pointerup", up);
-            setDragDur((h) => { if (h != null) resize.mutate({ planId: s.plan_id, durationMinute: h }); return null; });
+            window.removeEventListener("pointerup", finish);
+            window.removeEventListener("pointercancel", finish);
+            if (durRef.current !== startDur) {
+              resize.mutate({ planId: s.plan_id, durationMinute: durRef.current });
+            }
+            setDragDur(null);
           };
           window.addEventListener("pointermove", move);
-          window.addEventListener("pointerup", up);
+          window.addEventListener("pointerup", finish);
+          window.addEventListener("pointercancel", finish);
         }}
       />
     </div>
