@@ -7,15 +7,13 @@ import {
   type CollisionDetection,
 } from "@dnd-kit/core";
 import type { ReactNode } from "react";
-import { useAddPlanOptions, useCreatePlan, useUpdateTask } from "../hooks";
-import { api } from "./api";
+import { useAddPlanOptions, useCreatePlan } from "../hooks";
 import { useUi } from "./store";
 
 export const SNAP_MINUTES = 5;
 
-/** Shared DnD context provider for the recording timeline + BacklogView. */
+/** Shared DnD context provider for the recording timeline. */
 export function DndProvider({ children }: { children: ReactNode }) {
-  const upd = useUpdateTask();
   const createPlan = useCreatePlan();
   const addOptions = useAddPlanOptions();
   const clearActivitySelection = useUi((state) => state.clearActivitySelection);
@@ -54,30 +52,7 @@ export function DndProvider({ children }: { children: ReactNode }) {
     if (overData.kind !== "timeline-slot" && !(acceptsPlanSlot && overData.kind === "plan-slot")) return;
     const dropMinute = computeDropMinute(event, overData);
 
-    if (data.kind === "backlog") {
-      // Backlog → timeline: materialise if virtual, schedule on drop zone.
-      let realId = (data.task as { id: string }).id;
-      if (realId.startsWith("virtual:")) {
-        realId = await api.materializeIfVirtual(realId);
-      }
-      upd.mutate({
-        id: realId,
-        date: overData.date as string,
-        startMinute: dropMinute,
-        durationMinute: 30,
-      });
-    } else if (data.kind === "block") {
-      // Block move.
-      const item = data.item as { id: string };
-      let realId = item.id;
-      if (realId.startsWith("virtual:")) {
-        realId = await api.materializeIfVirtual(realId);
-      }
-      upd.mutate({
-        id: realId,
-        startMinute: dropMinute,
-      });
-    } else if (data.kind === "activity") {
+    if (data.kind === "activity") {
       const activityIds = (data as { activityIds: string[] }).activityIds;
       if (overData.kind === "plan-slot") {
         const planId = (overData as { planId: string }).planId;
