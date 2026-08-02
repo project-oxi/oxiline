@@ -380,9 +380,8 @@ fn scope_bounds(conn: &Connection, scope: &Scope, today: &str) -> (String, Strin
     }
 }
 
-/// `reports::week_start_date`
-/// — we duplicate the four lines here rather than enlarging the API surface.
-/// If Plan 2 grows the need, lift the helper to a shared module.
+/// Week-start calculation duplicated here (four lines) rather than enlarging
+/// the API surface. If Plan 2 grows the need, lift to a shared module.
 fn week_start_date(conn: &Connection, today: &str) -> NaiveDate {
     let week_starts_on = crate::settings::get_string(conn, "week_starts_on", "mon");
     let d = match NaiveDate::parse_from_str(today, "%Y-%m-%d") {

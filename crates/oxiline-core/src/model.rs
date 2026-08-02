@@ -6,86 +6,6 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-/// Where a `Task` row came from (`03-data-model.md` §3.5).
-#[derive(Serialize, Deserialize, Type, Clone, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum TaskSource {
-    Manual,
-    Routine,
-}
-
-impl TaskSource {
-    pub fn as_db_str(&self) -> &'static str {
-        match self {
-            TaskSource::Manual => "manual",
-            TaskSource::Routine => "routine",
-        }
-    }
-
-    pub fn from_db_str(s: &str) -> Self {
-        match s {
-            "routine" => TaskSource::Routine,
-            _ => TaskSource::Manual,
-        }
-    }
-}
-
-/// A recurring block of the day — the skeleton of a routine
-/// (`03-data-model.md` §3.3).
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct RoutineBlock {
-    pub id: String,
-    pub group_id: Option<String>,
-    pub title: String,
-    pub category_id: Option<String>,
-    pub start_minute: u16,
-    pub duration_minute: u16,
-    /// bit0=Mon … bit6=Sun. 0b1111111 = daily.
-    pub weekday_mask: u8,
-    pub effective_from: Option<String>,
-    pub effective_until: Option<String>,
-    pub is_active: bool,
-    pub color_override: Option<String>,
-    pub notes: Option<String>,
-    pub sort_order: i64,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-/// A bundle of routine blocks (`03-data-model.md` §3.4). UI is Phase 2 but the
-/// schema exists from v1.
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct RoutineGroup {
-    pub id: String,
-    pub name: String,
-    pub icon: Option<String>,
-    pub is_active: bool,
-    pub sort_order: i64,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-/// A task row — a concrete item for a date (or backlog when `date` is None)
-/// (`03-data-model.md` §3.5). May be a materialized routine occurrence.
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct Task {
-    pub id: String,
-    pub date: Option<String>,
-    pub title: String,
-    pub category_id: Option<String>,
-    pub start_minute: Option<u16>,
-    pub duration_minute: Option<u16>,
-    pub is_done: bool,
-    pub done_at: Option<String>,
-    pub is_skipped: bool,
-    pub source: TaskSource,
-    pub source_routine_block_id: Option<String>,
-    pub notes: Option<String>,
-    pub sort_order: i64,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
 /// Color-tag category (`03-data-model.md` §3.6).
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
 pub struct Category {
@@ -97,23 +17,6 @@ pub struct Category {
     pub is_builtin: bool,
     pub created_at: String,
     pub updated_at: String,
-}
-
-/// Unified view model returned by `get_timeline_for_date`
-/// (`03-data-model.md` §3.11). Virtual occurrences and materialized tasks share
-/// one shape so the frontend need not distinguish.
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct TimelineItem {
-    /// Real `task.id` or `"virtual:{block_id}:{date}"`.
-    pub id: String,
-    pub is_virtual: bool,
-    pub title: String,
-    pub start_minute: Option<u16>,
-    pub duration_minute: Option<u16>,
-    pub category_id: Option<String>,
-    pub is_done: bool,
-    pub is_skipped: bool,
-    pub origin_routine_block_id: Option<String>,
 }
 
 /// "What is happening now + next" derived from the recording layer (active
@@ -139,27 +42,6 @@ pub struct NowEntry {
     pub remaining_minute: Option<i64>,
 }
 
-/// A reusable card signature for quick-add autocomplete (`cards::suggest`).
-///
-/// Merges on-demand templates (`routine_blocks` with `weekday_mask == 0`)
-/// with distinct historical titles drawn from past `tasks` and recurring
-/// `routine_blocks`. Selecting one prefills a new task
-/// (title/category/duration/notes) instead of retyping it (`07-ui-screens-and-flows.md` §7.5).
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct CardSuggestion {
-    pub title: String,
-    pub category_id: Option<String>,
-    pub duration_minute: Option<u16>,
-    pub notes: Option<String>,
-    /// `true` when this is a curated on-demand template (a `routine_block`
-    /// with `weekday_mask == 0`); `false` for an aggregated history entry.
-    pub is_template: bool,
-    /// The originating `routine_block.id` when this suggestion is a template
-    /// or a recurring routine; `None` for task-only history.
-    pub template_id: Option<String>,
-    pub last_used_at: Option<String>,
-}
-
 /// Typed snapshot of all known settings (avoids `serde_json::Value` which does
 /// not implement `specta::Type`).
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
@@ -176,70 +58,6 @@ pub struct SettingsSnapshot {
     pub onboarding_done: bool,
     pub notifications_enabled: bool,
     pub notification_lead_minutes: u32,
-}
-
-// ---- report types (habit streak / weekly report) -------------------------
-
-/// Per-day completion breakdown for reports (`reports::day_breakdown`).
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct DayBreakdown {
-    pub date: String,
-    pub done: u32,
-    pub skipped: u32,
-    pub not_recorded: u32,
-    pub upcoming: u32,
-    pub completion_rate: Option<f64>,
-    pub categories: Vec<CategoryBreakdown>,
-}
-
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct CategoryBreakdown {
-    pub category_id: Option<String>,
-    /// Localized at the display layer when empty (no category).
-    pub category_name: String,
-    pub done: u32,
-    pub skipped: u32,
-    pub not_recorded: u32,
-    pub completion_rate: Option<f64>,
-}
-
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct DayTotals {
-    pub done: u32,
-    pub skipped: u32,
-    pub not_recorded: u32,
-    pub upcoming: u32,
-}
-
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct WeekReport {
-    pub week_start: String,
-    pub week_end: String,
-    pub days: Vec<DayBreakdown>,
-    pub totals: DayTotals,
-    pub completion_rate: Option<f64>,
-    pub prev_completion_rate: Option<f64>,
-    pub categories: Vec<CategoryBreakdown>,
-    pub streaks: Vec<RoutineStreak>,
-}
-
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct RangeReport {
-    pub from: String,
-    pub to: String,
-    pub days: Vec<DayBreakdown>,
-    pub totals: DayTotals,
-    pub completion_rate: Option<f64>,
-    pub categories: Vec<CategoryBreakdown>,
-    pub streaks: Vec<RoutineStreak>,
-}
-
-#[derive(Serialize, Deserialize, Type, Clone, Debug)]
-pub struct RoutineStreak {
-    pub routine_id: String,
-    pub title: String,
-    pub current: u32,
-    pub last_done_date: Option<String>,
 }
 
 // ---- recording layer (docs/superpowers/specs/2026-08-01-record-layer-design.md §5.4) ----

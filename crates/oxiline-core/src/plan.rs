@@ -424,7 +424,7 @@ fn options_for(conn: &Connection, plan_id: &str) -> Result<Vec<Activity>> {
 /// record (priority — the ground truth of what the user is doing) or, failing
 /// that, the unresolved plan slot whose window contains `now_minute`; `next`
 /// is the closest future unresolved plan slot today. Replaces the legacy
-/// task/routine `timeline::get_now_context`. Shared by the notifier, the tray
+/// task/routine timeline. Shared by the notifier, the tray
 /// menu, and the `oxiline now` CLI command.
 pub fn now_summary(conn: &Connection, now_minute: u16) -> Result<NowSummary> {
     let date = util::today_local();
