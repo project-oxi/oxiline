@@ -31,3 +31,10 @@ export function monthBounds(date: string): { from: string; to: string } {
   const g = monthGrid(date);
   return { from: g[0], to: g[g.length - 1] };
 }
+
+/** Shift `date` by `delta` calendar months, normalized to day 1 of the target
+ *  month (month-grid navigation only cares about year/month). */
+export function shiftMonth(date: string, delta: number): string {
+  const [y, m] = date.split("-").map(Number);
+  return ymd(new Date(y, m - 1 + delta, 1));
+}

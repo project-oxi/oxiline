@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { useTimelineRange, useCategories } from "../hooks";
 import { useUi, todayStr, shift } from "../lib/store";
 import { categoryById, categoryColor } from "../lib/colors";
-import { monthBounds, monthGrid } from "../lib/calendar";
+import { monthBounds, monthGrid, shiftMonth } from "../lib/calendar";
+
 export function Header() {
   const { t, i18n } = useTranslation();
   const { date, view, setView, setDate, shiftDate, setPaletteOpen, setPreferencesOpen, setRoutineManagerOpen } = useUi();
@@ -88,9 +89,9 @@ export function Header() {
             {calOpen && (
               <div className="date-popover w-[268px]" role="dialog" aria-label="날짜 선택">
                 <div className="mb-2 flex items-center gap-1">
-                  <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shift(calMonth, -35))} aria-label="이전 달">‹</button>
+                  <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shiftMonth(calMonth, -1))} aria-label="이전 달">‹</button>
                   <span className="min-w-0 flex-1 text-center text-[13px] font-semibold text-text">{calYy}년 {calMm}월</span>
-                  <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shift(calMonth, 35))} aria-label="다음 달">›</button>
+                  <button className="rounded px-2 py-1 text-text-muted hover:bg-surface-sunken" onClick={() => setCalMonth(shiftMonth(calMonth, 1))} aria-label="다음 달">›</button>
                   <button className="ml-1 rounded px-2 py-1 text-[11px] font-medium text-interactive-primary hover:bg-surface-sunken" onClick={() => { setCalMonth(today); setDate(today); setView("today"); setCalOpen(false); }}>오늘</button>
                 </div>
                 <div className="date-popover-grid mb-1 text-center text-[10px] font-semibold text-text-subtle">
