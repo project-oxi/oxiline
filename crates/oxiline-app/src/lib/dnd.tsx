@@ -2,10 +2,12 @@ import {
   DndContext,
   DragEndEvent,
   PointerSensor,
+  rectIntersection,
   useSensor,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import type { ReactNode } from "react";
-import { useCreatePlan, useUpdateTask } from "../hooks";
+import { useAddPlanOption, useCreatePlan, useUpdateTask } from "../hooks";
 import { api } from "./api";
 
 export const SNAP_MINUTES = 5;
@@ -14,10 +16,28 @@ export const SNAP_MINUTES = 5;
 export function DndProvider({ children }: { children: ReactNode }) {
   const upd = useUpdateTask();
   const createPlan = useCreatePlan();
+  const addOption = useAddPlanOption();
 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 8 },
   });
+
+  // Plan cards are droppables nested INSIDE the timeline droppable.
+  // plain rectIntersection ranks by intersection area, so the large timeline
+  // would always win over a small card — making drop-to-merge impossible.
+  // Prefer the plan-slot when present so the card "captures" the pointer.
+  // Scoped to activity draggables only: backlog/block must keep resolving to
+  // the timeline droppable so their update path keeps a valid `date`.
+  const nestedCollision: CollisionDetection = (args) => {
+    if (args.active.data.current?.kind !== "activity") return rectIntersection(args);
+    const collisions = rectIntersection(args);
+    const planSlot = collisions.find(
+      (c) =>
+        (c.data as { droppableContainer?: { data?: { current?: { kind?: string } } } })
+          ?.droppableContainer?.data?.current?.kind === "plan-slot",
+    );
+    return planSlot ? [planSlot] : collisions;
+  };
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -25,10 +45,11 @@ export function DndProvider({ children }: { children: ReactNode }) {
     const data = active.data.current;
     if (!data) return;
     const overData = over.data.current as
-      | { kind: string; date?: string; pxPerMin?: number; dayStartMin?: number }
+      | { kind: string; date?: string; pxPerMin?: number; dayStartMin?: number; planId?: string }
       | undefined;
-    if (!overData || overData.kind !== "timeline-slot") return;
-
+    if (!overData) return;
+    const acceptsPlanSlot = data.kind === "activity";
+    if (overData.kind !== "timeline-slot" && !(acceptsPlanSlot && overData.kind === "plan-slot")) return;
     const dropMinute = computeDropMinute(event, overData);
 
     if (data.kind === "backlog") {
@@ -55,20 +76,25 @@ export function DndProvider({ children }: { children: ReactNode }) {
         startMinute: dropMinute,
       });
     } else if (data.kind === "activity") {
-      // Library card → timetable: create a one-shot plan at the drop minute.
-      createPlan.mutate({
-        date: overData.date as string,
-        start_minute: dropMinute,
-        duration_minute: 60,
-        weekday_mask: 0,
-        title: null,
-        activity_ids: [(data as { activityId: string }).activityId],
-      });
+      const activityIds = (data as { activityIds: string[] }).activityIds;
+      if (overData.kind === "plan-slot") {
+        const planId = (overData as { planId: string }).planId;
+        activityIds.forEach((aid) => addOption.mutate({ planId, activityId: aid }));
+      } else {
+        createPlan.mutate({
+          date: overData.date as string,
+          start_minute: dropMinute,
+          duration_minute: 60,
+          weekday_mask: 0,
+          title: null,
+          activity_ids: activityIds,
+        });
+      }
     }
   }
 
   return (
-    <DndContext sensors={[pointerSensor]} onDragEnd={handleDragEnd}>
+    <DndContext sensors={[pointerSensor]} collisionDetection={nestedCollision} onDragEnd={handleDragEnd}>
       {children}
     </DndContext>
   );

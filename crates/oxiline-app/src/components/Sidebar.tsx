@@ -5,6 +5,7 @@
  *   2. ActivityLibrary — each active activity with a neutral weekly bar
  *      (target tick, 남음/달성/+Xm), drag source for Task 7.
  */
+import { useState } from "react";
 import { useActivities, useCompliance, useRecordState, useStopRecord } from "../hooks";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
 import { useDraggable } from "@dnd-kit/core";
@@ -80,6 +81,20 @@ function ActivityLibrary() {
   const weekQ = useCompliance("week");
   const byId = new Map(weekQ.data?.map((c) => [c.activity.id, c]));
   const activities = activitiesQ.data ?? [];
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function handleSelect(id: string, additive: boolean) {
+    if (additive) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    } else {
+      setSelected(new Set([id]));
+    }
+  }
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
@@ -92,9 +107,20 @@ function ActivityLibrary() {
           활동을 추가하세요
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div
+          className="flex flex-col gap-2"
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setSelected(new Set());
+          }}
+        >
           {activities.map((a) => (
-            <DraggableActivity key={a.id} activity={a} compliance={byId.get(a.id)} />
+            <DraggableActivity
+              key={a.id}
+              activity={a}
+              compliance={byId.get(a.id)}
+              selectedSet={selected}
+              onSelect={handleSelect}
+            />
           ))}
         </div>
       )}
@@ -102,10 +128,22 @@ function ActivityLibrary() {
   );
 }
 
-function DraggableActivity({ activity, compliance }: { activity: Activity; compliance?: Compliance }) {
+function DraggableActivity({
+  activity,
+  compliance,
+  selectedSet,
+  onSelect,
+}: {
+  activity: Activity;
+  compliance?: Compliance;
+  selectedSet: Set<string>;
+  onSelect: (id: string, additive: boolean) => void;
+}) {
+  const isSelected = selectedSet.has(activity.id);
+  const ids = isSelected && selectedSet.size > 0 ? [...selectedSet] : [activity.id];
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `activity-${activity.id}`,
-    data: { kind: "activity", activityId: activity.id },
+    data: { kind: "activity", activityIds: ids },
   });
   const ratio = compliance?.ratio ?? 0;
   const pct = Math.min(100, Math.round(ratio * 100));
@@ -126,13 +164,17 @@ function DraggableActivity({ activity, compliance }: { activity: Activity; compl
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""}`}
+      onClick={(e) => onSelect(activity.id, e.metaKey || e.ctrlKey)}
+      className={`cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""} ${isSelected ? "ring-2 ring-interactive-primary" : ""}`}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
     >
       <div className="flex items-center justify-between text-[12px]">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: hueVar(activity.hue_label) }} />
           {activity.name}
+          {selectedSet.size > 1 && isSelected && (
+            <span className="rounded bg-interactive-primary px-1 text-[9px] font-semibold text-text-inverse">{selectedSet.size}</span>
+          )}
         </span>
         <span className="text-[10px] text-text-subtle">
           {activity.target_minutes_weekly ? `주 ${hmm(activity.target_minutes_weekly * 60)}` : ""}

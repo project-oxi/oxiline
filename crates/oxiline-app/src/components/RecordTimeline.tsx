@@ -150,39 +150,47 @@ export function RecordTimeline() {
 function PlanLane({ slots, dayStartMin }: { slots: PlanSlot[]; dayStartMin: number }) {
   return (
     <div className="relative">
-      {slots.map((s) => {
-        const top = (s.start_minute - dayStartMin) * PX_PER_MIN;
-        const height = s.duration_minute * PX_PER_MIN;
-        return (
-          <div
-            key={s.plan_id}
-            className="absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5"
-            style={{ top, height }}
-          >
-            <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
-              <span>
-                {hhmm(s.start_minute)} · {Math.round(s.duration_minute)}m
-              </span>
-              {s.options.length > 1 && <span className="font-semibold">OR</span>}
+      {slots.map((s) => (
+        <PlanCard key={s.plan_id} s={s} dayStartMin={dayStartMin} />
+      ))}
+    </div>
+  );
+}
+
+function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `plan-${s.plan_id}`,
+    data: { kind: "plan-slot", planId: s.plan_id },
+  });
+  const top = (s.start_minute - dayStartMin) * PX_PER_MIN;
+  const height = s.duration_minute * PX_PER_MIN;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 ${isOver ? "ring-2 ring-interactive-primary" : ""}`}
+      style={{ top, height }}
+    >
+      <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
+        <span>
+          {hhmm(s.start_minute)} · {Math.round(s.duration_minute)}m
+        </span>
+        {s.options.length > 1 && <span className="font-semibold">OR</span>}
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {s.options.map((o) => {
+          const picked = s.resolved_by?.activity_id === o.id;
+          return (
+            <div key={o.id} className="flex items-center gap-1.5 text-[12px]">
+              <span
+                className="inline-block h-2 w-2 rounded-full border"
+                style={{ borderColor: hueVar(o.hue_label), background: picked ? hueVar(o.hue_label) : "transparent" }}
+              />
+              <span className={picked ? "text-text" : "text-text-muted"}>{o.name}</span>
+              {picked && <span className="text-[10px] text-text-subtle">→실행</span>}
             </div>
-            <div className="flex flex-col gap-0.5">
-              {s.options.map((o) => {
-                const picked = s.resolved_by?.activity_id === o.id;
-                return (
-                  <div key={o.id} className="flex items-center gap-1.5 text-[12px]">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full border"
-                      style={{ borderColor: hueVar(o.hue_label), background: picked ? hueVar(o.hue_label) : "transparent" }}
-                    />
-                    <span className={picked ? "text-text" : "text-text-muted"}>{o.name}</span>
-                    {picked && <span className="text-[10px] text-text-subtle">→실행</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
