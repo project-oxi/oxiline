@@ -39,12 +39,12 @@
 - **할 일**: #2 .app smoke에 포함 — ⌘⇧O를 여러 번 눌렀을 때 녹화 세션/슬롯 데이터가 최신으로 갱신되는지 확인(숨김 상태에서 stale 안 되는지).
 - **왜**: 표시 시점 최신 데이터 보장이 HUD의 핵심 계약.
 
-### 4. [기술부채] 다중선택 드롭-병합 sort_order 경쟁 (parked)
-- **상황**: 다중 활동을 기존 카드에 드롭하면 dnd.tsx가 N개의 `add_plan_option`을 **개별 풀 커넥션**으로 발화. 코어 `plan::add_option`의 `MAX(sort_order)+1` 읽기+쓰기가 비원자(트랜잭션 아님)라 WAL에서 동시 커넥션이 같은 MAX를 읽어 sort_order 충돌 가능.
-- **영향**: 표시 순서만 비결정적(데이터 손상 无, `busy_timeout`이 쓰기 직렬화, `→실행` 해석은 activity_id 사용). **머지 안막음**.
-- **할 일**: 벌크 명령 `add_plan_options(plan_id, activity_ids: Vec<String>)` 신설 — 단일 트랜잭션에서 순차 sort_order 배정(`update_plan`의 옵션 재작성 패턴 참고). 코어 → commands.rs/lib.rs 등록 → api.ts/hooks.ts → dnd.tsx의 `forEach(addOption)`를 1회 호출로 교체.
-- **파일**: `crates/oxiline-core/src/plan.rs`, `commands.rs`, `lib.rs`, `api.ts`, `hooks.ts`, `lib/dnd.tsx`(드롭-병합 분기).
-- **확인**: 동시 다중 추가 시 sort_order가 단조증가/유일.
+### 4. ✅ [기술부채] 다중선택 드롭-병합 sort_order 경쟁 — 완료 (2026-08-02)
+- **구현**: 벌크 `add_plan_options(plan_id, activity_ids)` 신설. 단일 옵션 경로(`add_option`/`add_plan_option`/`useAddPlanOption`/`find_option`) 완전 제거(dead code).
+- **핵심 — `BEGIN IMMEDIATE`**: `Transaction::new_unchecked(conn, TransactionBehavior::Immediate)`로 read 전에 쓰기락 선점. **DEFERRED(`unchecked_transaction()`)로는 경쟁 잔존** — `SELECT MAX`가 쓰기락 없이 stale WAL 스냅샷으로 읽혀 동시 커넥션이 같은 MAX 읽음. `update_plan`의 DEFERRED가 안전한 건 blind DELETE+INSERT라 stale-read 의존성이 없어서임(본 사례의 모델 아님). 상세: spec `docs/superpowers/specs/2026-08-02-bulk-plan-options-design.md` §1.0.
+- **검증**: 코어 통합 테스트 5건(단일 4 + 동시성 스트레스 1). 동시성 테스트는 DEFERRED에서 `"database is locked"`(SQLITE_BUSY_SNAPSHOT)로 실패 → IMMEDIATE에서 4스레드×25추가=101개 sort_order 전역 유일·에러 제거로 판별력 경험적 입증.
+- **커밋**: `aff2c34`(core) · `4e09c1a`(app cmd) · `513f035`(frontend). plan: `docs/superpowers/plans/2026-08-02-bulk-plan-options.md`.
+- **파일**: `crates/oxiline-core/src/plan.rs`(+`tests/plan.rs`), `src-tauri/src/commands.rs`, `src-tauri/src/lib.rs`, `src/lib/api.ts`, `src/hooks.ts`, `src/lib/dnd.tsx`.
 
 ### 5. [큰 작업] Task 8 — 레거시 전면 철거
 > ⚠️ **의존성 주의**: `timeline::get_now_context`가 아직 notifier/tray/CLI에 의존 중이라 `timeline.rs` 단순 삭제 불가. 선결 과제 있음.
