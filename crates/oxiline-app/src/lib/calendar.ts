@@ -26,7 +26,7 @@ export function monthGrid(date: string): string[] {
   return cells;
 }
 
-/** `[firstCell, lastCell]` range for `useTimelineRange` (covers adjacent-month spillover). */
+/** `[firstCell, lastCell]` range for `useRecordsRange` (covers adjacent-month spillover). */
 export function monthBounds(date: string): { from: string; to: string } {
   const g = monthGrid(date);
   return { from: g[0], to: g[g.length - 1] };

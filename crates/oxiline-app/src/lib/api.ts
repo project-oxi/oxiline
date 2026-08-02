@@ -6,24 +6,16 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   Activity,
   ActivityInput,
-  CardSuggestion,
+  ActivityRecord,
   Category,
   Compliance,
   Plan,
-  PlanOption,
   PlanInput,
+  PlanOption,
   PlanSlot,
-  RangeReport,
-  ActivityRecord,
   RecordState,
-  RoutineBlock,
-  RoutineGroup,
-  RoutineStreak,
   Scope,
   Settings,
-  Task,
-  TimelineItem,
-  WeekReport,
 } from "../types";
 
 export const api = {
@@ -33,69 +25,8 @@ export const api = {
     invoke<Category>("create_category", { name, colorHue, icon }),
   deleteCategory: (id: string) => invoke<void>("delete_category", { id }),
 
-  // routines
-  listRoutines: (activeOnly: boolean) =>
-    invoke<RoutineBlock[]>("list_routines", { activeOnly }),
-  createRoutine: (r: {
-    title: string;
-    startMinute: number;
-    durationMinute: number;
-    weekdayMask: number;
-    categoryId: string | null;
-    effectiveFrom: string | null;
-    effectiveUntil: string | null;
-    notes: string | null;
-  }) => invoke<RoutineBlock>("create_routine", r),
-  updateRoutine: (
-    id: string,
-    patch: Partial<{
-      title: string;
-      startMinute: number;
-      durationMinute: number;
-      weekdayMask: number;
-      categoryId: string | null;
-      notes: string | null;
-    }>,
-  ) =>
-    invoke<RoutineBlock>("update_routine", {
-      id,
-      ...patch,
-      // explicit Option<Option> semantics: pass through as-is
-    }),
-  setRoutineActive: (id: string, active: boolean) =>
-    invoke<RoutineBlock>("set_routine_active", { id, active }),
-  deleteRoutine: (id: string) => invoke<void>("delete_routine", { id }),
 
-  // timeline
-  getTimeline: (date: string) =>
-    invoke<TimelineItem[]>("get_timeline", { date }),
 
-  // tasks
-  listBacklog: () => invoke<Task[]>("list_backlog"),
-  createTask: (t: {
-    date: string | null;
-    title: string;
-    categoryId: string | null;
-    startMinute: number | null;
-    durationMinute: number | null;
-    notes: string | null;
-  }) => invoke<Task>("create_task", t),
-  updateTask: (
-    id: string,
-    patch: Partial<{
-      title: string;
-      date: string | null;
-      startMinute: number | null;
-      durationMinute: number | null;
-      categoryId: string | null;
-      notes: string | null;
-    }>,
-  ) => invoke<Task>("update_task", { id, ...patch }),
-  setTaskDone: (id: string, done: boolean) =>
-    invoke<Task>("set_task_done", { id, done }),
-  setTaskSkipped: (id: string, skipped: boolean) =>
-    invoke<Task>("set_task_skipped", { id, skipped }),
-  deleteTask: (id: string) => invoke<void>("delete_task", { id }),
 
   // settings
   getSettings: () => invoke<Settings>("get_settings"),
@@ -112,28 +43,8 @@ export const api = {
   isNotificationPermissionGranted: () => invoke<boolean>("is_notification_permission_granted"),
   openNotificationSettings: () => invoke<void>("open_notification_settings"),
 
-  // drag-and-drop
-  materializeIfVirtual: (id: string) => invoke<string>("materialize_if_virtual", { id }),
 
-  // quick-add suggestions (templates + history autocomplete)
-  suggestCards: (limit = 0) => invoke<CardSuggestion[]>("suggest_cards", { limit }),
 
-  // routine groups
-  listRoutineGroups: () => invoke<RoutineGroup[]>("list_routine_groups"),
-  createRoutineGroup: (name: string, icon: string | null) =>
-    invoke<RoutineGroup>("create_routine_group", { name, icon }),
-  updateRoutineGroup: (
-    id: string,
-    patch: { name?: string; icon?: string | null; sortOrder?: number },
-  ) => invoke<RoutineGroup>("update_routine_group", { id, ...patch }),
-  deleteRoutineGroup: (id: string) => invoke<void>("delete_routine_group", { id }),
-  setRoutineGroupActive: (id: string, active: boolean) =>
-    invoke<RoutineGroup>("set_routine_group_active", { id, active }),
-  // reports
-  getWeekReport: () => invoke<WeekReport>("get_week_report"),
-  getRangeReport: (from: string, to: string) =>
-    invoke<RangeReport>("get_range_report", { from, to }),
-  getRoutineStreaks: () => invoke<RoutineStreak[]>("get_routine_streaks"),
   // recording — activities
   listActivities: (activeOnly: boolean) =>
     invoke<Activity[]>("list_activities", { activeOnly }),
