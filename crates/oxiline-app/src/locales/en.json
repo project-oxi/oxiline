@@ -29,12 +29,10 @@
     "left": "{{n}} min left"
   },
   "palette": {
-    "placeholder": "Add or search a task…",
-    "hint": "Enter to add · @time to schedule",
-    "addToList": "Add to backlog",
+    "placeholder": "Record or schedule an activity…",
+    "hint": "Enter to record · @HH:MM to schedule",
     "noMatch": "No matches",
-    "title": "Quick add",
-    "template": "Template"
+    "title": "Quick add"
   },
   "routine": {
     "title": "Routines",

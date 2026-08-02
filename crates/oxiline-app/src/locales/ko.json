@@ -29,12 +29,10 @@
     "left": "{{n}}분 남음"
   },
   "palette": {
-    "placeholder": "할일 추가 또는 검색…",
-    "hint": "Enter로 추가 · @시간 으로 예약",
-    "addToList": "백로그에 추가",
+    "placeholder": "활동 녹화 또는 예약…",
+    "hint": "Enter로 녹화 · @HH:MM으로 예약",
     "noMatch": "일치하는 항목이 없어요",
-    "title": "빠른 추가",
-    "template": "템플릿"
+    "title": "빠른 추가"
   },
   "routine": {
     "title": "루틴 관리",

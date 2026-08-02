@@ -287,6 +287,14 @@ export function useStopRecord() {
   return useMutation({ mutationFn: () => api.stopRecord(), onSuccess: () => inv() });
 }
 
+export function useCreateActivity() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.createActivity>[0]) => api.createActivity(input),
+    onSuccess: () => inv(),
+  });
+}
+
 export function useCreatePlan() {
   const qc = useQueryClient();
   return useMutation({
