@@ -13,7 +13,7 @@
 
 use crate::activities::row_from as activity_row_from;
 use crate::error::{CoreError, Result};
-use crate::model::{Activity, NowSummary, NowEntry, Plan, PlanInput, PlanOption, PlanSlot};
+use crate::model::{Activity, NowEntry, NowSummary, Plan, PlanInput, PlanOption, PlanSlot};
 use crate::util;
 use chrono::{Datelike, NaiveDate, Utc};
 use rusqlite::{Connection, Transaction, TransactionBehavior, params};
@@ -475,5 +475,8 @@ pub fn now_summary(conn: &Connection, now_minute: u16) -> Result<NowSummary> {
 }
 
 fn first_option_title(slot: &PlanSlot) -> String {
-    slot.options.first().map(|a| a.name.clone()).unwrap_or_default()
+    slot.options
+        .first()
+        .map(|a| a.name.clone())
+        .unwrap_or_default()
 }

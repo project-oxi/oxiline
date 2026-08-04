@@ -33,15 +33,13 @@ pub fn row_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<Activity> {
 pub fn list_activities(conn: &Connection, active_only: bool) -> Result<Vec<Activity>> {
     let mut out = Vec::new();
     if active_only {
-        let mut stmt = conn.prepare(
-            "SELECT * FROM activities WHERE is_active = 1 ORDER BY sort_order, name",
-        )?;
+        let mut stmt =
+            conn.prepare("SELECT * FROM activities WHERE is_active = 1 ORDER BY sort_order, name")?;
         for r in stmt.query_map([], row_from)? {
             out.push(r?);
         }
     } else {
-        let mut stmt =
-            conn.prepare("SELECT * FROM activities ORDER BY sort_order, name")?;
+        let mut stmt = conn.prepare("SELECT * FROM activities ORDER BY sort_order, name")?;
         for r in stmt.query_map([], row_from)? {
             out.push(r?);
         }
@@ -98,21 +96,20 @@ pub fn create_activity(conn: &Connection, input: ActivityInput) -> Result<Activi
             |r| r.get(0),
         )
         .unwrap_or(0);
-    let name = input.name.clone().ok_or_else(|| {
-        CoreError::InvalidArgument("activity.name is required".into())
-    })?;
+    let name = input
+        .name
+        .clone()
+        .ok_or_else(|| CoreError::InvalidArgument("activity.name is required".into()))?;
     // Defaults supplied at the call boundary: is_active defaults to true
     // when the caller passes None; sort_order defaults to the next order.
-    let is_active: i64 = if input.is_active.unwrap_or(true) { 1 } else { 0 };
+    let is_active: i64 = if input.is_active.unwrap_or(true) {
+        1
+    } else {
+        0
+    };
     let sort_order = input.sort_order.unwrap_or(next_order);
-    let daily: Option<i64> = input
-        .target_minutes_daily
-        .flatten()
-        .map(|v| v as i64);
-    let weekly: Option<i64> = input
-        .target_minutes_weekly
-        .flatten()
-        .map(|v| v as i64);
+    let daily: Option<i64> = input.target_minutes_daily.flatten().map(|v| v as i64);
+    let weekly: Option<i64> = input.target_minutes_weekly.flatten().map(|v| v as i64);
     conn.execute(
         "INSERT INTO activities (id, name, hue_label, icon, category_id,
             target_minutes_daily, target_minutes_weekly,
@@ -139,11 +136,7 @@ pub fn create_activity(conn: &Connection, input: ActivityInput) -> Result<Activi
 /// outer `Some(Some(v))` => set. Other fields use plain Option:
 /// `None` => leave unchanged; `Some(v)` => set (including `Some(None)`
 /// for nullable columns like `hue_label`).
-pub fn update_activity(
-    conn: &Connection,
-    id: &str,
-    input: ActivityInput,
-) -> Result<Activity> {
+pub fn update_activity(conn: &Connection, id: &str, input: ActivityInput) -> Result<Activity> {
     // Verify the activity exists so we can return NotFound for unknown ids
     // instead of silently no-op'ing the UPDATE.
     let _existing = get_activity(conn, id)?;
@@ -200,10 +193,7 @@ pub fn update_activity(
         return get_activity(conn, id);
     }
 
-    let sql = format!(
-        "UPDATE activities SET {} WHERE id = ?",
-        sets.join(", ")
-    );
+    let sql = format!("UPDATE activities SET {} WHERE id = ?", sets.join(", "));
     let mut params_with_id: Vec<&dyn rusqlite::ToSql> = Vec::new();
     for b in bind.iter() {
         params_with_id.push(b.as_ref());
@@ -235,10 +225,7 @@ pub fn delete_activity(conn: &Connection, id: &str, force: bool) -> Result<()> {
 
     let tx = conn.unchecked_transaction()?;
     if count > 0 {
-        tx.execute(
-            "DELETE FROM records WHERE activity_id = ?1",
-            params![id],
-        )?;
+        tx.execute("DELETE FROM records WHERE activity_id = ?1", params![id])?;
     }
     let n = tx.execute("DELETE FROM activities WHERE id = ?1", params![id])?;
     if n == 0 {

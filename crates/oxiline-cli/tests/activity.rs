@@ -82,12 +82,14 @@ fn activity_list_after_add() {
         "expected at least 2 activities, got {}",
         arr.len()
     );
-    assert!(arr
-        .iter()
-        .any(|a| a.get("name").and_then(|v| v.as_str()) == Some("코딩")));
-    assert!(arr
-        .iter()
-        .any(|a| a.get("name").and_then(|v| v.as_str()) == Some("독서")));
+    assert!(
+        arr.iter()
+            .any(|a| a.get("name").and_then(|v| v.as_str()) == Some("코딩"))
+    );
+    assert!(
+        arr.iter()
+            .any(|a| a.get("name").and_then(|v| v.as_str()) == Some("독서"))
+    );
     let _keep_alive: TempDir = tmp;
 }
 
@@ -198,6 +200,9 @@ fn activity_rm_force_required_when_records_exist() {
     let stdout: serde_json::Value =
         serde_json::from_slice(&out2.stdout).expect("rm --force --json must emit JSON");
     assert_eq!(stdout.get("removed").and_then(|v| v.as_bool()), Some(true));
-    assert_eq!(stdout.get("id").and_then(|v| v.as_str()), Some(a.id.as_str()));
+    assert_eq!(
+        stdout.get("id").and_then(|v| v.as_str()),
+        Some(a.id.as_str())
+    );
     let _keep_alive: TempDir = tmp;
 }

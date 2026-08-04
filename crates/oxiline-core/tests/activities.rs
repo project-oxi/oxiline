@@ -59,10 +59,8 @@ fn resolve_activity_skips_inactive_duplicates() {
         sort_order: None,
     };
 
-    let active = oxiline_core::activities::create_activity(&c, input("독서"))
-        .unwrap();
-    let inactive = oxiline_core::activities::create_activity(&c, input("독서"))
-        .unwrap();
+    let active = oxiline_core::activities::create_activity(&c, input("독서")).unwrap();
+    let inactive = oxiline_core::activities::create_activity(&c, input("독서")).unwrap();
     // Soft-archive the duplicate.
     oxiline_core::activities::update_activity(
         &c,
@@ -184,7 +182,9 @@ fn delete_activity_refuses_with_history() {
 
     // Force: records + activity gone in one transaction.
     oxiline_core::activities::delete_activity(&c, &a.id, true).unwrap();
-    assert!(oxiline_core::activities::list_activities(&c, false)
-        .unwrap()
-        .is_empty());
+    assert!(
+        oxiline_core::activities::list_activities(&c, false)
+            .unwrap()
+            .is_empty()
+    );
 }

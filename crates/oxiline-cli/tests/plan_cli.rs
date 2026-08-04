@@ -35,8 +35,17 @@ fn plan_add_materializes_slot_with_options() {
     // Recurring Monday plan (bit 0), 11:00–13:00, 코딩 OR 독서.
     let add = oxiline_cmd(&db)
         .args([
-            "plan", "add", "--at", "11:00", "--duration", "120", "--days", "mon",
-            "--options", "코딩,독서", "--json",
+            "plan",
+            "add",
+            "--at",
+            "11:00",
+            "--duration",
+            "120",
+            "--days",
+            "mon",
+            "--options",
+            "코딩,독서",
+            "--json",
         ])
         .output()
         .unwrap();
@@ -85,8 +94,17 @@ fn plan_edit_preserves_time_duration_days() {
         .success();
     let add = oxiline_cmd(&db)
         .args([
-            "plan", "add", "--at", "9:00", "--duration", "90", "--days", "wed",
-            "--options", "코딩", "--json",
+            "plan",
+            "add",
+            "--at",
+            "9:00",
+            "--duration",
+            "90",
+            "--days",
+            "wed",
+            "--options",
+            "코딩",
+            "--json",
         ])
         .output()
         .unwrap();
@@ -140,7 +158,15 @@ fn plan_rm_removes_plan() {
         .assert()
         .success();
     let add = oxiline_cmd(&db)
-        .args(["plan", "add", "--days", "daily", "--options", "코딩", "--json"])
+        .args([
+            "plan",
+            "add",
+            "--days",
+            "daily",
+            "--options",
+            "코딩",
+            "--json",
+        ])
         .output()
         .unwrap();
     assert!(add.status.success());

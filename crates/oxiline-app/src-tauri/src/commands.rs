@@ -7,8 +7,8 @@
 //! (`04-architecture.md` §4.6). Errors are surfaced as `Result<_, String>`.
 
 use oxiline_core::model::{
-    Activity, ActivityInput, Category, Compliance, Plan, PlanInput, PlanOption, PlanSlot,
-    Record, RecordState, Scope,
+    Activity, ActivityInput, Category, Compliance, Plan, PlanInput, PlanOption, PlanSlot, Record,
+    RecordState, Scope,
 };
 use oxiline_core::{activities, categories, plan, record, settings, util};
 use serde_json::Value;
@@ -136,7 +136,6 @@ pub fn open_notification_settings(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| format!("opener: {e}"))
 }
 
-
 // ---- recording layer: activities / plans / records (Plan 2 Task 2) --------
 
 #[tauri::command]
@@ -159,7 +158,11 @@ pub fn resolve_activity(state: State<AppState>, query: String) -> Result<Activit
 
 #[tauri::command]
 #[specta::specta]
-pub fn update_activity(state: State<AppState>, id: String, input: ActivityInput) -> Result<Activity, String> {
+pub fn update_activity(
+    state: State<AppState>,
+    id: String,
+    input: ActivityInput,
+) -> Result<Activity, String> {
     activities::update_activity(&state.conn(), &id, input).map_err(map_err)
 }
 
@@ -173,7 +176,13 @@ pub fn delete_activity(state: State<AppState>, id: String, force: bool) -> Resul
 #[specta::specta]
 pub fn start_record(state: State<AppState>, activity_id: String) -> Result<RecordState, String> {
     let conn = state.conn();
-    record::start(&conn, &activity_id, chrono::Utc::now(), &util::today_local()).map_err(map_err)
+    record::start(
+        &conn,
+        &activity_id,
+        chrono::Utc::now(),
+        &util::today_local(),
+    )
+    .map_err(map_err)
 }
 
 #[tauri::command]

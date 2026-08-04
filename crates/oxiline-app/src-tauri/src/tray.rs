@@ -117,10 +117,7 @@ fn autostart_enabled(app: &AppHandle) -> bool {
 
 fn now_summary(app: &AppHandle) -> String {
     let state = app.state::<AppState>();
-    match oxiline_core::plan::now_summary(
-        &state.conn(),
-        oxiline_core::util::now_minute_local(),
-    ) {
+    match oxiline_core::plan::now_summary(&state.conn(), oxiline_core::util::now_minute_local()) {
         Ok(ctx) => {
             if let Some(c) = &ctx.current {
                 let rem = c
