@@ -104,8 +104,8 @@ jobs:
         with:
           name: oxiline-app-bundle
           path: |
-            crates/oxiline-app/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            crates/oxiline-app/src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+            target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
 
   release:
     name: GitHub Release
