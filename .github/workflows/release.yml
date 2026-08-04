@@ -8,6 +8,16 @@ on:
 permissions:
   contents: write
 
+# Force the workflow to pin Rust 1.85 across all `cargo` calls. The repo's
+# `rust-toolchain.toml` declares 1.89 (used by dev CI), but the release
+# pipeline installs 1.85 + the per-target stdlib via `dtolnay/rust-toolchain`.
+# Without this env, `rust-toolchain.toml` overrides the dtolnay install and
+# `cargo build --target x86_64-apple-darwin` fails with "the x86_64-apple-darwin
+# target may not be installed" because the stdlib for that target was added to
+# the 1.85 toolchain, not 1.89.
+env:
+  RUSTUP_TOOLCHAIN: 1.85
+
 jobs:
   cli:
     name: Build CLI binaries
@@ -22,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (1.85 + target stdlib)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.85
@@ -52,10 +62,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
+      - name: Install Rust toolchain (1.85 + universal-apple-darwin stdlib)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.85
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
