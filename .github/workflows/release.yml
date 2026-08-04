@@ -8,15 +8,11 @@ on:
 permissions:
   contents: write
 
-# Match the repo's `rust-toolchain.toml` (1.89). CI on main is already
-# green against 1.89; the release pipeline must use the same toolchain so
-# the workspace's MSRV (`rust-version = "1.89"`) is satisfied. We also need
-# 1.89's apple-darwin target stdlibs installed so that
-# `cargo build --target aarch64-apple-darwin`,
-# `cargo build --target x86_64-apple-darwin`, and Tauri's
-# `--target universal-apple-darwin` can cross-compile.
-env:
-  RUSTUP_TOOLCHAIN: 1.89
+# Toolchain selection is governed by the repo's `rust-toolchain.toml`:
+#   channel = "1.89"             — workspace MSRV (let-chains, etc.)
+#   targets = [aarch64, x86_64]  — apple-darwin stdlib for the matrix jobs
+#   + Tauri's universal-apple-darwin
+# Anything set here would be redundant or shadowed.
 
 jobs:
   cli:
@@ -62,7 +58,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (1.89 + universal-apple-darwin stdlib)
+      - name: Install Rust toolchain (1.89 + apple-darwin stdlibs)
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.89
