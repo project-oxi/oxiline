@@ -8,15 +8,15 @@ on:
 permissions:
   contents: write
 
-# Force the workflow to pin Rust 1.85 across all `cargo` calls. The repo's
-# `rust-toolchain.toml` declares 1.89 (used by dev CI), but the release
-# pipeline installs 1.85 + the per-target stdlib via `dtolnay/rust-toolchain`.
-# Without this env, `rust-toolchain.toml` overrides the dtolnay install and
-# `cargo build --target x86_64-apple-darwin` fails with "the x86_64-apple-darwin
-# target may not be installed" because the stdlib for that target was added to
-# the 1.85 toolchain, not 1.89.
+# Match the repo's `rust-toolchain.toml` (1.89). CI on main is already
+# green against 1.89; the release pipeline must use the same toolchain so
+# the workspace's MSRV (`rust-version = "1.89"`) is satisfied. We also need
+# 1.89's apple-darwin target stdlibs installed so that
+# `cargo build --target aarch64-apple-darwin`,
+# `cargo build --target x86_64-apple-darwin`, and Tauri's
+# `--target universal-apple-darwin` can cross-compile.
 env:
-  RUSTUP_TOOLCHAIN: 1.85
+  RUSTUP_TOOLCHAIN: 1.89
 
 jobs:
   cli:
@@ -32,10 +32,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (1.85 + target stdlib)
+      - name: Install Rust toolchain (1.89 + target stdlib)
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.85
+          toolchain: 1.89
           targets: ${{ matrix.target }}
 
       - name: Cache cargo
@@ -62,10 +62,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (1.85 + universal-apple-darwin stdlib)
+      - name: Install Rust toolchain (1.89 + universal-apple-darwin stdlib)
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.85
+          toolchain: 1.89
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Cache cargo
