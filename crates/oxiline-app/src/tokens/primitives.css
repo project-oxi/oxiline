@@ -1,0 +1,19 @@
+/* ============================================================================
+ * Tier 1 — Primitives (raw OKLCH ramps, DESIGN.md §3.2)
+ *
+ * The only place the warm (hue 95) / cool (hue 265) split happens. Components
+ * never touch these; semantic tokens alias them (see semantic.css). Dark-mode
+ * overrides for this ramp ride along in semantic-dark.css under `.dark`.
+ * ========================================================================== */
+
+:root {
+  --p-neutral-0:   oklch(98.5% 0.004 95);
+  --p-neutral-50:  oklch(95%   0.006 95);
+  --p-neutral-100: oklch(90%   0.007 95);
+  --p-neutral-300: oklch(75%   0.010 95);
+  --p-neutral-500: oklch(55%   0.012 95);
+  --p-neutral-700: oklch(35%   0.012 265);
+  --p-neutral-900: oklch(18%   0.015 265);
+  --p-neutral-950: oklch(13%   0.020 265);
+  --p-neutral-999: oklch(0%    0 0);
+}

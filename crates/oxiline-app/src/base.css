@@ -1,0 +1,60 @@
+/* ============================================================================
+ * Base layer — reset, document, a11y, scrollbars (DESIGN.md §9)
+ *
+ * Generic global styles shared by every window entry. App-specific window
+ * chrome (.hud-window, [data-tauri-drag-region], .date-popover) lives in the
+ * entry stylesheet (styles.css), not here.
+ * ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Smooth theme crossfade (§8). */
+  transition: background-color var(--duration-base) var(--ease-in-out),
+    color var(--duration-base) var(--ease-in-out);
+}
+
+/* Reduced motion: collapse all motion (§9.3). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Focus ring baseline — interactive elements except form inputs (§9.4). */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Thin custom scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}

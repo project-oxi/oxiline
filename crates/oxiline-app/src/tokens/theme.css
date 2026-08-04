@@ -1,0 +1,74 @@
+/* ============================================================================
+ * Tailwind utility exposure (@theme inline, DESIGN.md §2.1)
+ *
+ * `inline` keeps the var() indirection so .dark swaps resolve at use-site,
+ * and keeps these keys out of Tailwind's static :root emission — so component
+ * var(--color-*) references resolve against the semantic layer above.
+ * ========================================================================== */
+
+@theme inline {
+  /* Surfaces */
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-surface-muted: var(--color-surface-muted);
+
+  /* Text */
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-subtle: var(--color-text-subtle);
+  --color-text-inverse: var(--color-text-inverse);
+
+  /* Border */
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-focus-ring: var(--color-focus-ring);
+
+  /* Block surface (UI-redesign) */
+  --color-block-bg: var(--color-block-bg);
+  --color-block-border: var(--color-block-border);
+
+  /* Hue labels */
+  --color-hue-red: var(--color-hue-red);
+  --color-hue-amber: var(--color-hue-amber);
+  --color-hue-green: var(--color-hue-green);
+  --color-hue-teal: var(--color-hue-teal);
+  --color-hue-blue: var(--color-hue-blue);
+  --color-hue-purple: var(--color-hue-purple);
+
+  /* Status */
+  --color-status-success: var(--color-status-success);
+  --color-status-warning: var(--color-status-warning);
+  --color-status-error: var(--color-status-error);
+  --color-status-info: var(--color-status-info);
+  --color-status-success-subtle: var(--color-status-success-subtle);
+  --color-status-warning-subtle: var(--color-status-warning-subtle);
+  --color-status-error-subtle: var(--color-status-error-subtle);
+  --color-status-info-subtle: var(--color-status-info-subtle);
+  --color-status-success-on-subtle: var(--color-status-success-on-subtle);
+  --color-status-warning-on-subtle: var(--color-status-warning-on-subtle);
+  --color-status-error-on-subtle: var(--color-status-error-on-subtle);
+  --color-status-info-on-subtle: var(--color-status-info-on-subtle);
+
+  /* Interactive primary */
+  --color-interactive-primary: var(--color-interactive-primary);
+  --color-interactive-primary-foreground: var(--color-interactive-primary-foreground);
+  --color-interactive-primary-subtle: var(--color-interactive-primary-subtle);
+
+  /* Radius (expose scale) */
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  /* Fonts (§4.3) */
+  --font-sans: "SUIT Variable", "SUIT", system-ui, -apple-system, "Inter",
+    sans-serif;
+  --font-display: "SUITE Variable", "SUITE", system-ui, -apple-system, "Inter",
+    sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono",
+    Menlo, Consolas, monospace;
+}

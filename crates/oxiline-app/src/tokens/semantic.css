@@ -1,0 +1,61 @@
+/* ============================================================================
+ * Tier 2 — Semantic tokens, light theme (DESIGN.md §3.3)
+ *
+ * Purpose-driven aliases: surface / text / border / hue-label / status.
+ * Two-tier rule: components consume these via Tailwind utilities or
+ * var(--color-*); they never read primitives directly. Dark-mode overrides
+ * live in semantic-dark.css (applied under the `.dark` class).
+ * ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --color-surface:        var(--p-neutral-0);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-surface-sunken: var(--p-neutral-50);
+  --color-surface-muted:  oklch(96% 0.005 265);
+
+  /* Text */
+  --color-text:         var(--p-neutral-900);
+  --color-text-muted:   var(--p-neutral-700);
+  --color-text-subtle:  oklch(42% 0.010 95);
+  --color-text-inverse: oklch(98.5% 0.004 95);
+
+  /* Border */
+  --color-border:        var(--p-neutral-100);
+  --color-border-strong: oklch(82% 0.008 265);
+  --color-focus-ring:    oklch(0.45 0.04 265);
+
+  /* Functional hue labels — six-hue palette (§3.2). Color is data, not brand. */
+  --color-hue-red:    oklch(0.75 0.15 25);
+  --color-hue-amber:  oklch(0.75 0.15 75);
+  --color-hue-green:  oklch(0.75 0.13 145);
+  --color-hue-teal:   oklch(0.75 0.12 195);
+  --color-hue-blue:   oklch(0.70 0.14 250);
+  --color-hue-purple: oklch(0.72 0.15 310);
+
+  /* Status — APCA-optimized (§3.2) */
+  --color-status-success: oklch(0.596 0.145 163);
+  --color-status-warning: oklch(0.669 0.162 70);
+  --color-status-error:   oklch(0.577 0.245 27.325);
+  --color-status-info:    oklch(0.623 0.214 259.815);
+
+  /* Status surfaces (panel backgrounds) */
+  --color-status-success-subtle: oklch(0.97 0.014 163);
+  --color-status-warning-subtle: oklch(0.97 0.014 70);
+  --color-status-error-subtle:   oklch(0.97 0.014 27);
+  --color-status-info-subtle:    oklch(0.97 0.014 259);
+
+  /* Interactive primary — dedicated button fill (L=0.45, white text passes APCA Lc 60) */
+  --color-interactive-primary:            oklch(0.45 0.14 250);
+  --color-interactive-primary-foreground: oklch(98.5% 0.004 95);
+  /* Subtle tint for selected/active tracks (derived) */
+  --color-interactive-primary-subtle:     oklch(0.45 0.14 250 / 0.10);
+
+  /* Status text on subtle (Lc 75+ at 10px) */
+  --color-status-success-on-subtle: oklch(0.40 0.13 163);
+  --color-status-warning-on-subtle: oklch(0.45 0.14 70);
+  --color-status-error-on-subtle:   oklch(0.42 0.18 27);
+  --color-status-info-on-subtle:    oklch(0.42 0.16 259);
+
+  color-scheme: light;
+}

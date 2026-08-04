@@ -1,301 +1,43 @@
 @import "tailwindcss";
 
 /* ============================================================================
- * Oxi Design System — canonical token architecture (DESIGN.md §2)
+ * Oxi Design System — entry stylesheet (DESIGN.md §2)
+ *
+ * Token architecture, imported in tier order:
  *
  *   Primitive (--p-*)  →  Semantic (--color-*)  →  Component (--*-radius,
  *   --input-shadow, --shadow-*)  →  Tailwind utility (@theme inline)
- *   →  Component code
+ *   →  component code
+ *
+ * Tokens live under src/tokens/ (primitives / semantic / semantic-dark /
+ * components / theme); the portable global base lives in src/base.css. This
+ * entry only aggregates them and adds app-specific window chrome.
  *
  * Components consume Tailwind utilities (bg-surface, text-text, border-border)
  * or canonical semantic vars (var(--color-text)) for conditional values.
  * No dark: variant in components; no [data-theme]; .dark class is the trigger.
+ *
+ * NB: all @import statements lead the file (CSS @import-first rule), so the
+ * @custom-variant registration follows them — it is a Tailwind at-rule, not a
+ * CSS-standard import, and is processed regardless of position.
  * ========================================================================== */
+
+/* Tier order matters: primitives → semantic → dark → component → utility. */
+@import "./tokens/primitives.css";
+@import "./tokens/semantic.css";
+@import "./tokens/semantic-dark.css";
+@import "./tokens/components.css";
+@import "./tokens/theme.css";
+
+/* Global base: reset, document, a11y, scrollbars. */
+@import "./base.css";
 
 /* Dark variant — scoped to the token layer only (§8.3). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---- Tier 1: Primitives (raw OKLCH ramps, §3.2) -------------------------- */
-/* The only place the warm (hue 95) / cool (hue 265) split happens. */
-:root {
-  --p-neutral-0:   oklch(98.5% 0.004 95);
-  --p-neutral-50:  oklch(95%   0.006 95);
-  --p-neutral-100: oklch(90%   0.007 95);
-  --p-neutral-300: oklch(75%   0.010 95);
-  --p-neutral-500: oklch(55%   0.012 95);
-  --p-neutral-700: oklch(35%   0.012 265);
-  --p-neutral-900: oklch(18%   0.015 265);
-  --p-neutral-950: oklch(13%   0.020 265);
-  --p-neutral-999: oklch(0%    0 0);
-}
-
-/* ---- Tier 2: Semantic tokens — light (§3.3) ------------------------------ */
-:root {
-  /* Surfaces */
-  --color-surface:        var(--p-neutral-0);
-  --color-surface-raised: oklch(100% 0 0);
-  --color-surface-sunken: var(--p-neutral-50);
-  --color-surface-muted:  oklch(96% 0.005 265);
-
-  /* Text */
-  --color-text:         var(--p-neutral-900);
-  --color-text-muted:   var(--p-neutral-700);
-  --color-text-subtle:  oklch(42% 0.010 95);
-  --color-text-inverse: oklch(98.5% 0.004 95);
-
-  /* Border */
-  --color-border:        var(--p-neutral-100);
-  --color-border-strong: oklch(82% 0.008 265);
-  --color-focus-ring:    oklch(0.45 0.04 265);
-
-  /* Functional hue labels — six-hue palette (§3.2). Color is data, not brand. */
-  --color-hue-red:    oklch(0.75 0.15 25);
-  --color-hue-amber:  oklch(0.75 0.15 75);
-  --color-hue-green:  oklch(0.75 0.13 145);
-  --color-hue-teal:   oklch(0.75 0.12 195);
-  --color-hue-blue:   oklch(0.70 0.14 250);
-  --color-hue-purple: oklch(0.72 0.15 310);
-
-  /* Status — APCA-optimized (§3.2) */
-  --color-status-success: oklch(0.596 0.145 163);
-  --color-status-warning: oklch(0.669 0.162 70);
-  --color-status-error:   oklch(0.577 0.245 27.325);
-  --color-status-info:    oklch(0.623 0.214 259.815);
-
-  /* Status surfaces (panel backgrounds) */
-  --color-status-success-subtle: oklch(0.97 0.014 163);
-  --color-status-warning-subtle: oklch(0.97 0.014 70);
-  --color-status-error-subtle:   oklch(0.97 0.014 27);
-  --color-status-info-subtle:    oklch(0.97 0.014 259);
-
-  /* Interactive primary — dedicated button fill (L=0.45, white text passes APCA Lc 60) */
-  --color-interactive-primary:            oklch(0.45 0.14 250);
-  --color-interactive-primary-foreground: oklch(98.5% 0.004 95);
-  /* Subtle tint for selected/active tracks (derived) */
-  --color-interactive-primary-subtle:     oklch(0.45 0.14 250 / 0.10);
-
-  /* Status text on subtle (Lc 75+ at 10px) */
-  --color-status-success-on-subtle: oklch(0.40 0.13 163);
-  --color-status-warning-on-subtle: oklch(0.45 0.14 70);
-  --color-status-error-on-subtle:   oklch(0.42 0.18 27);
-  --color-status-info-on-subtle:    oklch(0.42 0.16 259);
-
-  color-scheme: light;
-}
-
-/* ---- Tier 2: Semantic tokens — dark (.dark, §3.3) ----------------------- */
-/* L-only adjustment for neutrals + label hues; status hues APCA-shift (§3.1). */
-.dark {
-  --p-neutral-100: oklch(28% 0.015 265);
-  --p-neutral-500: oklch(65% 0.012 265);
-  --p-neutral-950: oklch(13% 0.020 265);
-
-  --color-surface:        var(--p-neutral-950);
-  --color-surface-raised: oklch(22% 0.016 265);
-  --color-surface-sunken: oklch(11% 0.018 265);
-  --color-surface-muted:  oklch(20% 0.012 265);
-
-  --color-text:         var(--p-neutral-0);
-  --color-text-muted:   var(--p-neutral-300);
-  --color-text-subtle:  oklch(75% 0.012 265);
-  --color-text-inverse: var(--p-neutral-900);
-
-  --color-border:        oklch(28% 0.015 265);
-  --color-border-strong: oklch(40% 0.015 265);
-  --color-focus-ring:    oklch(0.65 0.05 265);
-
-  /* Hue labels: L +0.05 (precomputed) */
-  --color-hue-red:    oklch(0.78 0.14 25);
-  --color-hue-amber:  oklch(0.78 0.14 75);
-  --color-hue-green:  oklch(0.78 0.12 145);
-  --color-hue-teal:   oklch(0.78 0.11 195);
-  --color-hue-blue:   oklch(0.74 0.13 250);
-  --color-hue-purple: oklch(0.76 0.14 310);
-
-  /* Status — APCA-optimized for dark (C/H may shift) */
-  --color-status-success: oklch(0.723 0.219 149.579);
-  --color-status-warning: oklch(0.769 0.188 70.08);
-  --color-status-error:   oklch(0.704 0.191 22.216);
-  --color-status-info:    oklch(0.685 0.196 259);
-
-  --color-status-success-subtle: oklch(0.20 0.03 163);
-  --color-status-warning-subtle: oklch(0.20 0.03 70);
-  --color-status-error-subtle:   oklch(0.20 0.03 27);
-  --color-status-info-subtle:    oklch(0.20 0.03 259);
-
-  --color-interactive-primary:            oklch(0.70 0.14 250);
-  --color-interactive-primary-foreground: oklch(15% 0.015 265);
-  --color-interactive-primary-subtle:     oklch(0.70 0.14 250 / 0.14);
-
-  --color-status-success-on-subtle: oklch(0.80 0.10 163);
-  --color-status-warning-on-subtle: oklch(0.82 0.10 70);
-  --color-status-error-on-subtle:   oklch(0.78 0.12 27);
-  --color-status-info-on-subtle:    oklch(0.78 0.10 259);
-
-  color-scheme: dark;
-}
-
-/* ---- Tier 3: Component tokens (§5.2.1, §5.2, §6.4, §7.3) ----------------- */
-:root {
-  /* Radius scale (§5.2) */
-  --radius-xs:   0.25rem;
-  --radius-sm:   0.375rem;
-  --radius-md:   0.5rem;
-  --radius-lg:   0.75rem;
-  --radius-xl:   1rem;
-  --radius-2xl:  1.25rem;
-  --radius-full: 9999px;
-
-  /* Component → radius mapping (§5.2.1) */
-  --button-radius:  var(--radius-md);
-  --input-radius:   var(--radius-md);
-  --select-radius:  var(--radius-md);
-  --card-radius:    var(--radius-lg);
-  --dialog-radius:  var(--radius-lg);
-  --popover-radius: var(--radius-xl);
-  --tooltip-radius: var(--radius-xl);
-  --badge-radius:   var(--radius-full);
-  --tag-radius:     var(--radius-xs);
-
-  /* Input borders: box-shadow, not CSS border (§6.4) */
-  --input-shadow:       0 0 0 1px var(--color-border);
-  --input-shadow-focus: 0 0 0 1px var(--color-focus-ring),
-    0 0 0 4px oklch(0.45 0.04 265 / 0.15);
-  --input-shadow-error: 0 0 0 1px var(--color-status-error);
-
-  /* Elevation (§5.3) — oklch shadows; alpha raised in dark. */
-  --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.07), 0 1px 2px oklch(0% 0 0 / 0.04);
-  --shadow-md: 0 4px 8px oklch(0% 0 0 / 0.08), 0 2px 4px oklch(0% 0 0 / 0.04);
-  --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.10), 0 4px 8px oklch(0% 0 0 / 0.06);
-
-  /* Motion (§7.3) */
-  --duration-fast: 120ms;
-  --duration-base: 200ms;
-  --duration-slow: 350ms;
-  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* Timeline surface — UI-redesign 2026-07-31 (spec §3.1) */
-  --shadow-card:        var(--shadow-sm);
-  --shadow-block-rest:  none;
-  --shadow-block-hover: var(--shadow-md);
-  --shadow-block-drag:  var(--shadow-lg);
-
-  --color-block-bg:      oklch(96.5% 0.005 95);
-  --color-block-border:  oklch(90% 0.007 95);
-
-  --tl-rail-width:   3px;
-  --tl-spine-width:  1px;
-  --tl-tick-color:   oklch(0% 0 0 / 0.06);
-  --shadow-today-node: 0 2px 8px oklch(0.45 0.14 250 / 0.35);
-}
-.dark {
-  --shadow-xs: 0 1px 2px oklch(0% 0 0 / 0.30);
-  --shadow-sm: 0 1px 3px oklch(0% 0 0 / 0.40), 0 1px 2px oklch(0% 0 0 / 0.30);
-  --shadow-md: 0 4px 8px oklch(0% 0 0 / 0.45), 0 2px 4px oklch(0% 0 0 / 0.35);
-  --shadow-lg: 0 12px 24px oklch(0% 0 0 / 0.50), 0 4px 8px oklch(0% 0 0 / 0.40);
-
-  /* Timeline tokens — dark parity (UI-redesign) */
-  --color-block-bg:     oklch(28% 0.016 265);
-  --color-block-border: oklch(33% 0.015 265);
-  --tl-tick-color:      oklch(100% 0 0 / 0.05);
-  --shadow-today-node: 0 2px 8px oklch(0.70 0.14 250 / 0.40);
-}
-
-/* ---- Tailwind utility exposure (@theme inline, §2.1) -------------------- */
-/* `inline` keeps the var() indirection so .dark swaps resolve at use-site,
-   and keeps these keys out of Tailwind's static :root emission — so component
-   var(--color-*) references resolve against the semantic layer above. */
-@theme inline {
-  /* Surfaces */
-  --color-surface: var(--color-surface);
-  --color-surface-raised: var(--color-surface-raised);
-  --color-surface-sunken: var(--color-surface-sunken);
-  --color-surface-muted: var(--color-surface-muted);
-
-  /* Text */
-  --color-text: var(--color-text);
-  --color-text-muted: var(--color-text-muted);
-  --color-text-subtle: var(--color-text-subtle);
-  --color-text-inverse: var(--color-text-inverse);
-
-  /* Border */
-  --color-border: var(--color-border);
-  --color-border-strong: var(--color-border-strong);
-  --color-focus-ring: var(--color-focus-ring);
-
-  /* Block surface (UI-redesign) */
-  --color-block-bg: var(--color-block-bg);
-  --color-block-border: var(--color-block-border);
-
-  /* Hue labels */
-  --color-hue-red: var(--color-hue-red);
-  --color-hue-amber: var(--color-hue-amber);
-  --color-hue-green: var(--color-hue-green);
-  --color-hue-teal: var(--color-hue-teal);
-  --color-hue-blue: var(--color-hue-blue);
-  --color-hue-purple: var(--color-hue-purple);
-
-  /* Status */
-  --color-status-success: var(--color-status-success);
-  --color-status-warning: var(--color-status-warning);
-  --color-status-error: var(--color-status-error);
-  --color-status-info: var(--color-status-info);
-  --color-status-success-subtle: var(--color-status-success-subtle);
-  --color-status-warning-subtle: var(--color-status-warning-subtle);
-  --color-status-error-subtle: var(--color-status-error-subtle);
-  --color-status-info-subtle: var(--color-status-info-subtle);
-  --color-status-success-on-subtle: var(--color-status-success-on-subtle);
-  --color-status-warning-on-subtle: var(--color-status-warning-on-subtle);
-  --color-status-error-on-subtle: var(--color-status-error-on-subtle);
-  --color-status-info-on-subtle: var(--color-status-info-on-subtle);
-
-  /* Interactive primary */
-  --color-interactive-primary: var(--color-interactive-primary);
-  --color-interactive-primary-foreground: var(--color-interactive-primary-foreground);
-  --color-interactive-primary-subtle: var(--color-interactive-primary-subtle);
-
-  /* Radius (expose scale) */
-  --radius-xs: var(--radius-xs);
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
-  --radius-2xl: var(--radius-2xl);
-  --radius-full: var(--radius-full);
-
-  /* Fonts (§4.3) */
-  --font-sans: "SUIT Variable", "SUIT", system-ui, -apple-system, "Inter",
-    sans-serif;
-  --font-display: "SUITE Variable", "SUITE", system-ui, -apple-system, "Inter",
-    sans-serif;
-  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, "SF Mono",
-    Menlo, Consolas, monospace;
-}
-
-/* ---- Base ---------------------------------------------------------------- */
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  font-family: var(--font-sans);
-  background: var(--color-surface);
-  color: var(--color-text);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  /* Smooth theme crossfade (§8). */
-  transition: background-color var(--duration-base) var(--ease-in-out),
-    color var(--duration-base) var(--ease-in-out);
-}
+/* ============================================================================
+ * App-specific window chrome (not portable tokens)
+ * ========================================================================== */
 
 /* Floating HUD overlay (hud.html): transparent canvas so the rounded card
    floats over the desktop and its drop shadow isn't clipped to a square. The
@@ -321,34 +63,3 @@ body {
 .date-popover-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .date-popover-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; border-radius: var(--radius-full); font-size: 12px; cursor: pointer; }
-
-/* Reduced motion: collapse all motion (§9.3). */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    transition-duration: 0.001ms !important;
-  }
-}
-
-/* Focus ring baseline — interactive elements except form inputs (§9.4). */
-:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-xs);
-}
-
-/* Thin custom scrollbars. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border-strong) transparent;
-}
-*::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-*::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
-  border-radius: var(--radius-full);
-}

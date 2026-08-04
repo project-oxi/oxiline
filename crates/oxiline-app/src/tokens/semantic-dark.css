@@ -1,0 +1,58 @@
+/* ============================================================================
+ * Tier 2 — Semantic tokens, dark theme (DESIGN.md §3.3)
+ *
+ * Applied under the `.dark` class — the single light/dark trigger (§8).
+ * L-only adjustment for neutrals + label hues; status hues APCA-shift
+ * (C/H may shift). The Tier-1 neutral-ramp dark overrides (§3.2) ride along
+ * here so the whole `.dark` block stays cohesive.
+ * ========================================================================== */
+
+.dark {
+  --p-neutral-100: oklch(28% 0.015 265);
+  --p-neutral-500: oklch(65% 0.012 265);
+  --p-neutral-950: oklch(13% 0.020 265);
+
+  --color-surface:        var(--p-neutral-950);
+  --color-surface-raised: oklch(22% 0.016 265);
+  --color-surface-sunken: oklch(11% 0.018 265);
+  --color-surface-muted:  oklch(20% 0.012 265);
+
+  --color-text:         var(--p-neutral-0);
+  --color-text-muted:   var(--p-neutral-300);
+  --color-text-subtle:  oklch(75% 0.012 265);
+  --color-text-inverse: var(--p-neutral-900);
+
+  --color-border:        oklch(28% 0.015 265);
+  --color-border-strong: oklch(40% 0.015 265);
+  --color-focus-ring:    oklch(0.65 0.05 265);
+
+  /* Hue labels: L +0.05 (precomputed) */
+  --color-hue-red:    oklch(0.78 0.14 25);
+  --color-hue-amber:  oklch(0.78 0.14 75);
+  --color-hue-green:  oklch(0.78 0.12 145);
+  --color-hue-teal:   oklch(0.78 0.11 195);
+  --color-hue-blue:   oklch(0.74 0.13 250);
+  --color-hue-purple: oklch(0.76 0.14 310);
+
+  /* Status — APCA-optimized for dark (C/H may shift) */
+  --color-status-success: oklch(0.723 0.219 149.579);
+  --color-status-warning: oklch(0.769 0.188 70.08);
+  --color-status-error:   oklch(0.704 0.191 22.216);
+  --color-status-info:    oklch(0.685 0.196 259);
+
+  --color-status-success-subtle: oklch(0.20 0.03 163);
+  --color-status-warning-subtle: oklch(0.20 0.03 70);
+  --color-status-error-subtle:   oklch(0.20 0.03 27);
+  --color-status-info-subtle:    oklch(0.20 0.03 259);
+
+  --color-interactive-primary:            oklch(0.70 0.14 250);
+  --color-interactive-primary-foreground: oklch(15% 0.015 265);
+  --color-interactive-primary-subtle:     oklch(0.70 0.14 250 / 0.14);
+
+  --color-status-success-on-subtle: oklch(0.80 0.10 163);
+  --color-status-warning-on-subtle: oklch(0.82 0.10 70);
+  --color-status-error-on-subtle:   oklch(0.78 0.12 27);
+  --color-status-info-on-subtle:    oklch(0.78 0.10 259);
+
+  color-scheme: dark;
+}
