@@ -1,6 +1,8 @@
 //! Output rendering: human text vs. JSON (`05-cli-spec.md` §5.1).
 
-use oxiline_core::model::{Activity, Category, Compliance, NowEntry, NowSummary, Plan, PlanSlot, Record, RecordState};
+use oxiline_core::model::{
+    Activity, Category, Compliance, NowEntry, NowSummary, Plan, PlanSlot, Record, RecordState,
+};
 use oxiline_core::util;
 
 use crate::lang::L;
@@ -178,7 +180,11 @@ pub fn compliance_text(lang: L, comps: &[Compliance]) -> String {
         let ratio = pct(c.ratio);
         out.push_str(&format!(
             "● {:<16} {:>6} / {:<6} {:>5}  {}\n",
-            c.activity.name, recorded, target, ratio, compliance_state_label(lang, c),
+            c.activity.name,
+            recorded,
+            target,
+            ratio,
+            compliance_state_label(lang, c),
         ));
     }
     out
@@ -193,7 +199,11 @@ fn compliance_state_label(lang: L, c: &Compliance) -> String {
             let over_secs = c
                 .recorded_seconds
                 .saturating_sub(c.target_seconds.unwrap_or(0));
-            format!("{} +{}m", lang.compliance_over(), (over_secs as f64 / 60.0).round() as i64)
+            format!(
+                "{} +{}m",
+                lang.compliance_over(),
+                (over_secs as f64 / 60.0).round() as i64
+            )
         }
         Unbudgeted => lang.compliance_unbudgeted().into(),
     }
@@ -277,16 +287,30 @@ pub fn record_log_text(lang: L, records: &[Record], now: DateTime<Utc>) -> Strin
         let start_ts = DateTime::parse_from_rfc3339(&r.started_at)
             .ok()
             .map(|d| d.with_timezone(&Utc));
-        let end_ts = DateTime::parse_from_rfc3339(&end).ok().map(|d| d.with_timezone(&Utc));
+        let end_ts = DateTime::parse_from_rfc3339(&end)
+            .ok()
+            .map(|d| d.with_timezone(&Utc));
         let dur = match (start_ts, end_ts) {
             (Some(s), Some(e)) => (e - s).num_seconds(),
             _ => 0,
         };
         let hh = format!(
             "{:02}:{:02}:{:02}",
-            start_ts.map(|d| d.format("%H").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
-            start_ts.map(|d| d.format("%M").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
-            start_ts.map(|d| d.format("%S").to_string()).unwrap_or_else(|| "--".into()).parse::<u32>().unwrap_or(0),
+            start_ts
+                .map(|d| d.format("%H").to_string())
+                .unwrap_or_else(|| "--".into())
+                .parse::<u32>()
+                .unwrap_or(0),
+            start_ts
+                .map(|d| d.format("%M").to_string())
+                .unwrap_or_else(|| "--".into())
+                .parse::<u32>()
+                .unwrap_or(0),
+            start_ts
+                .map(|d| d.format("%S").to_string())
+                .unwrap_or_else(|| "--".into())
+                .parse::<u32>()
+                .unwrap_or(0),
         );
         let marker = if r.ended_at.is_none() { "▶" } else { " " };
         let activity_name = r.activity_id.clone();

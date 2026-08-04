@@ -118,7 +118,13 @@ fn record_at_backdates_switch() {
     // two records: the initial 코딩 (ended at `switch_at`) and the new
     // 독서 (started at `switch_at`).
     let log_out = oxiline_cmd(&db)
-        .args(["record", "log", "--range", "2026-08-01:2026-08-01", "--json"])
+        .args([
+            "record",
+            "log",
+            "--range",
+            "2026-08-01:2026-08-01",
+            "--json",
+        ])
         .output()
         .unwrap();
     assert!(log_out.status.success());

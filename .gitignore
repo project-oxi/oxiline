@@ -32,3 +32,7 @@ oxiline.toml
 
 # Brainstorming visual companion (mockups are ephemeral)
 .superpowers/
+
+# Release prep scratch + untracked worktrees (managed outside the repo)
+.release-prep-status.md
+.worktrees/

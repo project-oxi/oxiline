@@ -280,13 +280,35 @@ fn parse_range(r: &str) -> Result<(String, String)> {
         .ok_or_else(|| CoreError::InvalidArgument("range must be FROM:TO".into()))?;
     Ok((resolve_date_arg(from.trim())?, resolve_date_arg(to.trim())?))
 }
+/// Convert a `YYYY-MM-DD` local date to the inclusive UTC timestamp range
+/// covering that local day: `[local_midnight, local_midnight + 24h)`.
+/// Records are stored in UTC; using `T00:00:00Z..T23:59:59Z` directly would
+/// miss records created in the first/last hours of the day in non-UTC
+/// timezones (e.g. KST 00:00–09:00 is UTC 15:00–24:00 of the prior day).
+fn local_day_bounds(date: &str) -> Result<(String, String)> {
+    use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
+    let d = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map_err(|e| CoreError::InvalidArgument(format!("bad date '{date}': {e}")))?;
+    let start_local = NaiveDateTime::new(d, NaiveTime::MIN);
+    let end_local = NaiveDateTime::new(d.succ_opt().unwrap_or(d), NaiveTime::MIN);
+    let start_utc = chrono::Local
+        .from_local_datetime(&start_local)
+        .single()
+        .ok_or_else(|| CoreError::Internal(format!("ambiguous local midnight for {date}")))?
+        .with_timezone(&chrono::Utc);
+    let end_utc = chrono::Local
+        .from_local_datetime(&end_local)
+        .single()
+        .ok_or_else(|| CoreError::Internal(format!("ambiguous local midnight for {date}")))?
+        .with_timezone(&chrono::Utc);
+    Ok((
+        start_utc.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        end_utc.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+    ))
+}
 
 /// Dispatch `oxiline activity` subcommands (Task 8).
-fn handle_activity(
-    action: &ActivityAction,
-    conn: &rusqlite::Connection,
-    opts: &Cli,
-) -> Result<()> {
+fn handle_activity(action: &ActivityAction, conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
     let json = opts.json;
     let lang = resolve_lang(conn, opts);
     let l = L(lang);
@@ -432,16 +454,14 @@ fn parse_at_iso(at: Option<&str>) -> Result<Option<chrono::DateTime<chrono::Utc>
         None => Ok(None),
         Some(s) => chrono::DateTime::parse_from_rfc3339(s)
             .map(|d| Some(d.with_timezone(&chrono::Utc)))
-            .map_err(|e| CoreError::InvalidArgument(format!("bad --at '{s}' (expect RFC 3339): {e}"))),
+            .map_err(|e| {
+                CoreError::InvalidArgument(format!("bad --at '{s}' (expect RFC 3339): {e}"))
+            }),
     }
 }
 
 /// Dispatch `oxiline record` subcommands (Task 9).
-fn handle_record(
-    action: &RecordAction,
-    conn: &rusqlite::Connection,
-    opts: &Cli,
-) -> Result<()> {
+fn handle_record(action: &RecordAction, conn: &rusqlite::Connection, opts: &Cli) -> Result<()> {
     use chrono::Utc;
     let json = opts.json;
     let lang = resolve_lang(conn, opts);
@@ -469,28 +489,26 @@ fn handle_record(
             let st = record::stop(conn, now, &today)?;
             say(record_state_output(json, l, &st));
         }
-        RecordAction::Log { activity, date, range } => {
+        RecordAction::Log {
+            activity,
+            date,
+            range,
+        } => {
             let (from, to) = match (date, range) {
                 (Some(_), Some(_)) => {
                     return Err(CoreError::InvalidArgument(
                         "--date and --range are mutually exclusive".into(),
                     ));
                 }
-                (Some(d), None) => {
-                    let d = resolve_date_arg(d)?;
-                    (format!("{d}T00:00:00Z"), format!("{d}T23:59:59Z"))
-                }
+                (Some(d), None) => local_day_bounds(&resolve_date_arg(d)?)?,
                 (None, Some(r)) => {
                     let (from_date, to_date) = parse_range(r)?;
-                    (
-                        format!("{from_date}T00:00:00Z"),
-                        format!("{to_date}T23:59:59Z"),
-                    )
+                    local_day_bounds(&from_date).and_then(|f| {
+                        let t = local_day_bounds(&to_date)?.1;
+                        Ok((f.0, t))
+                    })?
                 }
-                (None, None) => (
-                    format!("{today}T00:00:00Z"),
-                    format!("{today}T23:59:59Z"),
-                ),
+                (None, None) => local_day_bounds(&today)?,
             };
             let activity_id = match activity.as_deref() {
                 Some(a) => Some(activities::resolve_activity(conn, a)?.id),
@@ -704,7 +722,7 @@ fn parse_days_mask(days: Option<&str>, date: Option<&str>) -> Result<u8> {
             other => {
                 return Err(CoreError::InvalidArgument(format!(
                     "unknown day '{other}' in --days (mon,tue,wed,thu,fri,sat,sun/weekdays/daily)"
-                )))
+                )));
             }
         };
         mask |= 1 << bit;

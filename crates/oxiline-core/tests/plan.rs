@@ -100,7 +100,10 @@ fn slot_marked_resolved_after_record() {
 fn mk_activity(c: &Connection, name: &str) -> oxiline_core::model::Activity {
     oxiline_core::activities::create_activity(
         c,
-        oxiline_core::model::ActivityInput { name: Some(name.into()), ..Default::default() },
+        oxiline_core::model::ActivityInput {
+            name: Some(name.into()),
+            ..Default::default()
+        },
     )
     .unwrap()
 }
@@ -182,12 +185,9 @@ fn add_options_monotonic_unique_and_dedups_existing() {
         },
     )
     .unwrap(); // a1 = order 0
-    let out = oxiline_core::plan::add_options(
-        &c,
-        &p.id,
-        &[a2.id.clone(), a3.id.clone(), a1.id.clone()],
-    )
-    .unwrap();
+    let out =
+        oxiline_core::plan::add_options(&c, &p.id, &[a2.id.clone(), a3.id.clone(), a1.id.clone()])
+            .unwrap();
     // (a) return: input order, existing-or-new, one row per unique input
     assert_eq!(out.len(), 3);
     assert_eq!(out[0].activity_id, a2.id);
@@ -217,12 +217,9 @@ fn add_options_dedups_within_input() {
         },
     )
     .unwrap(); // a4 = order 0
-    let out = oxiline_core::plan::add_options(
-        &c,
-        &p.id,
-        &[a4.id.clone(), a4.id.clone(), a5.id.clone()],
-    )
-    .unwrap();
+    let out =
+        oxiline_core::plan::add_options(&c, &p.id, &[a4.id.clone(), a4.id.clone(), a5.id.clone()])
+            .unwrap();
     assert_eq!(out.len(), 2); // within-input dup collapsed
     assert_eq!(out[0].activity_id, a4.id); // existing
     assert_eq!(out[0].sort_order, 0);
@@ -304,7 +301,7 @@ fn add_options_concurrent_unique_sort_order() {
 
     let handles: Vec<_> = conns
         .into_iter()
-        .zip(buckets.into_iter())
+        .zip(buckets)
         .map(|(conn, bucket)| {
             let plan_id = Arc::clone(&plan_id);
             thread::spawn(move || -> Result<(), String> {
@@ -318,7 +315,9 @@ fn add_options_concurrent_unique_sort_order() {
         .collect();
 
     for h in handles {
-        h.join().unwrap().expect("add_options errored under concurrency");
+        h.join()
+            .unwrap()
+            .expect("add_options errored under concurrency");
     }
 
     let orders = sort_orders(&setup, &p.id);

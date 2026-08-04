@@ -114,7 +114,6 @@ pub enum SettingsAction {
     Set { key: String, value: String },
 }
 
-
 /// Tri-state wrapper for nullable numeric budgets (`--daily`, `--weekly`).
 ///
 /// Maps the CLI's "0 means clear" convention onto the double-Option field
