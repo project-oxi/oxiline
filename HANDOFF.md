@@ -101,10 +101,26 @@ build, 14 vitest):
 Commits: `a7073e5` (draft editor), `c448fb8` (move/delete + core
 `weekday_mask`), `2692e5c` (spec rewrite). Spec: `doc/09-ui-redesign.md`.
 
-## Next session — actual-record editing
+## Actual-record editing — 2026-08-05 ✅ COMPLETE
 
-Symmetric completion: move/delete on *actual-record* blocks (ActualLane).
-Plan ready at `docs/superpowers/plans/2026-08-05-actual-record-editing.md` —
-core `edit_record`/`delete_record` already exist; only Tauri command exposure
-(`commands.rs` + `lib.rs` builder) + frontend gestures (`ActualBlock` drag +
-hover ×) remain. Execute via subagent-driven-development or executing-plans.
+Symmetric completion of the PlanCard move/delete pattern onto *actual-record*
+blocks (`ActualLane` → new `ActualBlock`). Plan:
+`docs/superpowers/plans/2026-08-05-actual-record-editing.md`, executed inline.
+
+Shipped (all green: `cargo test --workspace`, `clippy -D warnings`, `bun run build`, 14 vitest):
+- **Backend**: exposed `edit_record`/`delete_record` as Tauri commands
+  (`commands.rs` + `lib.rs` specta builder) — core fns already existed.
+- **API/hooks**: `api.editRecord`/`deleteRecord` + `useEditRecord`/`useDeleteRecord`
+  (invalidates `day-records`, `records-range`, `compliance`, `recordState`, `slots`).
+- **Drag-to-move**: `ActualBlock` pointer-drag → absolute UTC delta (preserves
+  duration + DST), 5-min snap, day-window clamp.
+- **Hover-delete**: `×` button (group-hover), `useDeleteRecord`.
+- **Live guard**: open (`ended_at IS NULL`) blocks are fixed — no move, no ×.
+- **Spec**: `doc/09-ui-redesign.md` §9.4.4/§9.8/§9.11/§9.12 updated.
+
+Commits: `14b4777` (commands) → `db2fcdb` (api+hooks) → `deb3078` (drag) →
+`a921cf3` (hover-delete).
+
+Note: the plan's `invalidateRecordDerived` listed a `["records"]` query key that
+does not exist in the query graph; corrected to `["records-range"]` (the real
+range-query key) to avoid a silent invalidation gap.

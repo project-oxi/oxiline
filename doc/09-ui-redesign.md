@@ -157,10 +157,22 @@
   blur 시 값이 있으면 커밋.
 - 커밋(`commitDraft`): 매칭 활동이 있으면 그 활동으로, 없으면 `createActivity` 후 `createPlan`.
 
-### 9.4.4 실제 레인 (`ActualLane`)
+### 9.4.4 실제 레인 (`ActualLane` + `ActualBlock`)
 
-`ActivityRecord[]`를 hue 채운 블록으로. **활동 이름 표시**(`nameById` 맵; 과거 raw id 버그 수정),
-좌측 3px hue 레일, 라이브 세션은 펄스 점. now-line은 별도(§9.4.5).
+`ActivityRecord[]`를 hue 채운 블록(`ActualBlock`)으로. **활동 이름 표시**(`nameById` 맵; 과거 raw id
+버그 수정), 좌측 3px hue 레일, 라이브 세션은 펄스 점. now-line은 별도(§9.4.5).
+
+각 블록은 계획 블록(`PlanCard`, §9.4.2)과 **대칭적인 직접 조작**을 지원한다. 단, **라이브(진행 중,
+`ended_at IS NULL`) 블록은 고정** — 이동·삭제가 막히며, 먼저 녹화를 멈춰야 한다.
+
+| 동작 | 제스처 | 구현 | 명령 |
+|---|---|---|---|
+| **이동** | 블록 본문 드래그 | 포인터 캡처 + 5분 스냅 + day-window 클램프 | `edit_record` (절대 UTC 델타) |
+| **삭제** | 블록 호버 `×` 버튼 | `useDeleteRecord` (`stopPropagation`) | `delete_record` |
+
+이동 델타는 **절대 UTC 시간**으로 적용한다(`new Date(started_at) + deltaMs`). 타임라인은 LOCAL 분으로
+렌더하지만 저장은 UTC ISO이므로, 시작·종료에 같은 델타를 더하면 블록 길이와 UTC 오프셋이 그대로
+보존된다(서머타임 전환에도 안전). 5분 스냅은 델타(절대값이 아닌)에 적용해 길이를 유지한다.
 
 ### 9.4.5 now-line (`NowLine`)
 
@@ -221,6 +233,8 @@
 | PlanCard 본문 | 이동 | 드래그 |
 | PlanCard 하단 | 크기 조절 | 핸들 드래그 |
 | PlanCard | 삭제 | 호버 `×` |
+| ActualBlock 본문 | 이동 | 드래그 |
+| ActualBlock | 삭제 | 호버 `×` (라이브 제외) |
 | 사이드바 활동 | 계획 배치 | 타임라인으로 드래그 |
 | DraftBlock | 커밋/취소 | `Enter` / `Esc` |
 | 글로벌 | 커맨드 팔레트 | `⌘K` |
@@ -275,6 +289,7 @@
 - [x] 날짜 클릭 시 캘린더 팝오버가 body 포털로 확실히 뜸(drag-region 간섭 없음).
 - [x] 녹화 중 트랜스포트/NowCard에 라이브 타이머; now-line이 양 레인 관통.
 - [x] 실제 레인·최근 세션이 활동 이름(비 id) 표시.
+- [x] 실제 기록 블록(ActualBlock)을 드래그로 이동(`edit_record`), 호버 ×로 삭제(라이브 제외).
 
 ---
 
@@ -289,11 +304,11 @@
 | 타임라인 모드/레인/now-line | `RecordTimeline.tsx` (`RecordTimeline`, `NowLine`) |
 | 계획 생성(클릭/드래그/초안) | `RecordTimeline.tsx` (`PlanLane`, `DraftBlock`) |
 | PlanCard 이동/리사이즈/삭제 | `RecordTimeline.tsx` (`PlanCard`) |
-| 실제 레인(이름 표시) | `RecordTimeline.tsx` (`ActualLane`) |
+| 실제 레인(이름 표시) + 블록 이동/삭제 | `RecordTimeline.tsx` (`ActualLane`, `ActualBlock`) |
 | 사이드바 NowCard/라이브러리 | `Sidebar.tsx` (`NowCard`, `ActivityLibrary`, `DraggableActivity`) |
 | 인스펙터 충족도/최근 세션 | `Inspector.tsx` (`ComplianceOverview`, `RecentSessions`) |
 | DnD(드롭 분/스냅/OR 머지) | `lib/dnd.tsx` (`DndProvider`, `computeDropMinute`, `snapMinute`) |
-| 이동/삭제/크기조절/생성 훅 | `hooks.ts` (`useMovePlan`, `useDeletePlan`, `useResizePlan`, `useCreatePlan`) |
+| 이동/삭제/크기조절/생성 훅 | `hooks.ts` (`useMovePlan`, `useDeletePlan`, `useResizePlan`, `useCreatePlan`, `useEditRecord`, `useDeleteRecord`) |
 | 글로벌 단축키 | `src-tauri/src/shortcuts.rs` (`register_quick_record`) |
 | PlanSlot.weekday_mask | `oxiline-core/src/model.rs` + `plan.rs` + `record.rs` |
 | 토큰 | `src/tokens/{primitives,semantic,semantic-dark,components,theme}.css` |
