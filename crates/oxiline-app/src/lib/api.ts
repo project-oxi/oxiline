@@ -83,6 +83,7 @@ export const api = {
 
   // preferences
   reloadShortcuts: () => invoke<void>("reload_shortcuts"),
+  showMainWindow: () => invoke<void>("show_main_window"),
 
 };
 

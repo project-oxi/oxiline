@@ -46,6 +46,7 @@ pub fn run() {
         commands::reload_shortcuts,
         commands::edit_record,
         commands::delete_record,
+        commands::show_main_window,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.
