@@ -22,9 +22,12 @@ import {
   useDeleteRecord,
   useEditRecord,
   useMovePlan,
+  useRecordState,
   useResizePlan,
   useSettings,
   useSlots,
+  useStartRecord,
+  useStopRecord,
 } from "../hooks";
 import { X } from "lucide-react";
 import { todayStr, useUi } from "../lib/store";
@@ -347,6 +350,18 @@ function PlanCard({
   const resize = useResizePlan();
   const move = useMovePlan();
   const del = useDeletePlan();
+  const start = useStartRecord();
+  const stop = useStopRecord();
+  const state = useRecordState();
+  // Toggle target: the resolved (executed) option if present, else the first
+  // option. OR plans without a resolved pick default to the first option.
+  const toggleTarget =
+    s.resolved_by?.activity_id ?? s.options[0]?.id ?? null;
+  const toggleRecording = () => {
+    if (!toggleTarget) return;
+    if (state.data?.active?.activity.id === toggleTarget) stop.mutate();
+    else start.mutate(toggleTarget);
+  };
 
   const startMin = dragStart ?? s.start_minute;
   const top = (startMin - dayStartMin) * PX_PER_MIN;
@@ -356,12 +371,16 @@ function PlanCard({
   return (
     <div
       ref={setNodeRef}
-      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 transition-shadow ${
+      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-interactive-primary ${
         isOver ? "ring-2 ring-interactive-primary" : ""
       } ${dragStart != null ? "z-30 cursor-grabbing border-interactive-primary/70 shadow-[var(--shadow-lg)]" : "cursor-grab hover:shadow-[var(--shadow-md)]"}`}
       style={{ top, height }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${s.options.map((o) => o.name).join(" / ")} 계획 — Enter로 녹화`}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
+        if (toggleTarget) e.currentTarget.focus();
         const startY = e.clientY;
         const orig = s.start_minute;
         const ref = { current: orig };
@@ -388,6 +407,11 @@ function PlanCard({
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
         window.addEventListener("pointercancel", onUp);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        toggleRecording();
       }}
     >
       <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
