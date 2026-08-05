@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
@@ -57,7 +57,13 @@ function HudCard() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const baseNowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMin = baseNowMin + Math.floor(tick / 60);
   const active = stateQ.data?.active ?? null;
   const cur = currentSlot(slotsQ.data ?? [], nowMin);
   const nxt = nextSlot(slotsQ.data ?? [], nowMin);
@@ -93,7 +99,7 @@ function HudCard() {
                 <div className="mt-1.5">
                   <div className="flex items-baseline justify-between text-[12px]">
                     <span className="text-text-muted">
-                      {hmm(active.elapsed_seconds)} 경과
+                      {hmm(active.elapsed_seconds + tick)} 경과
                     </span>
                     <span className="font-mono text-text-subtle">
                       {hmm(weekComp!.recorded_seconds)}/{hmm(weekComp!.target_seconds!)}
@@ -114,7 +120,7 @@ function HudCard() {
                 </div>
               ) : (
                 <div className="mt-1 text-[12px] text-text-muted">
-                  {hmm(active.elapsed_seconds)} 경과
+                {hmm(active.elapsed_seconds + tick)} 경과
                 </div>
               )}
               <button
