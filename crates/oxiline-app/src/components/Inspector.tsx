@@ -15,7 +15,7 @@ import type { Scope } from "../types";
 export function Inspector() {
   const [scope, setScope] = useState<Scope>("week");
   return (
-    <aside className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto p-3">
+    <aside className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-surface-raised p-3">
       <ComplianceOverview scope={scope} onScope={setScope} />
       <RecentSessions />
     </aside>

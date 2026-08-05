@@ -90,3 +90,6 @@ export function onOpenPreferences(cb: () => void): Promise<UnlistenFn> {
 export function onOpenQuickAdd(cb: () => void): Promise<UnlistenFn> {
   return listen("oxiline://open-quick-add", () => cb());
 }
+export function onQuickRecord(cb: () => void): Promise<UnlistenFn> {
+  return listen("oxiline://quick-record", () => cb());
+}

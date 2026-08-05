@@ -5,8 +5,17 @@
  *   2. ActivityLibrary — each active activity with a neutral weekly bar
  *      (target tick, 남음/달성/+Xm), drag source for Task 7.
  */
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { useActivities, useCompliance, useRecordState, useStopRecord } from "../hooks";
+import { Play, Plus } from "lucide-react";
+import {
+  useActivities,
+  useCompliance,
+  useCreateActivity,
+  useRecordState,
+  useStartRecord,
+  useStopRecord,
+} from "../hooks";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
 import { useUi } from "../lib/store";
 import type { Activity, Compliance } from "../types";
@@ -14,13 +23,20 @@ import type { Activity, Compliance } from "../types";
 export function Sidebar() {
   const stateQ = useRecordState();
   const stop = useStopRecord();
+  const start = useStartRecord();
+  const { lastActivityId, setSwitcherOpen } = useUi();
   const active = stateQ.data?.active ?? null;
 
+  function handleStart() {
+    if (lastActivityId) start.mutate(lastActivityId);
+    else setSwitcherOpen(true);
+  }
+
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col gap-4 overflow-y-auto p-3">
+    <aside className="flex w-[260px] shrink-0 flex-col gap-4 overflow-y-auto border-r border-border bg-surface-sunken p-3">
       <NowCard
         active={active}
-
+        onStart={handleStart}
         onStop={() => stop.mutate(undefined)}
         stopping={stop.isPending}
       />
@@ -31,11 +47,12 @@ export function Sidebar() {
 
 function NowCard({
   active,
+  onStart,
   onStop,
   stopping,
 }: {
   active: { activity: { name: string; hue_label: string | null }; elapsed_seconds: number } | null;
-
+  onStart: () => void;
   onStop: () => void;
   stopping: boolean;
 }) {
@@ -47,7 +64,14 @@ function NowCard({
           지금 녹화 중
         </div>
         <div className="mt-2 text-[13px] text-text-muted">녹화 중인 활동이 없어요</div>
-        <div className="mt-1 text-[11px] text-text-subtle">⌘⇧A 로 빠르게 전환</div>
+        <button
+          onClick={onStart}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-interactive-primary py-1.5 text-[12px] font-medium text-interactive-primary-foreground transition hover:opacity-90"
+        >
+          <Play size={13} fill="currentColor" />
+          녹화 시작
+        </button>
+        <div className="mt-1.5 text-center text-[11px] text-text-subtle">⌘⇧A 전환 · ⌘⇧R 빠른 토글</div>
       </section>
     );
   }
@@ -79,22 +103,57 @@ function NowCard({
 function ActivityLibrary() {
   const activitiesQ = useActivities(true);
   const weekQ = useCompliance("week");
+  const createAct = useCreateActivity();
   const byId = new Map(weekQ.data?.map((c) => [c.activity.id, c]));
   const activities = activitiesQ.data ?? [];
   const selectedActivityIds = useUi((state) => state.selectedActivityIds);
   const toggleActivitySelect = useUi((state) => state.toggleActivitySelect);
   const clearActivitySelection = useUi((state) => state.clearActivitySelection);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+
+  function submitName() {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    createAct.mutate({ name: trimmed }, { onSuccess: () => { setName(""); setAdding(false); } });
+  }
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-[11px] font-semibold uppercase tracking-wide text-text-subtle">활동 · 카드</h2>
-        <span className="text-[10px] text-text-subtle">드래그 → 배치</span>
+        <button
+          onClick={() => setAdding((v) => !v)}
+          className="flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-medium text-interactive-primary transition hover:bg-surface-sunken"
+          aria-label="활동 추가"
+          title="활동 추가"
+        >
+          <Plus size={13} />
+          추가
+        </button>
       </div>
-      {activities.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border text-[12px] text-text-subtle">
-          활동을 추가하세요
-        </div>
+      {adding && (
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitName();
+            else if (e.key === "Escape") { setAdding(false); setName(""); }
+          }}
+          onBlur={() => { if (!name.trim()) setAdding(false); }}
+          placeholder="활동 이름"
+          className="mb-2 rounded bg-surface px-2 py-1 text-[12px] shadow-[var(--input-shadow)] outline-none focus-visible:shadow-[var(--input-shadow-focus)]"
+        />
+      )}
+      {activities.length === 0 && !adding ? (
+        <button
+          onClick={() => setAdding(true)}
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-dashed border-border text-[12px] text-text-subtle transition hover:bg-surface-sunken"
+        >
+          <Plus size={13} />
+          첫 활동 만들기
+        </button>
       ) : (
         <div
           className="flex flex-col gap-2"
@@ -126,6 +185,7 @@ function DraggableActivity({
   onSelect: (id: string, additive: boolean) => void;
 }) {
   const selectedActivityIds = useUi((state) => state.selectedActivityIds);
+  const start = useStartRecord();
   const isSelected = selectedActivityIds.includes(activity.id);
   const ids = isSelected && selectedActivityIds.length > 0 ? selectedActivityIds : [activity.id];
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -152,7 +212,7 @@ function DraggableActivity({
       {...listeners}
       {...attributes}
       onClick={(e) => onSelect(activity.id, e.metaKey || e.ctrlKey)}
-      className={`cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""} ${isSelected ? "ring-2 ring-interactive-primary" : ""}`}
+      className={`group cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""} ${isSelected ? "ring-2 ring-interactive-primary" : ""}`}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
     >
       <div className="flex items-center justify-between text-[12px]">
@@ -163,8 +223,19 @@ function DraggableActivity({
             <span className="rounded bg-interactive-primary px-1 text-[9px] font-semibold text-text-inverse">{selectedActivityIds.length}</span>
           )}
         </span>
-        <span className="text-[10px] text-text-subtle">
-          {activity.target_minutes_weekly ? `주 ${hmm(activity.target_minutes_weekly * 60)}` : ""}
+        <span className="flex items-center gap-1">
+          <span className="text-[10px] text-text-subtle">
+            {activity.target_minutes_weekly ? `주 ${hmm(activity.target_minutes_weekly * 60)}` : ""}
+          </span>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); start.mutate(activity.id); }}
+            className="rounded p-0.5 text-text-subtle opacity-0 transition hover:bg-surface hover:text-interactive-primary group-hover:opacity-100"
+            aria-label={`${activity.name} 녹화 시작`}
+            title="녹화 시작"
+          >
+            <Play size={12} fill="currentColor" />
+          </button>
         </span>
       </div>
       <div className="relative mt-1 h-1.5 rounded-full bg-surface-sunken">

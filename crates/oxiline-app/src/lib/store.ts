@@ -9,6 +9,12 @@ interface UiState {
   onboardingOpen: boolean;
   paletteDate: string | null;
   selectedActivityIds: string[];
+  // Last activity that was recording — the resume target for the global
+  // quick-record toggle (⌘⇧R) and the header transport's "start" action.
+  lastActivityId: string | null;
+  // OxideBar click → scroll the timeline to this minute. `token` bumps each
+  // request so the same minute re-triggers the effect.
+  scrollTarget: { minute: number; token: number } | null;
   setDate: (d: string) => void;
   setPaletteOpen: (b: boolean) => void;
   setPreferencesOpen: (b: boolean) => void;
@@ -17,6 +23,8 @@ interface UiState {
   setPaletteDate: (d: string | null) => void;
   toggleActivitySelect: (id: string, additive: boolean) => void;
   clearActivitySelection: () => void;
+  setLastActivityId: (id: string | null) => void;
+  requestScroll: (minute: number) => void;
   shiftDate: (days: number) => void;
   goToToday: () => void;
 }
@@ -45,6 +53,8 @@ export const useUi = create<UiState>((set) => ({
   onboardingOpen: false,
   paletteDate: null,
   selectedActivityIds: [],
+  lastActivityId: null,
+  scrollTarget: null,
   setDate: (d) => set({ date: d }),
   setPaletteOpen: (b) => set({ paletteOpen: b }),
   setPreferencesOpen: (b) => set({ preferencesOpen: b }),
@@ -60,6 +70,11 @@ export const useUi = create<UiState>((set) => ({
         : [id],
     })),
   clearActivitySelection: () => set({ selectedActivityIds: [] }),
+  setLastActivityId: (id) => set({ lastActivityId: id }),
+  requestScroll: (minute) =>
+    set((state) => ({
+      scrollTarget: { minute, token: (state.scrollTarget?.token ?? 0) + 1 },
+    })),
   shiftDate: (days) => set((s) => ({ date: shift(s.date, days) })),
   goToToday: () => set({ date: todayStr() }),
 }));

@@ -3,8 +3,9 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import "./styles.css";
+import { Square } from "lucide-react";
 import { OxideBar } from "./components/OxideBar";
-import { useActivities, useCompliance, useDayRecords, useRecordState, useSlots } from "./hooks";
+import { useActivities, useCompliance, useDayRecords, useRecordState, useSlots, useStopRecord } from "./hooks";
 import { todayStr } from "./lib/store";
 import { currentSlot, nextSlot } from "./lib/now-next";
 import { hmm, hueVar } from "./lib/record-format";
@@ -25,6 +26,7 @@ function HudCard() {
   const actsQ = useActivities(false);
   const recsQ = useDayRecords(todayStr());
   const stateQ = useRecordState();
+  const stopRec = useStopRecord();
   const slotsQ = useSlots(todayStr());
   const weekQ = useCompliance("week");
   const qc = useQueryClient();
@@ -115,6 +117,13 @@ function HudCard() {
                   {hmm(active.elapsed_seconds)} 경과
                 </div>
               )}
+              <button
+                onClick={() => stopRec.mutate()}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-[12px] font-medium text-status-error transition hover:bg-status-error-subtle"
+              >
+                <Square size={12} fill="currentColor" />
+                멈춤
+              </button>
             </div>
           ) : cur ? (
             <div>

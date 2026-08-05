@@ -141,6 +141,13 @@ export function Preferences() {
               onBlur={(e) => setSetting.mutate({ key: "global_hotkey", value: e.target.value })}
             />
           </Row>
+          <Row label="빠른 녹화 (⌘⇧R)">
+            <input
+              defaultValue={(s.quick_record_hotkey as string) ?? "CmdOrCtrl+Shift+R"}
+              className="w-44 rounded bg-transparent px-2 py-1 font-mono text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
+              onBlur={(e) => setSetting.mutate({ key: "quick_record_hotkey", value: e.target.value })}
+            />
+          </Row>
           <Row label={t("settings.hudDuration")}>
             <input type="number" defaultValue={Math.round(((s.hud_duration_ms as number) ?? 2000) / 1000)} min={1} max={5} className="w-16 rounded bg-transparent px-2 py-1 text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none" onBlur={(e) => setSetting.mutate({ key: "hud_duration_ms", value: String(Number(e.target.value) * 1000) })} />
           </Row>
@@ -158,6 +165,21 @@ export function Preferences() {
                 <td className="py-1.5 pr-2 font-mono text-interactive-primary">{formatHotkey((s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O")}</td>
                 <td className="py-1.5 pr-2 text-text-muted">{t("settings.actHud")}</td>
                 <td className="py-1.5 text-text-subtle">{t("settings.scopeGlobal")}</td>
+              </tr>
+              <tr className="border-t border-border">
+                <td className="py-1.5 pr-2 font-mono text-interactive-primary">{formatHotkey((s.quick_record_hotkey as string) ?? "CmdOrCtrl+Shift+R")}</td>
+                <td className="py-1.5 pr-2 text-text-muted">빠른 녹화 토글</td>
+                <td className="py-1.5 text-text-subtle">{t("settings.scopeGlobal")}</td>
+              </tr>
+              <tr className="border-t border-border">
+                <td className="py-1.5 pr-2 font-mono text-text-muted">⌘⇧A</td>
+                <td className="py-1.5 pr-2 text-text-muted">활동 전환 (녹화)</td>
+                <td className="py-1.5 text-text-subtle">{t("settings.scopeApp")}</td>
+              </tr>
+              <tr className="border-t border-border">
+                <td className="py-1.5 pr-2 font-mono text-text-muted">⌘N</td>
+                <td className="py-1.5 pr-2 text-text-muted">{t("settings.actPalette")} (오늘)</td>
+                <td className="py-1.5 text-text-subtle">{t("settings.scopeMain")}</td>
               </tr>
               {SHORTCUT_ROWS.map((r) => (
                 <tr key={r.key} className="border-t border-border">

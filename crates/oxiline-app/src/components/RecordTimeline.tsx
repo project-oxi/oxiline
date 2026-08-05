@@ -11,10 +11,19 @@
  * Records are UTC instants; positions use LOCAL minute-of-day. Plans already
  * store local minutes. No `is_done` anywhere — completion = a record existing.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { useActivities, useDayRecords, useResizePlan, useSettings, useSlots } from "../hooks";
+import {
+  useActivities,
+  useCreateActivity,
+  useCreatePlan,
+  useDayRecords,
+  useResizePlan,
+  useSettings,
+  useSlots,
+} from "../hooks";
 import { todayStr, useUi } from "../lib/store";
+import { snapMinute, SNAP_MINUTES } from "../lib/dnd";
 import { resizeDuration } from "../lib/resize";
 import type { ActivityRecord, PlanSlot } from "../types";
 
@@ -73,7 +82,7 @@ export function RecordTimeline() {
   const showPlan = mode !== "act";
   const showAct = mode !== "plan";
   const both = mode === "both";
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: "record-timeline",
     data: { kind: "timeline-slot", date, pxPerMin: PX_PER_MIN, dayStartMin },
   });
@@ -82,6 +91,15 @@ export function RecordTimeline() {
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   const nowTop = (nowMin - dayStartMin) * PX_PER_MIN;
   const showNow = date === todayStr() && nowMin >= dayStartMin && nowMin <= dayStartMin + totalMin;
+  // OxideBar click (Header) → scroll this lane to the requested minute.
+  const scrollTarget = useUi((s) => s.scrollTarget);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!scrollTarget || !scrollRef.current) return;
+    const top = (scrollTarget.minute - dayStartMin) * PX_PER_MIN;
+    const el = scrollRef.current;
+    el.scrollTo({ top: Math.max(0, top - el.clientHeight / 2), behavior: "smooth" });
+  }, [scrollTarget, dayStartMin]);
 
   return (
     <div className="flex h-full flex-col">
@@ -112,7 +130,7 @@ export function RecordTimeline() {
         </div>
       )}
 
-      <div className="relative flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="relative flex-1 overflow-y-auto">
         <div className="relative flex" style={{ height: heightPx }}>
           <div className="relative w-12 shrink-0 border-r border-border">
             {hours.map((h) => (
@@ -128,7 +146,7 @@ export function RecordTimeline() {
 
           <div
             ref={setNodeRef}
-            className={both ? "relative grid flex-1" : "relative flex-1"}
+            className={`${both ? "relative grid flex-1" : "relative flex-1"} ${isOver ? "ring-2 ring-inset ring-interactive-primary/40" : ""}`}
             style={both ? { gridTemplateColumns: "1fr 1fr" } : undefined}
           >
             {showPlan && <PlanLane slots={slots} dayStartMin={dayStartMin} />}
@@ -149,11 +167,145 @@ export function RecordTimeline() {
 }
 
 function PlanLane({ slots, dayStartMin }: { slots: PlanSlot[]; dayStartMin: number }) {
+  const date = useUi((s) => s.date);
+  const createPlan = useCreatePlan();
+  const createActivity = useCreateActivity();
+  const activities = useActivities(false).data ?? [];
+  const [draft, setDraft] = useState<{ startMinute: number; durationMinute: number } | null>(null);
+  const [rubber, setRubber] = useState<{ startMinute: number; durationMinute: number } | null>(null);
+  const dragRef = useRef<{ startY: number; startMinute: number; moved: boolean } | null>(null);
+
+  function minuteFromY(el: HTMLElement, clientY: number): number {
+    const rect = el.getBoundingClientRect();
+    return snapMinute(Math.round(dayStartMin + (clientY - rect.top) / PX_PER_MIN));
+  }
+
+  function commitDraft(title: string) {
+    if (!draft) return;
+    const trimmed = title.trim();
+    const { startMinute, durationMinute } = draft;
+    setDraft(null);
+    if (!trimmed) return;
+    const existing = activities.find(
+      (a) => a.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+    const base = {
+      date,
+      start_minute: startMinute,
+      duration_minute: durationMinute,
+      weekday_mask: 0,
+      title: null as string | null,
+    };
+    if (existing) {
+      createPlan.mutate({ ...base, activity_ids: [existing.id] });
+    } else {
+      createActivity.mutate(
+        { name: trimmed },
+        { onSuccess: (a) => createPlan.mutate({ ...base, activity_ids: [a.id] }) },
+      );
+    }
+  }
+
+  // Empty-surface gesture: a click makes a 30-min draft; a drag rubber-bands a
+  // custom span. Both resolve to the same inline DraftBlock.
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (draft || e.target !== e.currentTarget) return;
+    const startMinute = minuteFromY(e.currentTarget, e.clientY);
+    dragRef.current = { startY: e.clientY, startMinute, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const d = dragRef.current;
+    if (!d) return;
+    if (Math.abs(e.clientY - d.startY) > 6) d.moved = true;
+    if (d.moved) {
+      const cur = minuteFromY(e.currentTarget, e.clientY);
+      const start = Math.min(d.startMinute, cur);
+      const dur = Math.max(SNAP_MINUTES, snapMinute(Math.abs(cur - d.startMinute)));
+      setRubber({ startMinute: start, durationMinute: dur });
+    }
+  }
+
+  function onPointerUp() {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d) return;
+    if (rubber) {
+      setDraft(rubber);
+      setRubber(null);
+    } else {
+      setDraft({ startMinute: d.startMinute, durationMinute: 30 });
+    }
+  }
+
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
       {slots.map((s) => (
         <PlanCard key={s.plan_id} s={s} dayStartMin={dayStartMin} />
       ))}
+      {rubber && (
+        <div
+          className="pointer-events-none absolute inset-x-1 rounded-md border border-dashed border-interactive-primary bg-interactive-primary-subtle"
+          style={{
+            top: (rubber.startMinute - dayStartMin) * PX_PER_MIN,
+            height: rubber.durationMinute * PX_PER_MIN,
+          }}
+        />
+      )}
+      {draft && (
+        <DraftBlock
+          draft={draft}
+          dayStartMin={dayStartMin}
+          onCommit={commitDraft}
+          onCancel={() => setDraft(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DraftBlock({
+  draft,
+  dayStartMin,
+  onCommit,
+  onCancel,
+}: {
+  draft: { startMinute: number; durationMinute: number };
+  dayStartMin: number;
+  onCommit: (title: string) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="absolute inset-x-1 z-20 overflow-hidden rounded-md border border-interactive-primary bg-surface-raised p-1.5 shadow-[var(--shadow-md)]"
+      style={{
+        top: (draft.startMinute - dayStartMin) * PX_PER_MIN,
+        height: Math.max(48, draft.durationMinute * PX_PER_MIN),
+      }}
+    >
+      <div className="mb-0.5 text-[10px] text-text-subtle">
+        {hhmm(draft.startMinute)} · {draft.durationMinute}m
+      </div>
+      <input
+        autoFocus
+        placeholder="활동 이름"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onCommit((e.currentTarget as HTMLInputElement).value);
+          else if (e.key === "Escape") onCancel();
+        }}
+        onBlur={(e) => {
+          const v = e.target.value.trim();
+          if (v) onCommit(v);
+          else onCancel();
+        }}
+        className="w-full rounded bg-surface px-1.5 py-0.5 text-[12px] outline-none ring-1 ring-border focus-visible:ring-2 focus-visible:ring-interactive-primary"
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUi } from "./lib/store";
 import { useMemo } from "react";
 import { api } from "./lib/api";
-import { useUi } from "./lib/store";
 import type { Scope } from "./types";
 
 export const qk = {
@@ -101,7 +101,12 @@ export function useStartRecord() {
   const inv = useInvalidate();
   return useMutation({
     mutationFn: (activityId: string) => api.startRecord(activityId),
-    onSuccess: () => inv(),
+    onSuccess: (_data, activityId) => {
+      // Remember what we started so the global ⌘⇧R toggle + header transport
+      // can resume it without prompting.
+      useUi.getState().setLastActivityId(activityId);
+      inv();
+    },
   });
 }
 

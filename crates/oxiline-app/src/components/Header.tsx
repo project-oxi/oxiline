@@ -1,17 +1,38 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, Settings as SettingsIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Search, Settings as SettingsIcon, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useActivities, useRecordsRange } from "../hooks";
+import {
+  useActivities,
+  useRecordState,
+  useRecordsRange,
+  useSettings,
+  useStartRecord,
+  useStopRecord,
+} from "../hooks";
 import { useUi, todayStr, shift } from "../lib/store";
-import { hueVar } from "../lib/record-format";
+import { hmm, hueVar } from "../lib/record-format";
 import { isoLocal } from "../lib/record-time";
 import type { ActivityRecord } from "../types";
 import { monthBounds, monthGrid, shiftMonth } from "../lib/calendar";
+import { OxideBar } from "./OxideBar";
 
 export function Header() {
   const { t, i18n } = useTranslation();
-  const { date, setDate, shiftDate, setPaletteOpen, setPreferencesOpen } = useUi();
+  const {
+    date,
+    setDate,
+    shiftDate,
+    setPaletteOpen,
+    setPreferencesOpen,
+    setSwitcherOpen,
+    lastActivityId,
+    requestScroll,
+  } = useUi();
   const actsQ = useActivities(false);
+  const settingsQ = useSettings();
+  const stateQ = useRecordState();
+  const startRec = useStartRecord();
+  const stopRec = useStopRecord();
   const lang = i18n.language?.startsWith("en") ? "en" : "ko";
 
   const [calOpen, setCalOpen] = useState(false);
@@ -50,9 +71,29 @@ export function Header() {
   const [yy, mm, dd] = date.split("-").map(Number);
   const titleDt = new Date(yy, mm - 1, dd);
   const wdKo = ["일", "월", "화", "수", "목", "금", "토"][titleDt.getDay()];
+  // Oxide Bar (day minimap) — reflects the selected date. day_start/end from
+  // settings; fall back to 05:00–26:00 like the timeline.
+  const dayStart =
+    typeof settingsQ.data?.day_start_hour === "number" ? settingsQ.data.day_start_hour : 5;
+  const dayEnd =
+    typeof settingsQ.data?.day_end_hour === "number" ? settingsQ.data.day_end_hour : 26;
+  const dayStartMin = dayStart * 60;
+  const totalMin = (dayEnd - dayStart) * 60;
+  const dayRecs = weekRecs.filter((r) => isoLocal(r.started_at).date === date);
+  const active = stateQ.data?.active ?? null;
+
+  function handleRecordToggle() {
+    if (active) {
+      stopRec.mutate();
+    } else if (lastActivityId) {
+      startRec.mutate(lastActivityId);
+    } else {
+      setSwitcherOpen(true);
+    }
+  }
 
   return (
-    <div className="shrink-0 select-none px-4 pb-2 pt-2">
+    <div className="shrink-0 select-none border-b border-border bg-surface-raised px-4 pb-2 pt-2">
       {/* Titlebar strip — overlaps native traffic lights (Overlay style).
           The strip is the window drag region; interactive buttons are drag-free islands. */}
       <div data-tauri-drag-region className="flex items-center justify-between gap-2 py-1.5 pl-[56px]">
@@ -78,7 +119,7 @@ export function Header() {
                 {lang === "ko" ? wdKo + "요일" : titleDt.toLocaleDateString("en-US", { weekday: "short" })}
               </span>
               {yy !== Number(today.slice(0, 4)) && <span className="text-[11px] font-medium text-text-subtle">{yy}</span>}
-              <span className="text-[10px] text-text-subtle" aria-hidden="true">⌄</span>
+              <span className="text-[13px] text-text-muted" aria-hidden="true">⌄</span>
             </button>
             {calOpen && (
               <div className="date-popover w-[268px]" role="dialog" aria-label="날짜 선택">
@@ -116,6 +157,26 @@ export function Header() {
         </div>
 
         <div data-tauri-drag-region className="flex items-center gap-1">
+          <button
+            onClick={handleRecordToggle}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 text-[12px] font-medium transition hover:bg-surface-sunken ${
+              active ? "text-status-error" : "text-text-muted"
+            }`}
+            title={active ? "멈춤 (⌘⇧R)" : "녹화 시작 (⌘⇧R)"}
+            aria-label={active ? "멈춤" : "녹화 시작"}
+          >
+            {active ? (
+              <>
+                <Square size={13} fill="currentColor" />
+                <span className="font-mono tabular-nums">{hmm(active.elapsed_seconds)}</span>
+              </>
+            ) : (
+              <>
+                <Play size={13} fill="currentColor" />
+                <span>{lang === "en" ? "Record" : "녹화"}</span>
+              </>
+            )}
+          </button>
           <button
             className="rounded p-1.5 hover:bg-surface-sunken"
             onClick={() => setPaletteOpen(true)}
@@ -177,6 +238,18 @@ export function Header() {
             </button>
           );
         })}
+      </div>
+
+      {/* Row 3: Oxide Bar — day minimap (signature visual, §6.6). Click a
+          position to scroll the timeline there. */}
+      <div className="px-1 pt-0.5">
+        <OxideBar
+          records={dayRecs}
+          activities={actsQ.data ?? []}
+          dayStartMin={dayStartMin}
+          totalMin={totalMin}
+          onClickMinute={(m) => requestScroll(m)}
+        />
       </div>
     </div>
   );

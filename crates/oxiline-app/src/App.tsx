@@ -72,7 +72,7 @@ export default function App() {
       <DndProvider>
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <main className="flex flex-1 flex-col overflow-hidden border-x border-border">
+          <main className="flex flex-1 flex-col overflow-hidden">
             <RecordTimeline />
           </main>
           <Inspector />
