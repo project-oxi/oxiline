@@ -152,5 +152,7 @@ Commits: `95f239a` (PlanCard Enter) → `387409c` (hotkey reload) → `56498b2`
   recording-native replacements. Until those land, removing the legacy views
   entirely would break the app.
 - Plan-block ↔ record-block visual continuity (e.g. animate the resolved
-  `→실행` marker into the ActualBlock once the record lands) — UX polish,
-  not blocking.
+  `→실행` marker into the ActualBlock once the record lands) — UX polish.
+  **Now landed (2026-08-05 session 4)**: the resolved PlanCard already carries
+  the matching hue rail, primary-tinted dashed border, and `●` mark before
+  `→실행` so plan ↔ record reads as one event across the two lanes.

@@ -28,6 +28,13 @@ All notable changes to OxiLine will be documented in this file.
 - **feat**: HUD live 1-second tick — elapsed timer and "next in N분" countdown
   refresh while open
 
+## H4 polish (2026-08-05 session 4)
+
+- **polish**: resolved PlanCard now wears a 3px left rail in the resolved
+  option's hue, a primary-tinted dashed border, and a `●` mark before `→실행`,
+  so the plan card visually lines up with the matching ActualBlock in the
+  other lane.
+
 ## [0.2.0] - 2026-08-05
 
 UI redesign, icon refresh, and interaction polish.
