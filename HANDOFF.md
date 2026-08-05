@@ -234,3 +234,37 @@ runtime-verified in browser):
   `api.showMainWindow`); stop/start buttons `stopPropagation`.
 
 Spec updated: `doc/09` §9.7/§9.8/§9.11/§9.12 + new §9.14.
+
+## macOS close/reopen hardening (2026-08-06) ✅ COMPLETE
+
+User shared a debugging lesson (saved as skill `tauri-macos-window-close-vs-
+dock-reopen`): a tray-resident macOS app has **two independent OS-event
+paths** — close (the red X) and reopen (dock/tray click) — and "won't reopen"
+is one symptom hiding both. Both must be overridden explicitly.
+
+Applied the lesson to oxiline (Accessory / menu-bar app, Dock hidden):
+- **Close path** — already correct: `lib.rs` `on_window_event` does
+  `prevent_close` + `hide` on label `main`. Verified, no change.
+- **Reopen path** — real bug found and fixed. All three reopen sites now route
+  through one `pub(crate) show_main` (`tray.rs`): the tray menu, the
+  `show_main_window` Tauri command (HUD click-to-open — the primary path), and
+  the `single_instance` callback (Finder relaunch). Previously each inlined
+  `show()` + `set_focus()`. tao 0.35's macOS `set_focus` only calls
+  `activateIgnoringOtherApps` when `!is_miniaturized && is_visible`, so a window
+  the user **minimized** (yellow dot) stayed buried behind the active app on any
+  reopen. `show_main` now does `show()` + `unminimize()` (`NSWindow::deminiaturize`)
+  + `set_focus()`, so the precondition holds for both the hide path and the
+  minimize path on every reopen route.
+- **Tried then reverted** a left-click tray toggle
+  (`show_menu_on_left_click(false)` + `on_tray_icon_event`). `TrayIcon::show_menu()`
+  does not exist in tauri 2.x, so disabling menu-on-left-click left the tray
+  menu (Quit/HUD/quick-add) with no trigger. Kept `show_menu_on_left_click(true)`.
+
+Verified (static; GUI interaction can't be automated headless): `cargo build
+--workspace` green, `cargo clippy -p oxiline-app -- -D warnings` clean, tao
+source confirms `set_focus`→`activateIgnoringOtherApps:YES` and
+`unminimize`→`deminiaturize`. **Runtime click-through (close X → tray Open /
+HUD card → main / minimize → reopen) pending a user check on wake.**
+
+Skill updated: `tauri-macos-window-close-vs-dock-reopen` (both policies, the
+`set_focus` precondition trap, the missing `show_menu()` trap).
