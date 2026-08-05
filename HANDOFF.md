@@ -151,8 +151,37 @@ Commits: `95f239a` (PlanCard Enter) → `387409c` (hotkey reload) → `56498b2`
   modules; the legacy *view* entry points remain in the view switch pending
   recording-native replacements. Until those land, removing the legacy views
   entirely would break the app.
-- Plan-block ↔ record-block visual continuity (e.g. animate the resolved
-  `→실행` marker into the ActualBlock once the record lands) — UX polish.
-  **Now landed (2026-08-05 session 4)**: the resolved PlanCard already carries
-  the matching hue rail, primary-tinted dashed border, and `●` mark before
-  `→실행` so plan ↔ record reads as one event across the two lanes.
+- **Plan-block ↔ record-block visual continuity** — landed in session 4 (see
+  Phase 2 / session 4 note). The resolved PlanCard already carries the matching
+  hue rail, primary-tinted dashed border, and `●` mark before `→실행` so plan ↔
+  record reads as one event across the two lanes.
+
+## Phase 2 (2026-08-05 session 5) ✅ COMPLETE
+
+- **워크로드 톤 변화** landed: 모드 토글 바 아래의 `surface-sunken` 얇은 바가 오늘
+  `PlanSlot.duration_minute` 합산과 `workload_warning_minutes`(기본 600, 0이면 바 숨김)를
+  비교해 `workloadEasy`/`workloadTight`를 토글. 임계 이상이면 `--color-status-warning`
+  톤. i18n 키(`timeline.plannedDur` / `workloadEasy` / `workloadTight`)는 ko/en 양쪽
+  준비돼 있었음. Commit `fae0e43`. `doc/09` §9.4.1에 명세 추가, `doc/08` roadmap 체크.
+- **트레이 진행률** was already on `main` (예전 세션): `tray::render_progress_icon`
+  가 22×22 진행 바를 그리고, `lib.rs` setup이 60초 sleep 루프 + `oxiline://db-changed`
+  리스너로 `tray::refresh`를 호출해 day-start~end 진행률을 매 1분 / DB 변경 시점에
+  갱신. 별도 작업 불필요.
+
+## Next session — what remains
+
+- Legacy replacement views (Backlog / Week / Report / RoutineManager). V5
+  already drops the legacy *tables* and `0.1.0` strips the legacy frontend
+  modules; the legacy *view* entry points remain in the view switch pending
+  recording-native replacements. Until those land, removing the legacy views
+  entirely would break the app.
+  *(Note: `App.tsx` has no view switch today; the legacy view *modules* were
+  stripped in 0.1.0 and no legacy entry point is currently mounted. The
+  underlying concern is whether a replacement (e.g. a Week view) needs to be
+  designed before legacy can be safely reintroduced — open question.)*
+- `routine_groups` UI (Phase 2): batch on/off for routine groups. The schema
+  and core hooks are not yet built; a separate brainstorming + plan is needed.
+- Native macOS notifications (Phase 2): the settings exist
+  (`notifications_enabled`, `notification_lead_minutes`) and `notifier.rs` is
+  wired, but the opt-in toggle is partially live in Preferences. Verify the
+  full flow end-to-end and tighten the UI copy.

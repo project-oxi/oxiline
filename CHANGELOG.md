@@ -35,6 +35,12 @@ All notable changes to OxiLine will be documented in this file.
   so the plan card visually lines up with the matching ActualBlock in the
   other lane.
 
+## Phase 2 (2026-08-05 session 5)
+
+- **feat**: 워크로드 톤 변화 — 타임라인 모드 토글 바 아래의 `surface-sunken` 얇은 바에
+  "오늘 계획 Xh Ym · 여유 있음 / 빠듯해요"를 표시. `workload_warning_minutes`(기본 600, 0이면
+  비활성) 이상이면 `--color-status-warning` 톤. 클릭/모달 없음.
+
 ## [0.2.0] - 2026-08-05
 
 UI redesign, icon refresh, and interaction polish.

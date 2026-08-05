@@ -118,6 +118,10 @@
 - **시간축 gutter**(`w-12`) — 시각 라벨(10px tabular), 우측 정렬.
 - **레인 컨테이너** — `both` 모드 시 `grid-template-columns: 1fr 1fr`; 사이드바 드래그
   드롭 타겟(`useDroppable id="record-timeline"`, `isOver` 시 `ring-interactive-primary/40`).
+- **워크로드 표시줄** — 모드 토글 바 하단의 `surface-sunken` 얇은 바. 오늘 `PlanSlot.duration_minute`
+  합산을 `formatDuration`으로 표시하고 `workload_warning_minutes`(기본 600, 0이면 바 숨김)와 비교.
+  임계 이상이면 `--color-status-warning` 톤 + `workloadTight`("빠듯해요"), 아니면 `text-text-subtle` +
+  `workloadEasy`("여유 있음"). 클릭/모달 없음 — 정보만 조용히 제공(`doc/07` §7.1, `doc/02` §2.2).
 
 ### 9.4.2 계획 레인 (`PlanLane` + `PlanCard`)
 
