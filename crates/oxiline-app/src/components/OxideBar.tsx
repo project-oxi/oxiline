@@ -10,11 +10,14 @@ interface Props {
   totalMin: number;
   onClickMinute?: (minute: number) => void;
   compact?: boolean;
+  /** Render the "now" marker. The HUD always shows it; the main-window bar
+   * only shows it for the selected date when that date is today. */
+  showNow?: boolean;
 }
 
 /** Oxide Bar — a day compressed into one horizontal mini-map (§6.6). Segments
  * are actual records (what happened), colored by each record's activity hue. */
-export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMinute, compact }: Props) {
+export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMinute, compact, showNow = true }: Props) {
   const nowMin = useMemo(() => {
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
@@ -60,19 +63,21 @@ export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMi
           }}
         />
       ))}
-      <div
-        className="absolute top-1/2 z-10"
-        style={{
-          left: `${Math.min(100, Math.max(0, nowPct))}%`,
-          transform: "translate(-50%, -50%)",
-          width: compact ? 6 : 8,
-          height: compact ? 6 : 8,
-          borderRadius: 999,
-          background: "var(--color-interactive-primary)",
-          boxShadow:
-            "0 0 0 3px color-mix(in oklch, var(--color-interactive-primary) 22%, transparent)",
-        }}
-      />
+      {showNow && (
+        <div
+          className="absolute top-1/2 z-10"
+          style={{
+            left: `${Math.min(100, Math.max(0, nowPct))}%`,
+            transform: "translate(-50%, -50%)",
+            width: compact ? 6 : 8,
+            height: compact ? 6 : 8,
+            borderRadius: 999,
+            background: "var(--color-interactive-primary)",
+            boxShadow:
+              "0 0 0 3px color-mix(in oklch, var(--color-interactive-primary) 22%, transparent)",
+          }}
+        />
+      )}
     </div>
   );
 }

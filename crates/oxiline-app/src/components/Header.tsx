@@ -249,6 +249,7 @@ export function Header() {
           dayStartMin={dayStartMin}
           totalMin={totalMin}
           onClickMinute={(m) => requestScroll(m)}
+          showNow={date === today}
         />
       </div>
     </div>
