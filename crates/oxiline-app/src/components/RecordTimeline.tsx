@@ -19,6 +19,7 @@ import {
   useCreatePlan,
   useDayRecords,
   useDeletePlan,
+  useDeleteRecord,
   useEditRecord,
   useMovePlan,
   useResizePlan,
@@ -520,13 +521,14 @@ function ActualBlock({
   totalMin: number;
 }) {
   const edit = useEditRecord();
+  const del = useDeleteRecord();
   const [dragDelta, setDragDelta] = useState(0);
   const dragging = dragDelta !== 0;
   const top = (start - dayStartMin + dragDelta) * PX_PER_MIN;
   const height = Math.max(16, (end - start) * PX_PER_MIN);
   return (
     <div
-      className={`absolute left-1 right-1 overflow-hidden rounded-md p-1.5 text-[11px] transition-shadow ${
+      className={`group absolute left-1 right-1 overflow-hidden rounded-md p-1.5 text-[11px] transition-shadow ${
         live
           ? ""
           : dragging
@@ -573,9 +575,25 @@ function ActualBlock({
         window.addEventListener("pointercancel", onUp);
       }}
     >
-      <div className="flex items-center gap-1 font-medium">
-        {live && <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-error" />}
-        <span className="truncate">{name}</span>
+      <div className="flex items-center justify-between gap-1 font-medium">
+        <span className="flex min-w-0 items-center gap-1">
+          {live && <span className="inline-block h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-status-error" />}
+          <span className="truncate">{name}</span>
+        </span>
+        {!live && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              del.mutate(r.id);
+            }}
+            className="shrink-0 rounded p-0.5 text-text-subtle opacity-0 transition hover:bg-status-error-subtle hover:text-status-error group-hover:opacity-100"
+            aria-label="삭제"
+            title="삭제"
+          >
+            <X size={11} />
+          </button>
+        )}
       </div>
       <div className="text-text-subtle">
         {hhmm(start + dragDelta)}–{live ? "" : hhmm(end + dragDelta)}
