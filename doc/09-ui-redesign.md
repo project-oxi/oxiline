@@ -143,6 +143,15 @@
   `weekday_mask`를 carry하고 `useMovePlan`이 기존 mask/duration을 그대로 전달한다
   (`date: null, title: null, activity_ids: []` → 각각 보존). 반복 계획도 반복 일정이 유지.
 
+- **겹침 컬럼 패킹(overlap packing)**: 시간이 겹치는 `PlanSlot`은 서로 위에
+  포개지지 않고 **나란히 배치**된다(Google Calendar 방식). `PlanLane`이
+  `lib/layout.ts`의 `packColumns`로 각 슬롯에 `{ col, cols }`를 할당하고,
+  `PlanCard`는 `left: calc((col/cols)*100% + 4px)`, `width: calc((1/cols)*100% - 8px)`
+  로 렌더한다. Y 위치(시간)는 그대로 — 오직 가로 폭만 분할. 겹침이 없으면
+  `cols=1`(풀폭)로 기존과 동일. 시간만 닿는(끝=시작) 블록은 별도 컬럼을
+  소비하지 않는다(half-open 구간). 알고리즘: 겹침 연결 컴포넌트(cluster) 식별 →
+  cluster 내 greedy 그래프 컬러링으로 컬럼 할당. 단위 테스트 7건으로 검증.
+
 ### 9.4.3 초안 블록 (`DraftBlock`) — 인라인 에디터
 
 빈 공간 클릭/드래그로 나타나는 카드. "폼"이 아니라 **카드 자체가 에디터**:
@@ -285,6 +294,7 @@
 - [x] 3 pane이 surface-sunken / surface / surface-raised로 구분(라이트·다크).
 - [x] 헤더가 단일 행(날짜·요일 칩·녹화 히어로) + 산화 바 스트립.
 - [x] 산화 바 클릭 시 해당 시각으로 타임라인 스크롤.
+- [x] 시간이 겹치는 계획 카드가 나란히 컬럼 분할되어 포개지지 않음(`packColumns`, 비겹침은 풀폭 유지).
 - [x] 요일 칩이 마이크로 산화 바로 그 날 기록을 표현.
 - [x] 타임라인 빈 공간 클릭/드래그 → 인라인 DraftBlock → Enter로 계획 생성.
 - [x] PlanCard 본문 드래그로 이동(`update_plan` start 보존), 하단 핸들로 크기 조절, 호버 ×로 삭제.
@@ -301,6 +311,7 @@
 
 | 명세 항목 | 구현 위치 |
 |---|---|
+| 겹침 컬럼 패킹(계획 카드) | `lib/layout.ts` (`packColumns`) + `RecordTimeline.tsx` (`PlanLane` layout useMemo, `PlanCard` % left/width) |
 | 헤더 1행 + 산화 바 | `Header.tsx` (`Header`) |
 | 요일 칩 + 마이크로 바 | `Header.tsx` (`DayChip`) |
 | 캘린더 팝오버(body 포털) | `Header.tsx` (`createPortal`, `anchorRef`/`popBoxRef`) |
@@ -333,3 +344,6 @@
 | P6 | "직관적이지 않다" | 읽기 전용 표면 → 표면이 곧 인터페이스(§9.1) |
 
 추가로 사용자 후속 요청으로 **이동/삭제**(§9.4.2)와 **헤더 1행 압축 + 인라인 에디터 정제**(§9.3, §9.4.3)를 반영했다.
+그리고 **계획 카드 겹침**(P7, "계획 카드가 서로 그냥 겹쳐짐")을 해소했다: `PlanCard`가
+`top`만 계산하고 겹침 처리가 없어 동시간대 카드가 z-order로 포개졌던 것을, Google Calendar
+방식의 **컬럼 패킹**(`packColumns`)으로 나란히 배치(§9.4.2). Y(시간)는 보존하고 가로만 분할.

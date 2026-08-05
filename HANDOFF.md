@@ -168,6 +168,27 @@ Commits: `95f239a` (PlanCard Enter) → `387409c` (hotkey reload) → `56498b2`
   리스너로 `tray::refresh`를 호출해 day-start~end 진행률을 매 1분 / DB 변경 시점에
   갱신. 별도 작업 불필요.
 
+## Plan-card overlap packing (2026-08-05 session 6) ✅ COMPLETE
+
+**Bug:** plan cards sharing a time span painted on top of each other — `PlanCard`
+was `absolute` with only `top` computed, no collision resolution.
+
+**Fix — column packing (Google-Calendar style):** new pure fn `lib/layout.ts`
+`packColumns(rects) → {col, cols}[]`. Groups overlapping blocks into connected
+clusters (transitive interval-overlap), greedy graph-colors each cluster into
+columns, half-open intervals so touching blocks don't waste a column.
+`PlanLane` memoizes the layout; `PlanCard` renders
+`left: calc((col/cols)*100% + 4px)`, `width: calc((1/cols)*100% - 8px)`. Y (time)
+is never distorted — only the horizontal share. Non-overlapping → `cols=1`
+(full width, identical to before). `ActualBlock` left unchanged (concurrent
+records are impossible, so they never overlap).
+
+TDD: 7 unit tests (empty / non-overlapping / 2- & 3-way overlap / chain reuse /
+disjoint clusters / input-order preservation). Verified visually in browser via
+a throwaway `audit/` Tauri-mock harness (since removed): 3 overlapping cards
+fan out side-by-side with 8px gaps, disjoint afternoon card stays full-width.
+Spec: `doc/09` §9.4.2 + §9.11 + §9.12 + §9.13 (P7).
+
 ## Next session — what remains
 
 - Legacy replacement views (Backlog / Week / Report / RoutineManager). V5

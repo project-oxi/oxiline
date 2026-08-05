@@ -33,6 +33,7 @@ import { X } from "lucide-react";
 import { todayStr, useUi } from "../lib/store";
 import { snapMinute, SNAP_MINUTES } from "../lib/dnd";
 import { resizeDuration } from "../lib/resize";
+import { packColumns } from "../lib/layout";
 import { useTranslation } from "react-i18next";
 import { formatDuration } from "../lib/colors";
 import type { ActivityRecord, PlanSlot } from "../types";
@@ -208,6 +209,18 @@ function PlanLane({ slots, dayStartMin, totalMin }: { slots: PlanSlot[]; dayStar
   const [draft, setDraft] = useState<{ startMinute: number; durationMinute: number } | null>(null);
   const [rubber, setRubber] = useState<{ startMinute: number; durationMinute: number } | null>(null);
   const dragRef = useRef<{ startY: number; startMinute: number; moved: boolean } | null>(null);
+  // Column-pack overlapping plan cards (Google-Calendar style). Each card
+  // keeps its Y (time) position; overlapping cards fan out side-by-side.
+  const layout = useMemo(
+    () =>
+      packColumns(
+        slots.map((s) => ({
+          start: s.start_minute,
+          end: s.start_minute + s.duration_minute,
+        })),
+      ),
+    [slots],
+  );
 
   function minuteFromY(el: HTMLElement, clientY: number): number {
     const rect = el.getBoundingClientRect();
@@ -280,8 +293,15 @@ function PlanLane({ slots, dayStartMin, totalMin }: { slots: PlanSlot[]; dayStar
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      {slots.map((s) => (
-        <PlanCard key={s.plan_id} s={s} dayStartMin={dayStartMin} totalMin={totalMin} />
+      {slots.map((s, idx) => (
+        <PlanCard
+          key={s.plan_id}
+          s={s}
+          col={layout[idx]?.col ?? 0}
+          cols={layout[idx]?.cols ?? 1}
+          dayStartMin={dayStartMin}
+          totalMin={totalMin}
+        />
       ))}
       {rubber && (
         <div
@@ -355,10 +375,14 @@ function DraftBlock({
 
 function PlanCard({
   s,
+  col,
+  cols,
   dayStartMin,
   totalMin,
 }: {
   s: PlanSlot;
+  col: number;
+  cols: number;
   dayStartMin: number;
   totalMin: number;
 }) {
@@ -399,12 +423,14 @@ function PlanCard({
   return (
     <div
       ref={setNodeRef}
-      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed ${s.is_resolved ? "border-interactive-primary/55" : "border-border-strong"} p-1.5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-interactive-primary ${
+      className={`group absolute overflow-hidden rounded-md border border-dashed ${s.is_resolved ? "border-interactive-primary/55" : "border-border-strong"} p-1.5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-interactive-primary ${
         isOver ? "ring-2 ring-interactive-primary" : ""
       } ${dragStart != null ? "z-30 cursor-grabbing border-interactive-primary/70 shadow-[var(--shadow-lg)]" : "cursor-grab hover:shadow-[var(--shadow-md)]"}`}
       style={{
         top,
         height,
+        left: `calc(${(col / cols) * 100}% + 4px)`,
+        width: `calc(${(1 / cols) * 100}% - 8px)`,
         ...(s.is_resolved && resolvedHue
           ? { borderLeft: `3px solid ${hueVar(resolvedHue)}`, paddingLeft: 4 }
           : null),
