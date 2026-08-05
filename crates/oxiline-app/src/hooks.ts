@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useUi } from "./lib/store";
 import { useMemo } from "react";
 import { api } from "./lib/api";
@@ -194,6 +194,37 @@ export function useDeletePlan() {
       qc.invalidateQueries({ queryKey: ["plans"] });
     },
   });
+}
+
+/** Move or resize an actual record. `null` for a timestamp preserves it. */
+export function useEditRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      recordId: string;
+      startedAt?: string | null;
+      endedAt?: string | null;
+    }) => api.editRecord(args.recordId, args.startedAt, args.endedAt),
+    onSuccess: () => invalidateRecordDerived(qc),
+  });
+}
+
+export function useDeleteRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (recordId: string) => api.deleteRecord(recordId),
+    onSuccess: () => invalidateRecordDerived(qc),
+  });
+}
+
+/** A record change ripples into day records, compliance, the live state, AND
+ *  plan resolution (a moved/deleted record may resolve a different plan). */
+function invalidateRecordDerived(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: ["day-records"] });
+  qc.invalidateQueries({ queryKey: ["records-range"] });
+  qc.invalidateQueries({ queryKey: ["compliance"] });
+  qc.invalidateQueries({ queryKey: ["recordState"] });
+  qc.invalidateQueries({ queryKey: ["slots"] });
 }
 
 /** ISO window [date-1 00:00Z, date+1 23:59Z] for a local `date` (YYYY-MM-DD). */

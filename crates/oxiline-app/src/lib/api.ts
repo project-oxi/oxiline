@@ -63,6 +63,9 @@ export const api = {
   currentRecordState: () => invoke<RecordState>("current_record_state"),
   listRecords: (activityId: string | null, from: string, to: string) =>
     invoke<ActivityRecord[]>("list_records", { activityId, from, to }),
+  editRecord: (id: string, startedAt?: string | null, endedAt?: string | null) =>
+    invoke<ActivityRecord>("edit_record", { id, startedAt, endedAt }),
+  deleteRecord: (id: string) => invoke<void>("delete_record", { id }),
   getCompliance: (scope: Scope) => invoke<Compliance[]>("get_compliance", { scope }),
   // recording — plans
   listPlans: (recurringOnly: boolean) =>
