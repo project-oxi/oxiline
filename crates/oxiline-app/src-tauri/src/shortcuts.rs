@@ -13,11 +13,8 @@ use crate::{hud, state::AppState};
 /// Read the configured hotkeys from settings and register both.
 pub fn register_default(app: &AppHandle) {
     let state = app.state::<AppState>();
-    let hud_hk = oxiline_core::settings::get_string(
-        &state.conn(),
-        "global_hotkey",
-        "CmdOrCtrl+Shift+O",
-    );
+    let hud_hk =
+        oxiline_core::settings::get_string(&state.conn(), "global_hotkey", "CmdOrCtrl+Shift+O");
     let qr_hk = oxiline_core::settings::get_string(
         &state.conn(),
         "quick_record_hotkey",
