@@ -268,6 +268,16 @@ pub fn resize_plan(
     plan::resize_plan(&state.conn(), &plan_id, duration_minute).map_err(map_err)
 }
 
+/// Re-read the configured hotkeys and re-register the global shortcuts. Called
+/// from the Preferences UI after the user edits `global_hotkey` /
+/// `quick_record_hotkey`, so the change takes effect without a relaunch.
+#[tauri::command]
+#[specta::specta]
+pub fn reload_shortcuts(app: tauri::AppHandle) -> Result<(), String> {
+    crate::shortcuts::register_default(&app);
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn edit_record(

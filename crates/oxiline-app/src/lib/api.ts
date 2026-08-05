@@ -81,6 +81,9 @@ export const api = {
   resizePlan: (planId: string, durationMinute: number) =>
     invoke<Plan>("resize_plan", { planId, durationMinute }),
 
+  // preferences
+  reloadShortcuts: () => invoke<void>("reload_shortcuts"),
+
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */

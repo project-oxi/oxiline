@@ -138,14 +138,20 @@ export function Preferences() {
             <input
               defaultValue={(s.global_hotkey as string) ?? "CmdOrCtrl+Shift+O"}
               className="w-44 rounded bg-transparent px-2 py-1 font-mono text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
-              onBlur={(e) => setSetting.mutate({ key: "global_hotkey", value: e.target.value })}
+              onBlur={(e) => setSetting.mutate(
+                { key: "global_hotkey", value: e.target.value },
+                { onSuccess: () => void api.reloadShortcuts() },
+              )}
             />
           </Row>
           <Row label="빠른 녹화 (⌘⇧R)">
             <input
               defaultValue={(s.quick_record_hotkey as string) ?? "CmdOrCtrl+Shift+R"}
               className="w-44 rounded bg-transparent px-2 py-1 font-mono text-[12px] shadow-[var(--input-shadow)] focus-visible:shadow-[var(--input-shadow-focus)] focus-visible:outline-none"
-              onBlur={(e) => setSetting.mutate({ key: "quick_record_hotkey", value: e.target.value })}
+              onBlur={(e) => setSetting.mutate(
+                { key: "quick_record_hotkey", value: e.target.value },
+                { onSuccess: () => void api.reloadShortcuts() },
+              )}
             />
           </Row>
           <Row label={t("settings.hudDuration")}>
