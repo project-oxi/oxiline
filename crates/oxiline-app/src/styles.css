@@ -57,7 +57,9 @@
   -webkit-app-region: no-drag;
 }
 
-.date-popover { position: absolute; left: 0; top: 100%; z-index: 50; margin-top: 4px;
+/* Calendar popover — rendered into a body portal (position: fixed set inline)
+   so it never inherits the titlebar's drag region. */
+.date-popover { z-index: 50;
   border-radius: var(--popover-radius); border: 1px solid var(--color-border);
   background: var(--color-surface-raised); box-shadow: var(--shadow-lg); padding: 10px; }
 .date-popover-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }

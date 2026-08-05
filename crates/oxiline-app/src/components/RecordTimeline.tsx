@@ -75,6 +75,7 @@ export function RecordTimeline() {
 
   const slots = slotsQ.data ?? [];
   const hueById = new Map(activitiesQ.data?.map((a) => [a.id, a.hue_label] as const));
+  const nameById = new Map(activitiesQ.data?.map((a) => [a.id, a.name] as const));
   const records = (recordsQ.data ?? [])
     .filter((r) => isoLocal(r.started_at).date === date)
     .map((r) => ({ r, start: isoLocal(r.started_at).minute }));
@@ -110,7 +111,9 @@ export function RecordTimeline() {
               key={m}
               onClick={() => setMode(m)}
               className={`rounded-[5px] px-3 py-1 transition ${
-                mode === m ? "bg-surface-raised font-medium text-text" : "text-text-subtle"
+                mode === m
+                  ? "bg-surface-raised font-medium text-text shadow-[var(--shadow-sm)] ring-1 ring-border-strong"
+                  : "text-text-subtle hover:text-text-muted"
               }`}
             >
               {m === "plan" ? "계획" : m === "act" ? "실제" : "둘 다"}
@@ -154,11 +157,12 @@ export function RecordTimeline() {
               <ActualLane
                 records={records}
                 hueById={hueById}
+                nameById={nameById}
                 dayStartMin={dayStartMin}
-                nowTop={showNow ? nowTop : null}
                 divider={both}
               />
             )}
+            {showNow && <NowLine top={nowTop} />}
           </div>
         </div>
       </div>
@@ -281,20 +285,25 @@ function DraftBlock({
   onCommit: (title: string) => void;
   onCancel: () => void;
 }) {
+  const endMinute = draft.startMinute + draft.durationMinute;
   return (
     <div
-      className="absolute inset-x-1 z-20 overflow-hidden rounded-md border border-interactive-primary bg-surface-raised p-1.5 shadow-[var(--shadow-md)]"
+      className="absolute inset-x-1 z-20 overflow-hidden rounded-lg border border-interactive-primary/70 bg-surface-raised p-2 shadow-[var(--shadow-lg)]"
       style={{
         top: (draft.startMinute - dayStartMin) * PX_PER_MIN,
-        height: Math.max(48, draft.durationMinute * PX_PER_MIN),
+        minHeight: 104,
+        height: Math.max(104, draft.durationMinute * PX_PER_MIN),
       }}
     >
-      <div className="mb-0.5 text-[10px] text-text-subtle">
-        {hhmm(draft.startMinute)} · {draft.durationMinute}m
+      <div className="mb-1.5 flex items-center gap-1.5 text-[11px]">
+        <span className="rounded bg-interactive-primary-subtle px-1.5 py-0.5 font-mono font-medium tabular-nums text-interactive-primary">
+          {hhmm(draft.startMinute)}–{hhmm(endMinute)}
+        </span>
+        <span className="text-text-subtle">{draft.durationMinute}분</span>
       </div>
       <input
         autoFocus
-        placeholder="활동 이름"
+        placeholder="활동 이름 · 엔터로 추가"
         onKeyDown={(e) => {
           if (e.key === "Enter") onCommit((e.currentTarget as HTMLInputElement).value);
           else if (e.key === "Escape") onCancel();
@@ -304,8 +313,12 @@ function DraftBlock({
           if (v) onCommit(v);
           else onCancel();
         }}
-        className="w-full rounded bg-surface px-1.5 py-0.5 text-[12px] outline-none ring-1 ring-border focus-visible:ring-2 focus-visible:ring-interactive-primary"
+        className="w-full rounded-md bg-surface px-2 py-1.5 text-[13px] text-text outline-none shadow-[var(--input-shadow)] transition placeholder:text-text-subtle focus-visible:shadow-[var(--input-shadow-focus)]"
       />
+      <div className="mt-1 flex items-center justify-end gap-2 text-[10px] text-text-subtle">
+        <span><kbd className="rounded border border-border bg-surface px-1 font-mono">⏎</kbd> 저장</span>
+        <span><kbd className="rounded border border-border bg-surface px-1 font-mono">esc</kbd> 취소</span>
+      </div>
     </div>
   );
 }
@@ -380,14 +393,14 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
 function ActualLane({
   records,
   hueById,
+  nameById,
   dayStartMin,
-  nowTop,
   divider,
 }: {
   records: { r: ActivityRecord; start: number }[];
   hueById: Map<string, string | null>;
+  nameById: Map<string, string>;
   dayStartMin: number;
-  nowTop: number | null;
   divider: boolean;
 }) {
   return (
@@ -410,7 +423,7 @@ function ActualLane({
           >
             <div className="flex items-center gap-1 font-medium">
               {live && <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-error" />}
-              <span className="truncate">{r.activity_id}</span>
+              <span className="truncate">{nameById.get(r.activity_id) ?? r.activity_id}</span>
             </div>
             <div className="text-text-subtle">
               {hhmm(start)}–{live ? "" : hhmm(end)}
@@ -418,14 +431,20 @@ function ActualLane({
           </div>
         );
       })}
-      {nowTop !== null && (
-        <div className="pointer-events-none absolute inset-x-0 z-10" style={{ top: nowTop }}>
-          <div className="border-t border-status-error" />
-          <span className="absolute -right-0 -top-2 rounded bg-status-error px-1 text-[9px] text-status-error-subtle">
-            {hhmm(new Date().getHours() * 60 + new Date().getMinutes())}
-          </span>
-        </div>
-      )}
+    </div>
+  );
+}
+
+/** Now-line — spans every lane (plan and/or actual) at the current minute. */
+function NowLine({ top }: { top: number }) {
+  const hh = new Date().getHours();
+  const mm = new Date().getMinutes();
+  return (
+    <div className="pointer-events-none absolute inset-x-0 z-10" style={{ top }}>
+      <div className="border-t border-status-error" />
+      <span className="absolute -top-2 right-0 rounded bg-status-error px-1 font-mono text-[9px] font-medium text-text-inverse">
+        {String(hh).padStart(2, "0")}:{String(mm).padStart(2, "0")}
+      </span>
     </div>
   );
 }

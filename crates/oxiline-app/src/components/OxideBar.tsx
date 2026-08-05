@@ -10,6 +10,8 @@ interface Props {
   totalMin: number;
   onClickMinute?: (minute: number) => void;
   compact?: boolean;
+  /** Pixel height override (header strip uses a taller bar than the HUD). */
+  height?: number;
   /** Render the "now" marker. The HUD always shows it; the main-window bar
    * only shows it for the selected date when that date is today. */
   showNow?: boolean;
@@ -17,7 +19,7 @@ interface Props {
 
 /** Oxide Bar — a day compressed into one horizontal mini-map (§6.6). Segments
  * are actual records (what happened), colored by each record's activity hue. */
-export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMinute, compact, showNow = true }: Props) {
+export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMinute, compact, height, showNow = true }: Props) {
   const nowMin = useMemo(() => {
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
@@ -43,7 +45,7 @@ export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMi
   return (
     <div
       className="relative w-full overflow-hidden rounded-full"
-      style={{ height: compact ? 6 : 8, background: "var(--color-surface-sunken)" }}
+      style={{ height: height ?? (compact ? 6 : 8), background: "var(--color-surface-sunken)" }}
       onClick={(e) => {
         if (!onClickMinute) return;
         const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
@@ -69,8 +71,8 @@ export function OxideBar({ records, activities, dayStartMin, totalMin, onClickMi
           style={{
             left: `${Math.min(100, Math.max(0, nowPct))}%`,
             transform: "translate(-50%, -50%)",
-            width: compact ? 6 : 8,
-            height: compact ? 6 : 8,
+            width: height ?? (compact ? 6 : 8),
+            height: height ?? (compact ? 6 : 8),
             borderRadius: 999,
             background: "var(--color-interactive-primary)",
             boxShadow:

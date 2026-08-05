@@ -7,7 +7,7 @@
  * Neutral copy only: 미달/달성/초과 +Xm/목표 없음 (never failure language).
  */
 import { useState } from "react";
-import { useCompliance, useDayRecords } from "../hooks";
+import { useActivities, useCompliance, useDayRecords } from "../hooks";
 import { todayStr } from "../lib/store";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
 import type { Scope } from "../types";
@@ -37,7 +37,9 @@ function ComplianceOverview({ scope, onScope }: { scope: Scope; onScope: (s: Sco
             key={s}
             onClick={() => onScope(s)}
             className={`rounded-[5px] px-3 py-1 transition ${
-              scope === s ? "bg-surface-raised font-medium text-text" : "text-text-subtle"
+              scope === s
+                ? "bg-surface-raised font-medium text-text shadow-[var(--shadow-sm)] ring-1 ring-border-strong"
+                : "text-text-subtle hover:text-text-muted"
             }`}
           >
             {s === "week" ? "주간" : "오늘"}
@@ -93,6 +95,9 @@ function ComplianceOverview({ scope, onScope }: { scope: Scope; onScope: (s: Sco
 
 function RecentSessions() {
   const q = useDayRecords(todayStr());
+  const actsQ = useActivities(false);
+  const nameById = new Map((actsQ.data ?? []).map((a) => [a.id, a.name] as const));
+  const hueById = new Map((actsQ.data ?? []).map((a) => [a.id, a.hue_label] as const));
   const records = (q.data ?? [])
     .filter((r) => localDate(r.started_at) === todayStr())
     .sort((a, b) => (a.started_at < b.started_at ? 1 : -1))
@@ -112,8 +117,8 @@ function RecentSessions() {
             return (
               <div key={r.id} className="flex items-center justify-between text-[12px]">
                 <span className="flex items-center gap-1.5 truncate">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-text-subtle" />
-                  <span className="truncate text-text-muted">{r.activity_id}</span>
+                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: hueVar(hueById.get(r.activity_id) ?? null) }} />
+                  <span className="truncate text-text-muted">{nameById.get(r.activity_id) ?? r.activity_id}</span>
                 </span>
                 <span className="shrink-0 text-text-subtle">
                   {pad(start.getHours())}:{pad(start.getMinutes())} · {hmm((end.getTime() - start.getTime()) / 1000)}
