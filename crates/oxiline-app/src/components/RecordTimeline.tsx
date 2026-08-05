@@ -18,10 +18,13 @@ import {
   useCreateActivity,
   useCreatePlan,
   useDayRecords,
+  useDeletePlan,
+  useMovePlan,
   useResizePlan,
   useSettings,
   useSlots,
 } from "../hooks";
+import { X } from "lucide-react";
 import { todayStr, useUi } from "../lib/store";
 import { snapMinute, SNAP_MINUTES } from "../lib/dnd";
 import { resizeDuration } from "../lib/resize";
@@ -152,7 +155,7 @@ export function RecordTimeline() {
             className={`${both ? "relative grid flex-1" : "relative flex-1"} ${isOver ? "ring-2 ring-inset ring-interactive-primary/40" : ""}`}
             style={both ? { gridTemplateColumns: "1fr 1fr" } : undefined}
           >
-            {showPlan && <PlanLane slots={slots} dayStartMin={dayStartMin} />}
+            {showPlan && <PlanLane slots={slots} dayStartMin={dayStartMin} totalMin={totalMin} />}
             {showAct && (
               <ActualLane
                 records={records}
@@ -170,7 +173,7 @@ export function RecordTimeline() {
   );
 }
 
-function PlanLane({ slots, dayStartMin }: { slots: PlanSlot[]; dayStartMin: number }) {
+function PlanLane({ slots, dayStartMin, totalMin }: { slots: PlanSlot[]; dayStartMin: number; totalMin: number }) {
   const date = useUi((s) => s.date);
   const createPlan = useCreatePlan();
   const createActivity = useCreateActivity();
@@ -251,7 +254,7 @@ function PlanLane({ slots, dayStartMin }: { slots: PlanSlot[]; dayStartMin: numb
       onPointerUp={onPointerUp}
     >
       {slots.map((s) => (
-        <PlanCard key={s.plan_id} s={s} dayStartMin={dayStartMin} />
+        <PlanCard key={s.plan_id} s={s} dayStartMin={dayStartMin} totalMin={totalMin} />
       ))}
       {rubber && (
         <div
@@ -323,26 +326,89 @@ function DraftBlock({
   );
 }
 
-function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
+function PlanCard({
+  s,
+  dayStartMin,
+  totalMin,
+}: {
+  s: PlanSlot;
+  dayStartMin: number;
+  totalMin: number;
+}) {
   const { setNodeRef, isOver } = useDroppable({
     id: `plan-${s.plan_id}`,
     data: { kind: "plan-slot", planId: s.plan_id },
   });
   const [dragDur, setDragDur] = useState<number | null>(null);
+  const [dragStart, setDragStart] = useState<number | null>(null);
   const resize = useResizePlan();
-  const top = (s.start_minute - dayStartMin) * PX_PER_MIN;
+  const move = useMovePlan();
+  const del = useDeletePlan();
+
+  const startMin = dragStart ?? s.start_minute;
+  const top = (startMin - dayStartMin) * PX_PER_MIN;
   const height = (dragDur ?? s.duration_minute) * PX_PER_MIN;
+  const maxStart = dayStartMin + totalMin - s.duration_minute;
+
   return (
     <div
       ref={setNodeRef}
-      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 ${isOver ? "ring-2 ring-interactive-primary" : ""}`}
+      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 transition-shadow ${
+        isOver ? "ring-2 ring-interactive-primary" : ""
+      } ${dragStart != null ? "z-30 cursor-grabbing border-interactive-primary/70 shadow-[var(--shadow-lg)]" : "cursor-grab hover:shadow-[var(--shadow-md)]"}`}
       style={{ top, height }}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        const startY = e.clientY;
+        const orig = s.start_minute;
+        const ref = { current: orig };
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        const onMove = (ev: PointerEvent) => {
+          const next = snapMinute(Math.min(maxStart, Math.max(dayStartMin, orig + (ev.clientY - startY) / PX_PER_MIN)));
+          ref.current = next;
+          setDragStart(next);
+        };
+        const onUp = () => {
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+          setDragStart(null);
+          if (ref.current !== orig) {
+            move.mutate({
+              planId: s.plan_id,
+              startMinute: ref.current,
+              durationMinute: s.duration_minute,
+              weekdayMask: s.weekday_mask,
+            });
+          }
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+      }}
     >
       <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
-        <span>
-          {hhmm(s.start_minute)} · {Math.round(s.duration_minute)}m
+        <span className="tabular-nums">
+          {hhmm(startMin)} · {Math.round(s.duration_minute)}m
+          {dragStart != null && dragStart !== s.start_minute && (
+            <span className="ml-1 text-interactive-primary">→ {hhmm(dragStart)}</span>
+          )}
         </span>
-        {s.options.length > 1 && <span className="font-semibold">OR</span>}
+        <span className="flex items-center gap-1">
+          {s.options.length > 1 && <span className="font-semibold">OR</span>}
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              del.mutate(s.plan_id);
+            }}
+            className="rounded p-0.5 text-text-subtle opacity-0 transition hover:bg-status-error-subtle hover:text-status-error group-hover:opacity-100"
+            aria-label="삭제"
+            title="삭제"
+          >
+            <X size={11} />
+          </button>
+        </span>
       </div>
       <div className="flex flex-col gap-0.5">
         {s.options.map((o) => {
@@ -367,13 +433,13 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
           const startDur = s.duration_minute;
           const durRef = { current: startDur };
           (e.currentTarget as Element).setPointerCapture(e.pointerId);
-          const move = (ev: PointerEvent) => {
+          const mv = (ev: PointerEvent) => {
             const next = resizeDuration(startDur, (ev.clientY - startY) / PX_PER_MIN);
             durRef.current = next;
             setDragDur(next);
           };
           const finish = () => {
-            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointermove", mv);
             window.removeEventListener("pointerup", finish);
             window.removeEventListener("pointercancel", finish);
             if (durRef.current !== startDur) {
@@ -381,7 +447,7 @@ function PlanCard({ s, dayStartMin }: { s: PlanSlot; dayStartMin: number }) {
             }
             setDragDur(null);
           };
-          window.addEventListener("pointermove", move);
+          window.addEventListener("pointermove", mv);
           window.addEventListener("pointerup", finish);
           window.addEventListener("pointercancel", finish);
         }}

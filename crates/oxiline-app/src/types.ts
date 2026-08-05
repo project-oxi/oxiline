@@ -71,6 +71,7 @@ export interface PlanSlot {
   date: string;
   start_minute: number;
   duration_minute: number;
+  weekday_mask: number;
   options: Activity[];
   is_resolved: boolean;
   resolved_by: ActivityRecord | null;

@@ -379,6 +379,7 @@ pub fn slots_for_date(conn: &Connection, date: &str) -> Result<Vec<PlanSlot>> {
             date: date.to_string(),
             start_minute: plan.start_minute,
             duration_minute: plan.duration_minute,
+            weekday_mask: plan.weekday_mask,
             options,
             is_resolved: resolved_by.is_some(),
             resolved_by,

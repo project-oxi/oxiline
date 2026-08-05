@@ -158,6 +158,44 @@ export function useResizePlan() {
   });
 }
 
+/** Move a slot's start time, preserving its date/title/recurring mask and
+ * option set. `update_plan` reassigns `weekday_mask` directly (not partial),
+ * so the existing mask is passed through to keep recurring plans recurring. */
+export function useMovePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      planId: string;
+      startMinute: number;
+      durationMinute: number;
+      weekdayMask: number;
+    }) =>
+      api.updatePlan(args.planId, {
+        date: null,
+        start_minute: args.startMinute,
+        duration_minute: args.durationMinute,
+        weekday_mask: args.weekdayMask,
+        title: null,
+        activity_ids: [],
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+    },
+  });
+}
+
+export function useDeletePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => api.deletePlan(planId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["slots"] });
+      qc.invalidateQueries({ queryKey: ["plans"] });
+    },
+  });
+}
+
 /** ISO window [date-1 00:00Z, date+1 23:59Z] for a local `date` (YYYY-MM-DD). */
 function windowFor(date: string): { from: string; to: string } {
   const [y, m, d] = date.split("-").map(Number);

@@ -332,6 +332,7 @@ pub fn resolve_plan_for(conn: &Connection, rec: &Record) -> Result<Option<crate:
             date: rec_local_date.clone(),
             start_minute: plan.start_minute,
             duration_minute: plan.duration_minute,
+            weekday_mask: plan.weekday_mask,
             options,
             is_resolved: true,
             resolved_by: Some(rec.clone()),

@@ -106,6 +106,7 @@ pub struct PlanSlot {
     pub date: String,
     pub start_minute: u16,
     pub duration_minute: u16,
+    pub weekday_mask: u8,
     pub options: Vec<Activity>,
     pub is_resolved: bool,
     pub resolved_by: Option<Record>,

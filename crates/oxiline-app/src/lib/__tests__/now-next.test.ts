@@ -3,7 +3,7 @@ import { currentSlot, nextSlot } from "../now-next";
 import type { PlanSlot } from "../../types";
 
 function slot(id: string, start: number, dur: number): PlanSlot {
-  return { plan_id: id, date: "2026-08-02", start_minute: start, duration_minute: dur, options: [], is_resolved: false, resolved_by: null };
+  return { plan_id: id, date: "2026-08-02", start_minute: start, duration_minute: dur, options: [], is_resolved: false, resolved_by: null, weekday_mask: 0 };
 }
 
 describe("now/next derivation", () => {
