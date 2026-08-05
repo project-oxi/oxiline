@@ -367,14 +367,27 @@ function PlanCard({
   const top = (startMin - dayStartMin) * PX_PER_MIN;
   const height = (dragDur ?? s.duration_minute) * PX_PER_MIN;
   const maxStart = dayStartMin + totalMin - s.duration_minute;
+  // Resolved → the slot has been fulfilled by an actual record. Use the
+  // resolved option's hue as a left rail so the plan card visually lines up
+  // with its corresponding ActualBlock (same 3px hue stripe).
+  const resolvedOption = s.resolved_by
+    ? s.options.find((o) => o.id === s.resolved_by?.activity_id) ?? null
+    : null;
+  const resolvedHue = resolvedOption?.hue_label ?? null;
 
   return (
     <div
       ref={setNodeRef}
-      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-border-strong p-1.5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-interactive-primary ${
+      className={`group absolute left-1 right-1 overflow-hidden rounded-md border border-dashed ${s.is_resolved ? "border-interactive-primary/55" : "border-border-strong"} p-1.5 outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-interactive-primary ${
         isOver ? "ring-2 ring-interactive-primary" : ""
       } ${dragStart != null ? "z-30 cursor-grabbing border-interactive-primary/70 shadow-[var(--shadow-lg)]" : "cursor-grab hover:shadow-[var(--shadow-md)]"}`}
-      style={{ top, height }}
+      style={{
+        top,
+        height,
+        ...(s.is_resolved && resolvedHue
+          ? { borderLeft: `3px solid ${hueVar(resolvedHue)}`, paddingLeft: 4 }
+          : null),
+      }}
       role="button"
       tabIndex={0}
       aria-label={`${s.options.map((o) => o.name).join(" / ")} 계획 — Enter로 녹화`}
@@ -447,7 +460,7 @@ function PlanCard({
                 style={{ borderColor: hueVar(o.hue_label), background: picked ? hueVar(o.hue_label) : "transparent" }}
               />
               <span className={picked ? "text-text" : "text-text-muted"}>{o.name}</span>
-              {picked && <span className="text-[10px] text-text-subtle">→실행</span>}
+              {picked && <span className="text-[10px] text-text-subtle">● →실행</span>}
             </div>
           );
         })}
