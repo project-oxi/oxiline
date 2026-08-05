@@ -297,14 +297,10 @@ pub fn delete_record(state: State<AppState>, id: String) -> Result<(), String> {
 
 /// Reveal and focus the main window. Called from the HUD (click-to-open) so a
 /// glance at the floating panel can become a full session with one click.
-/// Mirrors the single-instance show+focus pattern.
+/// Routes through `tray::show_main` (shared reopen path: show + unminimize + set_focus).
 #[tauri::command]
 #[specta::specta]
 pub fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
-    use tauri::Manager;
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
-        let _ = w.set_focus();
-    }
+    crate::tray::show_main(&app);
     Ok(())
 }

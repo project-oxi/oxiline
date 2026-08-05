@@ -90,9 +90,20 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     }
 }
 
-fn show_main(app: &AppHandle) {
+/// Bring the main window to the front — the **reopen** half of the
+/// close/reopen pair. The close button only hides the window (`lib.rs`
+/// `CloseRequested` → `prevent_close` + `hide`), and this brings it back,
+/// reached from the tray menu, the single-instance callback, and the HUD.
+///
+/// `unminimize()` is load-bearing: tao's `set_focus()` only fires
+/// `activateIgnoringOtherApps` when the window is visible **and not
+/// miniaturized**, so a window the user minimized (yellow dot) would stay
+/// buried behind the active app even after `show()`. `unminimize` clears that
+/// so `set_focus` activates for real.
+pub(crate) fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
+        let _ = w.unminimize();
         let _ = w.set_focus();
     }
 }

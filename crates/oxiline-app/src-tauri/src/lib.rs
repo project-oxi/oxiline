@@ -8,7 +8,7 @@ mod state;
 mod tray;
 mod watcher;
 
-use tauri::{Listener, Manager, WindowEvent};
+use tauri::{Listener, WindowEvent};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_specta::{Builder as SpectaBuilder, collect_commands};
 
@@ -60,10 +60,7 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
+            crate::tray::show_main(app);
         }))
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
