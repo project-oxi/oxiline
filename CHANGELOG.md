@@ -4,6 +4,17 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-05
+
+UI redesign, icon refresh, and interaction polish.
+
+### Desktop app (`oxiline-app`)
+
+- **feat**: redesigned UI interactions, record entry points, and visual
+  hierarchy (per `oxi DESIGN.md`)
+- **feat**: replace Tauri app icon with clock design
+- **fix**: hide Oxide Bar now-marker for non-today dates in main window
+
 ## [0.1.0] - 2026-08-04
 
 First official release. Recording-centered OxiLine: data layer (`oxiline-core`),
@@ -63,3 +74,5 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 - **refactor**: replace `NowContext` with recording-native `now_summary`
 
 [0.1.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.1.0
+
+[0.2.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.2.0
