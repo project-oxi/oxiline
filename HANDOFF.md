@@ -83,3 +83,28 @@ Runtime-verified in browser: date popover, activity-add, click- and drag-to-crea
 `global_hotkey`/`quick_record_hotkey` edits in Preferences still only re-register
 on next launch (pre-existing behavior for `global_hotkey`); a live re-register
 command is a future nicety, not a regression.
+
+## UI polish — 2026-08-05 (session 2)
+
+Follow-on refinements on top of the redesign (all green: cargo workspace, bun
+build, 14 vitest):
+- **Header collapsed to a single command row + oxide strip** (~85px returned
+  to the timeline): date masthead, weekday chips with micro oxide bars, record
+  hero pill, ⌘K/⚙. Calendar popover is now a body portal (drag-region-free).
+- **Inline draft editor**: borderless in-place input, ⏎/esc kbd hints inline.
+- **Plan-block move + delete**: drag body = move (`update_plan`, start-only,
+  recurring mask preserved via `PlanSlot.weekday_mask`); hover × = delete.
+- Bug fixes: ActualLane + RecentSessions show activity names (was raw ids);
+  now-line spans both lanes; tab active-state contrast.
+- `doc/09-ui-redesign.md` rewritten as the canonical UI/interaction spec.
+
+Commits: `a7073e5` (draft editor), `c448fb8` (move/delete + core
+`weekday_mask`), `2692e5c` (spec rewrite). Spec: `doc/09-ui-redesign.md`.
+
+## Next session — actual-record editing
+
+Symmetric completion: move/delete on *actual-record* blocks (ActualLane).
+Plan ready at `docs/superpowers/plans/2026-08-05-actual-record-editing.md` —
+core `edit_record`/`delete_record` already exist; only Tauri command exposure
+(`commands.rs` + `lib.rs` builder) + frontend gestures (`ActualBlock` drag +
+hover ×) remain. Execute via subagent-driven-development or executing-plans.
