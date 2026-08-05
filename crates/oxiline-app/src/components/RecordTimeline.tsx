@@ -11,7 +11,7 @@
  * Records are UTC instants; positions use LOCAL minute-of-day. Plans already
  * store local minutes. No `is_done` anywhere — completion = a record existing.
  */
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   useActivities,
@@ -33,6 +33,8 @@ import { X } from "lucide-react";
 import { todayStr, useUi } from "../lib/store";
 import { snapMinute, SNAP_MINUTES } from "../lib/dnd";
 import { resizeDuration } from "../lib/resize";
+import { useTranslation } from "react-i18next";
+import { formatDuration } from "../lib/colors";
 import type { ActivityRecord, PlanSlot } from "../types";
 
 type Mode = "plan" | "act" | "both";
@@ -82,6 +84,15 @@ export function RecordTimeline() {
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
   const slots = slotsQ.data ?? [];
+  // Workload tone shift (§doc/07 §7.1): sum today's planned minutes and
+  // compare to `workload_warning_minutes` (0 disables). Tight = at/over.
+  const { t, i18n } = useTranslation();
+  const plannedMin = useMemo(
+    () => slots.reduce((acc, s) => acc + (s.duration_minute ?? 0), 0),
+    [slots],
+  );
+  const warningMin = num(settingsQ.data?.workload_warning_minutes, 600);
+  const tight = warningMin > 0 && plannedMin >= warningMin;
   const hueById = new Map(activitiesQ.data?.map((a) => [a.id, a.hue_label] as const));
   const nameById = new Map(activitiesQ.data?.map((a) => [a.id, a.name] as const));
   const records = (recordsQ.data ?? [])
@@ -128,6 +139,16 @@ export function RecordTimeline() {
             </button>
           ))}
         </div>
+
+      {warningMin > 0 && (
+        <div className="flex items-center justify-between border-b border-border bg-surface-sunken px-3 py-1 text-[11px] tabular-nums">
+          <span className={tight ? "text-status-warning" : "text-text-subtle"}>
+            {t("timeline.plannedDur", { dur: formatDuration(plannedMin, i18n.language as "ko" | "en") })}{" "}
+            ·{" "}
+            {tight ? t("timeline.workloadTight") : t("timeline.workloadEasy")}
+          </span>
+        </div>
+      )}
         <span className="text-[11px] text-text-subtle">계획은 OR(택1) · 실제는 기록</span>
       </div>
 
