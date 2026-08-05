@@ -6,6 +6,7 @@ import { Preferences } from "./components/Preferences";
 import { Onboarding } from "./components/Onboarding";
 import { Sidebar } from "./components/Sidebar";
 import { Inspector } from "./components/Inspector";
+import { ContextMenu } from "./components/ContextMenu";
 import { ActivitySwitcher } from "./components/ActivitySwitcher";
 import { useUi } from "./lib/store";
 
@@ -83,6 +84,7 @@ export default function App() {
       <ActivitySwitcher />
       <Preferences />
       <Onboarding />
+      <ContextMenu />
     </div>
   );
 }

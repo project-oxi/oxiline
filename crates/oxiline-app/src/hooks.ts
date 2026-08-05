@@ -123,6 +123,14 @@ export function useCreateActivity() {
   });
 }
 
+export function useDeleteActivity() {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteActivity(id, false),
+    onSuccess: () => inv(),
+  });
+}
+
 export function useCreatePlan() {
   const qc = useQueryClient();
   return useMutation({

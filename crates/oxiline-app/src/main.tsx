@@ -9,7 +9,10 @@ import { useUi } from "./lib/store";
 import App from "./App";
 
 async function boot() {
-  // Settings drive locale + theme before first paint.
+  // Replace the platform's native webview right-click menu with the app-native
+  // <ContextMenu/>. preventDefault only blocks the native menu; React
+  // onContextMenu handlers still fire and open ours where declared.
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
   let settings: Record<string, unknown> = {};
   try {
     settings = await api.getSettings();

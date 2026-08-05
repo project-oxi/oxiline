@@ -7,17 +7,19 @@
  */
 import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Play, Plus } from "lucide-react";
+import { Play, Plus, Square, Trash2 } from "lucide-react";
 import {
   useActivities,
   useCompliance,
   useCreateActivity,
+  useDeleteActivity,
   useRecordState,
   useStartRecord,
   useStopRecord,
 } from "../hooks";
 import { complianceLabel, hmm, hueVar } from "../lib/record-format";
 import { useUi } from "../lib/store";
+import { useContextMenu } from "../lib/context-menu";
 import type { Activity, Compliance } from "../types";
 
 export function Sidebar() {
@@ -186,6 +188,10 @@ function DraggableActivity({
 }) {
   const selectedActivityIds = useUi((state) => state.selectedActivityIds);
   const start = useStartRecord();
+  const stop = useStopRecord();
+  const delAct = useDeleteActivity();
+  const recState = useRecordState();
+  const isActive = recState.data?.active?.activity.id === activity.id;
   const isSelected = selectedActivityIds.includes(activity.id);
   const ids = isSelected && selectedActivityIds.length > 0 ? selectedActivityIds : [activity.id];
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -212,6 +218,20 @@ function DraggableActivity({
       {...listeners}
       {...attributes}
       onClick={(e) => onSelect(activity.id, e.metaKey || e.ctrlKey)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        useContextMenu.getState().show(e.clientX, e.clientY, [
+          { kind: "header", label: activity.name },
+          {
+            kind: "item",
+            label: isActive ? "녹화 중지" : "녹화 시작",
+            icon: isActive ? Square : Play,
+            onSelect: () => (isActive ? stop.mutate() : start.mutate(activity.id)),
+          },
+          { kind: "separator" },
+          { kind: "item", label: "활동 삭제", icon: Trash2, danger: true, onSelect: () => delAct.mutate(activity.id) },
+        ]);
+      }}
       className={`group cursor-grab rounded-md p-1.5 hover:bg-surface-sunken ${isDragging ? "opacity-40" : ""} ${isSelected ? "ring-2 ring-interactive-primary" : ""}`}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
     >

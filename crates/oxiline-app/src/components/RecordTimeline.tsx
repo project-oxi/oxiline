@@ -29,7 +29,8 @@ import {
   useStartRecord,
   useStopRecord,
 } from "../hooks";
-import { X } from "lucide-react";
+import { Play, Square, Trash2, X } from "lucide-react";
+import { useContextMenu } from "../lib/context-menu";
 import { todayStr, useUi } from "../lib/store";
 import { snapMinute, SNAP_MINUTES } from "../lib/dnd";
 import { resizeDuration } from "../lib/resize";
@@ -181,6 +182,13 @@ export function RecordTimeline() {
             ref={setNodeRef}
             className={`${both ? "relative grid flex-1" : "relative flex-1"} ${isOver ? "ring-2 ring-inset ring-interactive-primary/40" : ""}`}
             style={both ? { gridTemplateColumns: "1fr 1fr" } : undefined}
+            onContextMenu={(e) => {
+              const ui = useUi.getState();
+              useContextMenu.getState().show(e.clientX, e.clientY, [
+                { kind: "item", label: "오늘로 이동", onSelect: () => ui.goToToday() },
+                { kind: "item", label: "지금으로 스크롤", onSelect: () => ui.requestScroll(nowMin) },
+              ]);
+            }}
           >
             {showPlan && <PlanLane slots={slots} dayStartMin={dayStartMin} totalMin={totalMin} />}
             {showAct && (
@@ -209,6 +217,7 @@ function PlanLane({ slots, dayStartMin, totalMin }: { slots: PlanSlot[]; dayStar
   const [draft, setDraft] = useState<{ startMinute: number; durationMinute: number } | null>(null);
   const [rubber, setRubber] = useState<{ startMinute: number; durationMinute: number } | null>(null);
   const dragRef = useRef<{ startY: number; startMinute: number; moved: boolean } | null>(null);
+
   // Column-pack overlapping plan cards (Google-Calendar style). Each card
   // keeps its Y (time) position; overlapping cards fan out side-by-side.
   const layout = useMemo(
@@ -221,7 +230,6 @@ function PlanLane({ slots, dayStartMin, totalMin }: { slots: PlanSlot[]; dayStar
       ),
     [slots],
   );
-
   function minuteFromY(el: HTMLElement, clientY: number): number {
     const rect = el.getBoundingClientRect();
     return snapMinute(Math.round(dayStartMin + (clientY - rect.top) / PX_PER_MIN));
@@ -473,6 +481,23 @@ function PlanCard({
         e.preventDefault();
         toggleRecording();
       }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isActive = state.data?.active?.activity.id === toggleTarget;
+        useContextMenu.getState().show(e.clientX, e.clientY, [
+          { kind: "header", label: `${hhmm(startMin)} · ${Math.round(s.duration_minute)}m` },
+          {
+            kind: "item",
+            label: isActive ? "녹화 중지" : "지금 녹화",
+            icon: isActive ? Square : Play,
+            onSelect: toggleRecording,
+            disabled: !toggleTarget,
+          },
+          { kind: "separator" },
+          { kind: "item", label: "삭제", icon: Trash2, danger: true, onSelect: () => del.mutate(s.plan_id) },
+        ]);
+      }}
     >
       <div className="mb-1 flex items-center justify-between text-[10px] text-text-subtle">
         <span className="tabular-nums">
@@ -606,6 +631,8 @@ function ActualBlock({
 }) {
   const edit = useEditRecord();
   const del = useDeleteRecord();
+  const startRec = useStartRecord();
+  const stopRec = useStopRecord();
   const [dragDelta, setDragDelta] = useState(0);
   const dragging = dragDelta !== 0;
   const top = (start - dayStartMin + dragDelta) * PX_PER_MIN;
@@ -657,6 +684,23 @@ function ActualBlock({
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
         window.addEventListener("pointercancel", onUp);
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (live) {
+          useContextMenu.getState().show(e.clientX, e.clientY, [
+            { kind: "header", label: name },
+            { kind: "item", label: "녹화 중지", icon: Square, onSelect: () => stopRec.mutate() },
+          ]);
+        } else {
+          useContextMenu.getState().show(e.clientX, e.clientY, [
+            { kind: "header", label: name },
+            { kind: "item", label: "이어서 녹화", icon: Play, onSelect: () => startRec.mutate(r.activity_id) },
+            { kind: "separator" },
+            { kind: "item", label: "삭제", icon: Trash2, danger: true, onSelect: () => del.mutate(r.id) },
+          ]);
+        }
       }}
     >
       <div className="flex items-center justify-between gap-1 font-medium">

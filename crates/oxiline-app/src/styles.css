@@ -65,3 +65,9 @@
 .date-popover-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .date-popover-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; border-radius: var(--radius-full); font-size: 12px; cursor: pointer; }
+/* App-native context menu — fade + scale-in on open. */
+.context-menu { animation: ctx-in var(--duration-fast) var(--ease-out); }
+@keyframes ctx-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
