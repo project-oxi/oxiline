@@ -19,6 +19,15 @@ All notable changes to OxiLine will be documented in this file.
 - **fix**: actual lane + recent sessions show activity names (was raw ids)
 - **fix**: now-line spans both lanes
 
+## Follow-ups (2026-08-05 session 3)
+
+- **feat**: PlanCard Enter / Space toggles recording (resolved option if present,
+  else first option; OR plans default to first)
+- **feat**: live re-register of `global_hotkey` / `quick_record_hotkey` from
+  Preferences (no relaunch); new `reload_shortcuts` Tauri command
+- **feat**: HUD live 1-second tick — elapsed timer and "next in N분" countdown
+  refresh while open
+
 ## [0.2.0] - 2026-08-05
 
 UI redesign, icon refresh, and interaction polish.

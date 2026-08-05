@@ -125,9 +125,32 @@ Note: the plan's `invalidateRecordDerived` listed a `["records"]` query key that
 does not exist in the query graph; corrected to `["records-range"]` (the real
 range-query key) to avoid a silent invalidation gap.
 
-## Next session — reserved gaps
+## Follow-ups (2026-08-05 session 3) ✅ COMPLETE
 
-- `Enter` on a plan block toggles recording for that activity (§9.9, reserved).
-- Live re-register of `global_hotkey` / `quick_record_hotkey` edits (future
-  nicety; currently applies on next launch).
-- HUD enrichment (⌘⇧O) beyond the actionable stop button (deferred from Plan 2).
+Shipped (all green: cargo workspace, clippy -D warnings, bun build, 14 vitest):
+
+- **PlanCard Enter / Space** — focuses the card on pointerdown, then Enter or
+  Space toggles recording: resolved option if present, else the first option
+  (OR plans default to first). Same-activity → stop; otherwise → start. Card is
+  keyboard-reachable (`tabIndex={0}`, `role="button"`, `focus-visible` ring).
+- **Live hotkey reload** — new `reload_shortcuts` Tauri command calls
+  `shortcuts::register_default` (which already unregisters-all + re-registers).
+  Preferences' two hotkey inputs invoke it on `onBlur` after the setting write.
+  Edits take effect immediately, no relaunch.
+- **HUD live tick** — 1-second `setInterval` updates `tick`; `elapsed_seconds`
+  and the next-slot `N분 후` countdown refresh while the HUD is open. `nowMin`
+  is `baseNowMin + floor(tick/60)` so minute-resolution displays stay correct.
+
+Commits: `95f239a` (PlanCard Enter) → `387409c` (hotkey reload) → `56498b2`
+(HUD tick).
+
+## Next session — what remains
+
+- Legacy replacement views (Backlog / Week / Report / RoutineManager). V5
+  already drops the legacy *tables* and `0.1.0` strips the legacy frontend
+  modules; the legacy *view* entry points remain in the view switch pending
+  recording-native replacements. Until those land, removing the legacy views
+  entirely would break the app.
+- Plan-block ↔ record-block visual continuity (e.g. animate the resolved
+  `→실행` marker into the ActualBlock once the record lands) — UX polish,
+  not blocking.
