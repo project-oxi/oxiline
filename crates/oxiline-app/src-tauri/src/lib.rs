@@ -43,6 +43,8 @@ pub fn run() {
         commands::delete_plan,
         commands::add_plan_options,
         commands::resize_plan,
+        commands::edit_record,
+        commands::delete_record,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.

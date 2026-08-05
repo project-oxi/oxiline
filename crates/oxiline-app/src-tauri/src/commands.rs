@@ -267,3 +267,20 @@ pub fn resize_plan(
 ) -> Result<Plan, String> {
     plan::resize_plan(&state.conn(), &plan_id, duration_minute).map_err(map_err)
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn edit_record(
+    state: State<AppState>,
+    id: String,
+    started_at: Option<String>,
+    ended_at: Option<String>,
+) -> Result<Record, String> {
+    record::edit_record(&state.conn(), &id, started_at, ended_at).map_err(map_err)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_record(state: State<AppState>, id: String) -> Result<(), String> {
+    record::delete_record(&state.conn(), &id).map_err(map_err)
+}
