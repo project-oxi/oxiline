@@ -124,3 +124,10 @@ Commits: `14b4777` (commands) → `db2fcdb` (api+hooks) → `deb3078` (drag) →
 Note: the plan's `invalidateRecordDerived` listed a `["records"]` query key that
 does not exist in the query graph; corrected to `["records-range"]` (the real
 range-query key) to avoid a silent invalidation gap.
+
+## Next session — reserved gaps
+
+- `Enter` on a plan block toggles recording for that activity (§9.9, reserved).
+- Live re-register of `global_hotkey` / `quick_record_hotkey` edits (future
+  nicety; currently applies on next launch).
+- HUD enrichment (⌘⇧O) beyond the actionable stop button (deferred from Plan 2).

@@ -4,6 +4,21 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+### Desktop app (`oxiline-app`)
+
+- **feat**: single-row header + oxide strip (date masthead, weekday chips with
+  micro oxide bars, record hero pill, calendar body-portal popover)
+- **feat**: inline draft editor for plan quick-add (borderless in-place input,
+  ⏎/esc kbd hints)
+- **feat**: plan-block move + delete (drag body → `update_plan` start-only,
+  recurring mask preserved; hover × → `delete_plan`)
+- **feat**: actual-record block move + delete (drag → `edit_record` absolute
+  UTC delta with 5-min snap + day-window clamp; hover × → `delete_record`;
+  live open sessions are fixed until stopped)
+- **feat**: expose `edit_record` / `delete_record` Tauri commands
+- **fix**: actual lane + recent sessions show activity names (was raw ids)
+- **fix**: now-line spans both lanes
+
 ## [0.2.0] - 2026-08-05
 
 UI redesign, icon refresh, and interaction polish.
