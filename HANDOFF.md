@@ -57,3 +57,29 @@ multi-select + plan resize, full legacy demolition (`V5__drop_legacy.sql`).
 cargo test --workspace      # Plan 1 gate — green
 # Plan 2: see the plan2 doc, execute task-by-task (SDD or inline)
 ```
+
+
+## UI Redesign — 2026-08-05 ✅ COMPLETE (commit `0ae3da3`)
+
+Addressed the UX regression reported against the Plan 2 GUI: the surface felt
+read-only and undifferentiated. Diagnosis + rationale: `doc/09-ui-redesign.md`.
+
+Shipped (all green: tsc+vite build, 14 FE tests, clippy -D warnings, workspace tests):
+- **Visual**: 3-tier pane surfaces (sidebar `surface-sunken` / timeline `surface` /
+  inspector `surface-raised`) + header chrome bar; Oxide Bar mounted in the main
+  window (was HUD-only) with click→scroll via `useUi.requestScroll`.
+- **Timeline direct-create**: click empty plan lane → inline DraftBlock quick-add;
+  drag → rubber-band block; sidebar-drag drop highlight (`isOver` ring).
+- **Recording entry**: header transport + NowCard start CTA + per-card hover
+  quick-record; **global ⌘⇧R quick-toggle** (new `quick_record_hotkey` setting +
+  `oxiline://quick-record` event; resume last activity / stop).
+- **Sidebar**: ＋ inline activity creation + CTA empty state.
+- **HUD**: actionable stop button. **Preferences**: quick-record hotkey + full table.
+- Removed orphaned `NowLine.tsx`.
+
+Store additions (`lib/store.ts`): `lastActivityId`, `scrollTarget`/`requestScroll`.
+Runtime-verified in browser: date popover, activity-add, click- and drag-to-create.
+
+`global_hotkey`/`quick_record_hotkey` edits in Preferences still only re-register
+on next launch (pre-existing behavior for `global_hotkey`); a live re-register
+command is a future nicety, not a regression.
