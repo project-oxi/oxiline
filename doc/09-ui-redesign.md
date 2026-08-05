@@ -227,7 +227,7 @@
 | **카드 호버 ▶** | 사이드바 활동 행 | 호버 | 해당 활동 즉시 시작 |
 | **⌘⇧A 스위처** | 모달 | 단축키 | 필터 + ↑↓ + Enter로 활동 전환 |
 | **⌘⇧R 글로벌** | OS 전역 | 단축키 | 토글(창 포커스 불필요). `shortcuts.rs` + `oxiline://quick-record` |
-| **HUD** | 플로팅 패널 | ⌘⇧O | actionable 정지 버튼 |
+| **HUD** | 플로팅 패널 | ⌘⇧O | 녹화중=정지; 예정=`▶ 지금 시작`; 자유=오늘 총 기록. 카드 클릭=메인 창 열기(`show_main_window`) |
 
 히어로 필/NowCard/카드 호버는 `lastActivityId`로 resume; 없으면 스위처 오픈.
 
@@ -250,7 +250,7 @@
 | ActualBlock | 삭제 | 호버 `×` (라이브 제외) |
 | 사이드바 활동 | 계획 배치 | 타임라인으로 드래그 |
 | DraftBlock | 커밋/취소 | `Enter` / `Esc` |
-| 글로벌 | 커맨드 팔레트 | `⌘K` |
+| 글로벌 | 컨텍스트 메뉴 | 우클릭 (§9.14) |
 | 글로벌 | 환경설정 | `⌘,` |
 
 ---
@@ -304,6 +304,8 @@
 - [x] 녹화 중 트랜스포트/NowCard에 라이브 타이머; now-line이 양 레인 관통.
 - [x] 실제 레인·최근 세션이 활동 이름(비 id) 표시.
 - [x] 실제 기록 블록(ActualBlock)을 드래그로 이동(`edit_record`), 호버 ×로 삭제(라이브 제외).
+- [x] 우클릭 시 웹뷰 네이티브 메뉴 대신 앱 컨텍스트 메뉴(PlanCard/ActualBlock/활동/타임라인 배면)가 뜬다(§9.14).
+- [x] HUD가 대기 상태에서도 행동 가능(예정=`지금 시작`, 자유=오늘 총 기록)하며 카드 클릭으로 메인 창을 연다.
 
 ---
 
@@ -327,6 +329,8 @@
 | 글로벌 단축키 | `src-tauri/src/shortcuts.rs` (`register_quick_record`) |
 | PlanSlot.weekday_mask | `oxiline-core/src/model.rs` + `plan.rs` + `record.rs` |
 | 토큰 | `src/tokens/{primitives,semantic,semantic-dark,components,theme}.css` |
+| 우클릭 컨텍스트 메뉴 | `lib/context-menu.ts` (`useContextMenu`, `clampMenuPosition`) + `components/ContextMenu.tsx` + `.context-menu` (`styles.css`) |
+| HUD 클릭→메인 창 | `src-tauri/src/commands.rs` (`show_main_window`) + `lib/api.ts` (`showMainWindow`) |
 
 ---
 
@@ -347,3 +351,41 @@
 그리고 **계획 카드 겹침**(P7, "계획 카드가 서로 그냥 겹쳐짐")을 해소했다: `PlanCard`가
 `top`만 계산하고 겹침 처리가 없어 동시간대 카드가 z-order로 포개졌던 것을, Google Calendar
 방식의 **컬럼 패킹**(`packColumns`)으로 나란히 배치(§9.4.2). Y(시간)는 보존하고 가로만 분할.
+
+---
+
+## 9.14 우클릭 컨텍스트 메뉴 + HUD 정제 (2026-08-05)
+
+### 9.14.1 컨텍스트 메뉴 시스템
+
+우클릭 시 웹뷰의 네이티브 메뉴(Reload/Inspect/…) 대신 **앱 고유의 컨텍스트 메뉴**가 뜬다.
+단일 스토어 + 단일 컴포넌트(`ContextMenu`, App 루트에서 body 포털 렌더)로 구성.
+
+- **네이티브 억제**: `main.tsx`/`hud.tsx` 부트에서 `document` 레벨 `contextmenu`→`preventDefault`.
+  React `onContextMenu`는 여전히 발화하므로 메뉴를 선언한 요소만 연다.
+- **위치**: `clampMenuPosition`이 오른쪽/아래 overflow 시 커서 반대편으로 flip 후 뷰포트 안으로 clamp.
+  실측 크기로 런타임 보정(`useLayoutEffect`). 닫힘: 외부 클릭 / `Esc` / blur / scroll / resize.
+- **키보드**: ↑↓ 이동(item만, separator/header/disabled 건너뜀), Enter 선택, Esc 닫기.
+- **시각**: `surface-raised` + `border` + `--shadow-lg` + `rounded-lg`, fade+scale-in(`--duration-fast`).
+
+메뉴는 기존 직접 조작(드래그/호버 ×)과 **동일한 동작의 발견 가능한 2차 경로**다(§9.1). 블록 핸들러는
+`stopPropagation`해 배면 메뉴가 겹쳐 열리지 않게 한다.
+
+| 표면 | 항목 |
+|---|---|
+| **PlanCard** | 헤더 `HH:MM · Nm`; ▶ 지금 녹화 / ■ 녹화 중지(토글); ──; 🗑 삭제 |
+| **ActualBlock(진행중)** | 헤더 이름; ■ 녹화 중지 |
+| **ActualBlock(과거)** | 헤더 이름; ▶ 이어서 녹화(같은 활동 시작); ──; 🗑 삭제 |
+| **사이드바 활동** | 헤더 이름; ▶ 녹화 시작 / ■ 녹화 중지(토글); ──; 🗑 활동 삭제(`force=false`) |
+| **타임라인 배면** | 오늘로 이동; 지금으로 스크롤 |
+
+드래그 핸들러는 `e.button !== 0` 가드를 가지므로 우클릭이 드래그를 시작하지 않는다.
+
+### 9.14.2 HUD 정제
+
+HUD(플로팅 패널, ⌘⇧O)를 모든 상태에서 **행동 가능**하게 다듬었다(창 높이 170→200px).
+
+- **녹화 중**: 활동 hue 좌측 레일(3px, 타임라인 블록과 동일) + 22px 모노 경과 타이머 + 주간 진행 바 + 위험 톤 정지 버튼.
+- **예정(대기)**: `▶ 지금 시작` 버튼이 해결/첫 옵션을 즉시 녹화 — HUD가 한 번의 클릭으로 실행 가능.
+- **자유 시간(대기)**: 오늘 실제 기록 총합(`오늘 Nh Nm 기록`)을 표시해 glance가 항상 의미를 갖는다.
+- **카드 클릭 → 메인 창**: `show_main_window` Tauri 명령으로 메인 창을 show+focus. 정지/시작 버튼은 `stopPropagation`.

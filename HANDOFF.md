@@ -206,3 +206,31 @@ Spec: `doc/09` §9.4.2 + §9.11 + §9.12 + §9.13 (P7).
   (`notifications_enabled`, `notification_lead_minutes`) and `notifier.rs` is
   wired, but the opt-in toggle is partially live in Preferences. Verify the
   full flow end-to-end and tighten the UI copy.
+
+## Context menu + HUD polish (2026-08-05 session 7) ✅ COMPLETE
+
+User reported right-click showed only the platform's native webview menu; also
+asked to refine the HUD. Done autonomously (user asleep). Spec:
+`docs/superpowers/specs/2026-08-05-context-menu-and-hud-design.md`, plan:
+`docs/superpowers/plans/2026-08-05-context-menu-and-hud.md`.
+
+**Context menu** (all green: 28 vitest, tsc+vite, cargo workspace, clippy -D warnings;
+runtime-verified in browser):
+- App-native menu replaces the native webview menu. `lib/context-menu.ts`
+  (`useContextMenu` store + pure `clampMenuPosition`) + `components/ContextMenu.tsx`
+  (body portal, viewport flip+clamp, ↑↓/Enter/Esc kbd nav, close on outside/blur/scroll).
+  Native suppressed via document-level `contextmenu`→`preventDefault` in `main.tsx`/`hud.tsx`.
+  `.context-menu` chrome + `ctx-in` keyframe in `styles.css`.
+- Wired per surface (mirrors existing direct manipulation — the discoverable 2nd path):
+  PlanCard (toggle/delete), ActualBlock (live→stop / past→continue+delete), sidebar
+  activity (toggle/delete via new `useDeleteActivity`), timeline background (today/scroll-now).
+- Drag handlers guard `e.button !== 0` so right-click never starts a drag.
+
+**HUD polish** (`hud.tsx`; window height 170→200):
+- Actionable idle: scheduled → `▶ 지금 시작` (start resolved/first option); free time →
+  today's total recorded time (`오늘 Nh Nm 기록`, filtered to local today).
+- Active: hue left-rail (matches timeline blocks) + 22px mono elapsed + danger stop.
+- Click card → `show_main_window` (new Tauri command `commands.rs` + `lib.rs` specta +
+  `api.showMainWindow`); stop/start buttons `stopPropagation`.
+
+Spec updated: `doc/09` §9.7/§9.8/§9.11/§9.12 + new §9.14.
