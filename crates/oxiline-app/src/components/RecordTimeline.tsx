@@ -288,22 +288,26 @@ function DraftBlock({
   const endMinute = draft.startMinute + draft.durationMinute;
   return (
     <div
-      className="absolute inset-x-1 z-20 overflow-hidden rounded-lg border border-interactive-primary/70 bg-surface-raised p-2 shadow-[var(--shadow-lg)]"
+      className="absolute inset-x-1 z-20 overflow-hidden rounded-lg border border-interactive-primary/70 bg-surface-raised px-2.5 py-2 shadow-[var(--shadow-lg)]"
       style={{
         top: (draft.startMinute - dayStartMin) * PX_PER_MIN,
-        minHeight: 104,
-        height: Math.max(104, draft.durationMinute * PX_PER_MIN),
+        minHeight: 62,
+        height: Math.max(62, draft.durationMinute * PX_PER_MIN),
       }}
     >
-      <div className="mb-1.5 flex items-center gap-1.5 text-[11px]">
+      <div className="mb-1 flex items-center gap-1.5 text-[11px]">
         <span className="rounded bg-interactive-primary-subtle px-1.5 py-0.5 font-mono font-medium tabular-nums text-interactive-primary">
           {hhmm(draft.startMinute)}–{hhmm(endMinute)}
         </span>
         <span className="text-text-subtle">{draft.durationMinute}분</span>
+        <span className="ml-auto flex items-center gap-1 text-text-subtle">
+          <kbd className="rounded border border-border bg-surface px-1 font-mono text-[9px]">⏎</kbd>
+          <kbd className="rounded border border-border bg-surface px-1 font-mono text-[9px]">esc</kbd>
+        </span>
       </div>
       <input
         autoFocus
-        placeholder="활동 이름 · 엔터로 추가"
+        placeholder="활동 이름"
         onKeyDown={(e) => {
           if (e.key === "Enter") onCommit((e.currentTarget as HTMLInputElement).value);
           else if (e.key === "Escape") onCancel();
@@ -313,12 +317,8 @@ function DraftBlock({
           if (v) onCommit(v);
           else onCancel();
         }}
-        className="w-full rounded-md bg-surface px-2 py-1.5 text-[13px] text-text outline-none shadow-[var(--input-shadow)] transition placeholder:text-text-subtle focus-visible:shadow-[var(--input-shadow-focus)]"
+        className="w-full bg-transparent text-[13px] font-medium text-text outline-none placeholder:font-normal placeholder:text-text-subtle"
       />
-      <div className="mt-1 flex items-center justify-end gap-2 text-[10px] text-text-subtle">
-        <span><kbd className="rounded border border-border bg-surface px-1 font-mono">⏎</kbd> 저장</span>
-        <span><kbd className="rounded border border-border bg-surface px-1 font-mono">esc</kbd> 취소</span>
-      </div>
     </div>
   );
 }
