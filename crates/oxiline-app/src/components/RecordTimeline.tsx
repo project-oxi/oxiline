@@ -19,6 +19,7 @@ import {
   useCreatePlan,
   useDayRecords,
   useDeletePlan,
+  useEditRecord,
   useMovePlan,
   useResizePlan,
   useSettings,
@@ -163,6 +164,7 @@ export function RecordTimeline() {
                 nameById={nameById}
                 dayStartMin={dayStartMin}
                 divider={both}
+                totalMin={totalMin}
               />
             )}
             {showNow && <NowLine top={nowTop} />}
@@ -461,42 +463,123 @@ function ActualLane({
   hueById,
   nameById,
   dayStartMin,
+  totalMin,
   divider,
 }: {
   records: { r: ActivityRecord; start: number }[];
   hueById: Map<string, string | null>;
   nameById: Map<string, string>;
   dayStartMin: number;
+  totalMin: number;
   divider: boolean;
 }) {
   return (
     <div className={`relative ${divider ? "border-l border-border" : ""}`}>
       {records.map(({ r, start }) => {
-        const end = r.ended_at ? isoLocal(r.ended_at).minute : new Date().getHours() * 60 + new Date().getMinutes();
-        const top = (start - dayStartMin) * PX_PER_MIN;
-        const height = Math.max(16, (end - start) * PX_PER_MIN);
-        const live = r.ended_at === null;
+        const end = r.ended_at
+          ? isoLocal(r.ended_at).minute
+          : new Date().getHours() * 60 + new Date().getMinutes();
         return (
-          <div
+          <ActualBlock
             key={r.id}
-            className="absolute left-1 right-1 overflow-hidden rounded-md p-1.5 text-[11px]"
-            style={{
-              top,
-              height,
-              background: `color-mix(in oklch, ${hueVar(hueById.get(r.activity_id) ?? null)} 22%, var(--color-surface-raised))`,
-              borderLeft: `3px solid ${hueVar(hueById.get(r.activity_id) ?? null)}`,
-            }}
-          >
-            <div className="flex items-center gap-1 font-medium">
-              {live && <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-error" />}
-              <span className="truncate">{nameById.get(r.activity_id) ?? r.activity_id}</span>
-            </div>
-            <div className="text-text-subtle">
-              {hhmm(start)}–{live ? "" : hhmm(end)}
-            </div>
-          </div>
+            r={r}
+            start={start}
+            end={end}
+            live={r.ended_at === null}
+            name={nameById.get(r.activity_id) ?? r.activity_id}
+            hue={hueVar(hueById.get(r.activity_id) ?? null)}
+            dayStartMin={dayStartMin}
+            totalMin={totalMin}
+          />
         );
       })}
+    </div>
+  );
+}
+
+/** A single actual-record block. Dragging the body moves the whole block by an
+ *  absolute UTC delta (preserves duration + DST offset); 5-min snap; clamped to
+ *  the day window. Live (open) records are fixed — stop the session first. */
+function ActualBlock({
+  r,
+  start,
+  end,
+  live,
+  name,
+  hue,
+  dayStartMin,
+  totalMin,
+}: {
+  r: ActivityRecord;
+  start: number;
+  end: number;
+  live: boolean;
+  name: string;
+  hue: string;
+  dayStartMin: number;
+  totalMin: number;
+}) {
+  const edit = useEditRecord();
+  const [dragDelta, setDragDelta] = useState(0);
+  const dragging = dragDelta !== 0;
+  const top = (start - dayStartMin + dragDelta) * PX_PER_MIN;
+  const height = Math.max(16, (end - start) * PX_PER_MIN);
+  return (
+    <div
+      className={`absolute left-1 right-1 overflow-hidden rounded-md p-1.5 text-[11px] transition-shadow ${
+        live
+          ? ""
+          : dragging
+            ? "z-30 cursor-grabbing shadow-[var(--shadow-lg)]"
+            : "cursor-grab hover:shadow-[var(--shadow-md)]"
+      }`}
+      style={{
+        top,
+        height,
+        background: `color-mix(in oklch, ${hue} 22%, var(--color-surface-raised))`,
+        borderLeft: `3px solid ${hue}`,
+      }}
+      onPointerDown={(e) => {
+        if (live || e.button !== 0) return;
+        const startY = e.clientY;
+        const ref = { current: 0 };
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        const onMove = (ev: PointerEvent) => {
+          const snapped = snapMinute((ev.clientY - startY) / PX_PER_MIN);
+          // Keep the block start inside [dayStartMin, dayEnd - duration].
+          const newStartMin = start + snapped;
+          const clamped = Math.min(
+            dayStartMin + totalMin - (end - start),
+            Math.max(dayStartMin, newStartMin),
+          );
+          ref.current = clamped - start;
+          setDragDelta(ref.current);
+        };
+        const onUp = () => {
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
+          setDragDelta(0);
+          if (ref.current !== 0) {
+            const ns = new Date(new Date(r.started_at).getTime() + ref.current * 60000).toISOString();
+            const ne = r.ended_at
+              ? new Date(new Date(r.ended_at).getTime() + ref.current * 60000).toISOString()
+              : null;
+            edit.mutate({ recordId: r.id, startedAt: ns, endedAt: ne });
+          }
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+      }}
+    >
+      <div className="flex items-center gap-1 font-medium">
+        {live && <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-error" />}
+        <span className="truncate">{name}</span>
+      </div>
+      <div className="text-text-subtle">
+        {hhmm(start + dragDelta)}–{live ? "" : hhmm(end + dragDelta)}
+      </div>
     </div>
   );
 }
