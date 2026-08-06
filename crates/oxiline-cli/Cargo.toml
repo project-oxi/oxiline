@@ -1,5 +1,6 @@
 [package]
 name = "oxiline-cli"
+description = "Command-line interface for the OxiLine recording and planning application."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

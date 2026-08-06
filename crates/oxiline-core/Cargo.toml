@@ -1,5 +1,6 @@
 [package]
 name = "oxiline-core"
+description = "Recording-centered time planning and activity data core for OxiLine."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
