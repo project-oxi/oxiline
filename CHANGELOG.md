@@ -4,6 +4,10 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-06
+
+Timeline interaction, recording controls, HUD polish, and macOS window behavior.
+
 ### Desktop app (`oxiline-app`)
 
 - **feat**: single-row header + oxide strip (date masthead, weekday chips with
@@ -113,3 +117,5 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.1.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.1.0
 
 [0.2.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.2.0
+
+[0.3.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.0
