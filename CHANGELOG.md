@@ -4,6 +4,16 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-06
+
+Release alignment and packaging metadata for the updated SQLite stack.
+
+### Packaging and dependencies
+
+- **fix**: publishable `oxiline-core` and `oxiline-cli` manifests now include crates.io descriptions
+- **chore**: migrate the SQLite stack to `rusqlite` 0.40, `rusqlite_migration` 2.6, and `r2d2_sqlite` 0.35
+- **chore**: raise the workspace MSRV to Rust 1.95
+
 ## [0.3.0] - 2026-08-06
 
 Timeline interaction, recording controls, HUD polish, and macOS window behavior.
@@ -119,3 +129,5 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.2.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.2.0
 
 [0.3.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.0
+
+[0.3.1]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.1
