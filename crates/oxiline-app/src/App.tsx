@@ -8,6 +8,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Inspector } from "./components/Inspector";
 import { ContextMenu } from "./components/ContextMenu";
 import { ActivitySwitcher } from "./components/ActivitySwitcher";
+import { CliNudge } from "./components/CliNudge";
 import { useUi } from "./lib/store";
 
 function useGlobalKeys() {
@@ -85,6 +86,7 @@ export default function App() {
       <Preferences />
       <Onboarding />
       <ContextMenu />
+      <CliNudge />
     </div>
   );
 }

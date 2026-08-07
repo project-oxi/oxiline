@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
-import { useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory } from "../hooks";
+import { Check, Terminal, X } from "lucide-react";
+import { useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory, useCliStatus, useInstallCli, useUninstallCli } from "../hooks";
 import { api } from "../lib/api";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUi } from "../lib/store";
 import { applyTheme, setThemeMode, type ThemeMode } from "../lib/theme";
 import { changeLang, type Lang } from "../lib/i18n";
 import { categoryColor } from "../lib/colors";
+import type { CliState } from "../types";
 import { Modal } from "./Modal";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -49,8 +50,56 @@ const SHORTCUT_ROWS: { key: string; actionKey: string; scopeKey: string }[] = [
   { key: "⌘,", actionKey: "settings.actPrefs", scopeKey: "settings.scopeMain" },
   { key: "T", actionKey: "settings.actToday", scopeKey: "settings.scopeViews" },
   { key: "← / →", actionKey: "settings.actPrevNext", scopeKey: "settings.scopeDay" },
-  { key: "Esc", actionKey: "settings.actClose", scopeKey: "settings.scopeGlobal" },
 ];
+
+/** Surfaces the bundled `oxiline` CLI on $PATH via a one-time macOS admin
+ *  prompt. Mirrors `oximemo`'s Settings → "Command-line tool". */
+function CliSection() {
+  const { t } = useTranslation();
+  const status = useCliStatus();
+  const install = useInstallCli();
+  const uninstall = useUninstallCli();
+  const state: CliState = status.data ?? "not-installed";
+  const busy = install.isPending || uninstall.isPending;
+
+  const onInstall = () => install.mutate(undefined, { onSuccess: () => status.refetch() });
+  const onUninstall = () => uninstall.mutate(undefined, { onSuccess: () => status.refetch() });
+
+  return (
+    <div className="space-y-2.5">
+      <p className="text-[11px] leading-relaxed text-text-subtle">{t("settings.cliDesc")}</p>
+      <div className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2">
+        <span className="flex items-center gap-1.5 text-xs text-text-muted">
+          {state === "installed" && <Check size={13} className="text-status-success" />}
+          {state === "installed" ? t("settings.cliInstalled") : t("settings.cliNotInstalled")}
+        </span>
+        {state === "installed" ? (
+          <button
+            type="button"
+            onClick={onUninstall}
+            disabled={busy}
+            className="rounded-lg border border-line px-2 py-1 text-xs font-medium text-text-muted transition-colors hover:bg-surface-muted disabled:opacity-50"
+          >
+            {busy ? "…" : t("settings.cliUninstall")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onInstall}
+            disabled={busy}
+            className="rounded-lg border border-line px-2 py-1 text-xs font-medium text-text-muted transition-colors hover:bg-surface-muted disabled:opacity-50"
+          >
+            {busy
+              ? t("settings.cliInstalling")
+              : state === "stale"
+                ? t("settings.cliReinstall")
+                : t("settings.cliInstall")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function Preferences() {
   const { t } = useTranslation();
@@ -278,6 +327,14 @@ export function Preferences() {
           <Row label={t("settings.dbPath")}>
             <code className="max-w-[60%] truncate text-[11px] text-text-subtle">{String(s.__dbPath ?? "")}</code>
           </Row>
+        </section>
+
+        <section className="mb-4">
+          <h3 className="mb-1 flex items-center gap-1.5 text-[12px] font-semibold uppercase text-text-subtle">
+            <Terminal size={12} />
+            {t("settings.sectionCli")}
+          </h3>
+          <CliSection />
         </section>
 
         <section>

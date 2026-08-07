@@ -66,7 +66,22 @@
     "scopeApp": "앱 내 전역",
     "scopeMain": "메인 창",
     "scopeViews": "메인 뷰",
-    "scopeDay": "날짜 이동"
+    "scopeDay": "날짜 이동",
+    "sectionCli": "명령줄 도구",
+    "cliDesc": "터미널에서 `oxiline` 명령으로 활동을 기록·조회해요. 에이전트와 함께 쓰기 좋아요.",
+    "cliInstall": "명령 설치",
+    "cliUninstall": "명령 제거",
+    "cliNotInstalled": "설치 안 됨",
+    "cliInstalled": "설치됨",
+    "cliReinstall": "다시 설치",
+    "cliInstalling": "설치 중…",
+    "cliInstallDone": "`oxiline` 명령이 설치됐어요. 새 터미널을 열면 쓸 수 있어요.",
+    "cliUninstallDone": "`oxiline` 명령이 제거됐어요.",
+    "cliInstallFailed": "설치에 실패했어요. 관리자 권한이 필요해요.",
+    "cliNudgeTitle": "명령줄 도구를 켜보세요",
+    "cliNudgeBody": "OxiLine은 터미널에서도 쓸 수 있어요. 한 번 설치하면 에이전트와 함께 쓰기 좋아요.",
+    "cliNudgeInstall": "지금 설치",
+    "cliNudgeDismiss": "나중에"
   },
   "onboarding": {
     "welcome": "환영합니다",
