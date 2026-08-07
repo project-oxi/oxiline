@@ -109,3 +109,8 @@ export interface RecordState {
 }
 
 export type Scope = "today" | "week";
+
+/** Whether the bundled `oxiline` CLI is exposed on $PATH. Mirrors
+ * `oxiline_app_lib::cli::CliState` (serde + specta rename_all =
+ * "lowercase"). */
+export type CliState = "installed" | "not-installed" | "stale";

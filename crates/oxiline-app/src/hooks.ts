@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { useUi } from "./lib/store";
 import { useMemo } from "react";
 import { api } from "./lib/api";
-import type { Scope } from "./types";
+import type { CliState, Scope } from "./types";
 
 export const qk = {
   categories: ["categories"] as const,
@@ -245,4 +245,38 @@ function windowFor(date: string): { from: string; to: string } {
     `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
 
   return { from: `${f(prev)}T00:00:00Z`, to: `${f(next)}T23:59:59Z` };
+
+}
+
+// ---- CLI install (in-app) -----------------------------------------------
+
+export function useCliStatus() {
+  return useQuery<CliState>({
+    queryKey: ["cli-status"],
+    queryFn: api.cliStatus,
+    // The CLI's install state only changes when the user clicks Install /
+    // Uninstall, both of which invalidate this key. Default 1s staleTime is
+    // wasteful; keep it cached.
+    staleTime: Infinity,
+  });
+}
+
+export function useInstallCli() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.installCli(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cli-status"] });
+    },
+  });
+}
+
+export function useUninstallCli() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.uninstallCli(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cli-status"] });
+    },
+  });
 }

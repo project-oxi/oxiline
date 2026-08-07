@@ -8,6 +8,7 @@ import type {
   ActivityInput,
   ActivityRecord,
   Category,
+  CliState,
   Compliance,
   Plan,
   PlanInput,
@@ -17,6 +18,16 @@ import type {
   Scope,
   Settings,
 } from "../types";
+
+// Browser/dev fallback gate — matches oximemo's tauri.ts `inTauri` shim.
+// Only CLI install commands short-circuit here; all other commands are
+// expected to be invoked from the real Tauri shell.
+const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+/** CLI is never installed in browser/dev mode. */
+function cliUnavailable(): never {
+  throw new Error("CLI setup is only available in the desktop app");
+}
 
 export const api = {
   // categories
@@ -84,7 +95,12 @@ export const api = {
   // preferences
   reloadShortcuts: () => invoke<void>("reload_shortcuts"),
   showMainWindow: () => invoke<void>("show_main_window"),
-
+  // CLI install (in-app) — only meaningful in the desktop bundle; the
+  // browser preview reports "not-installed" and rejects install/uninstall.
+  cliStatus: (): Promise<CliState> =>
+    inTauri ? invoke<CliState>("cli_status") : Promise.resolve("not-installed"),
+  installCli: (): Promise<void> => (inTauri ? invoke<void>("install_cli") : cliUnavailable()),
+  uninstallCli: (): Promise<void> => (inTauri ? invoke<void>("uninstall_cli") : cliUnavailable()),
 };
 
 /** Subscribe to the cross-process DB-changed event. Returns an unlisten fn. */
