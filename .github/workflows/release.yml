@@ -81,21 +81,21 @@ jobs:
         working-directory: crates/oxiline-app
         run: bun install --frozen-lockfile
 
-      # Build the `oxiline` CLI and stage it as a Tauri externalBin sidecar
-      # so the .app bundle ships a signed, runnable `oxiline` command
-      # (Settings → "Install command" symlinks it onto PATH). The
-      # downstream tauri-action builds a *universal* app — Tauri copies
-      # the staged sidecar into Contents/MacOS/oxiline regardless of
-      # target triple. The aarch64 CLI binary is the canonical artifact
-      # the cli matrix job also uploads, so we use the same target here.
-      - name: Build CLI sidecar
-        run: cargo build --release -p oxiline-cli --target aarch64-apple-darwin
-
-      - name: Stage CLI sidecar for app bundle
+      # Build the `oxiline` CLI as a universal binary and stage it as a Tauri
+      # externalBin sidecar so the .app bundle ships a signed, runnable
+      # `oxiline` command (Settings → "Install command" symlinks it onto PATH).
+      # The downstream tauri-action builds a *universal* app, which requires
+      # the sidecar at `binaries/oxiline-universal-apple-darwin` (Tauri looks
+      # up `<externalBin-base>-<target-triple>`). lipo merges the aarch64 and
+      # x86_64 release builds into one fat binary at that exact path.
+      - name: Build CLI sidecar (universal)
         run: |
-          mkdir -p crates/oxiline-app/src-tauri/binaries
-          cp target/aarch64-apple-darwin/release/oxiline \
-             crates/oxiline-app/src-tauri/binaries/oxiline-aarch64-apple-darwin
+          cargo build --release -p oxiline-cli --target aarch64-apple-darwin
+          cargo build --release -p oxiline-cli --target x86_64-apple-darwin
+          lipo -create \
+            target/aarch64-apple-darwin/release/oxiline \
+            target/x86_64-apple-darwin/release/oxiline \
+            -output crates/oxiline-app/src-tauri/binaries/oxiline-universal-apple-darwin
 
       - name: Build Tauri app (universal, signed, notarized, .app + DMG)
         # tauri-action performs Apple code-signing + notarization + bundle
