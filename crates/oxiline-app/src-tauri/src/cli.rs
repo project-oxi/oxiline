@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[derive(serde::Serialize, specta::Type, PartialEq, Eq, Debug, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 #[specta(rename_all = "lowercase")]
- pub enum CliState {
+pub enum CliState {
     /// Symlink present and points at this app's bundled CLI.
     Installed,
     /// No symlink present.
@@ -34,9 +34,8 @@ pub fn classify(link_target: Option<&Path>, link_exists: bool, bundled: Option<&
     let Some(bundled) = bundled else {
         return CliState::NotInstalled;
     };
-    let canonical_eq = |a: &Path, b: &Path| {
-        std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok()
-    };
+    let canonical_eq =
+        |a: &Path, b: &Path| std::fs::canonicalize(a).ok() == std::fs::canonicalize(b).ok();
     match link_target {
         Some(target) if canonical_eq(target, bundled) => CliState::Installed,
         Some(_) => CliState::Stale,
@@ -69,14 +68,17 @@ pub fn cli_status() -> Result<CliState, String> {
     let bundled = bundled_cli_path();
     let link_target = std::fs::read_link(link).ok();
     let link_exists = link.exists();
-    Ok(classify(link_target.as_deref(), link_exists, bundled.as_deref()))
+    Ok(classify(
+        link_target.as_deref(),
+        link_exists,
+        bundled.as_deref(),
+    ))
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn install_cli() -> Result<(), String> {
-    let target = bundled_cli_path()
-        .ok_or_else(|| "could not locate the app bundle".to_string())?;
+    let target = bundled_cli_path().ok_or_else(|| "could not locate the app bundle".to_string())?;
     if !target.exists() {
         return Err("bundled CLI binary is missing".to_string());
     }
@@ -145,7 +147,10 @@ mod tests {
     #[test]
     fn classify_absent_link_is_not_installed() {
         let (_tmp, bundled) = bundled_in_tmp();
-        assert_eq!(classify(None, false, Some(&bundled)), CliState::NotInstalled);
+        assert_eq!(
+            classify(None, false, Some(&bundled)),
+            CliState::NotInstalled
+        );
     }
 
     #[test]
@@ -164,7 +169,10 @@ mod tests {
         std::os::unix::fs::symlink(&bundled, &link).unwrap();
         // The fixture's read_link path is the symlink itself, target = bundled.
         let target = std::fs::read_link(&link).unwrap();
-        assert_eq!(classify(Some(&target), true, Some(&bundled)), CliState::Installed);
+        assert_eq!(
+            classify(Some(&target), true, Some(&bundled)),
+            CliState::Installed
+        );
     }
 
     #[test]
@@ -173,7 +181,10 @@ mod tests {
         let other = tempfile::tempdir().unwrap();
         let other_path = other.path().join("oxiline");
         std::fs::write(&other_path, b"#!/bin/sh\nexit 0\n").unwrap();
-        assert_eq!(classify(Some(&other_path), true, Some(&bundled)), CliState::Stale);
+        assert_eq!(
+            classify(Some(&other_path), true, Some(&bundled)),
+            CliState::Stale
+        );
     }
 
     #[test]
