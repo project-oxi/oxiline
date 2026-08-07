@@ -77,19 +77,23 @@ pub fn save(conn: &Connection, prefs: &[TraySlotPref]) -> Result<()> {
 }
 /// Load the persisted slot list, normalize it, and return a `ResolvedSlots`.
 ///
-/// Normalization:
-/// 1. If the stored list has duplicate `order` values, replace it with the
-///    canonical [`defaults`] (the renderer can't disambiguate otherwise).
-/// 2. Drop entries whose kind is unknown to this build.
-/// 3. Sort the remaining entries by `order` ascending.
+/// Normalization (per spec §4):
+/// 1. Drop entries whose kind is unknown to this build.
+/// 2. Fill missing canonical kinds with default values (`on = false`, `order =
+///    current max + 1`) so that future builds adding a new slot kind don't
+///    require a re-seed migration to surface it.
+/// 3. Sort the remaining entries by `order` ascending. If duplicate `order`
+///    values are detected after the fill, the stored list is replaced with
+///    the canonical [`defaults`] — the renderer can't disambiguate otherwise.
 pub fn resolve(conn: &Connection) -> ResolvedSlots {
     let raw = crate::settings::get_tray_slots(conn);
-    let all = if has_duplicate_order(&raw) {
+    let known = normalize(raw);
+    let all = if has_duplicate_order(&known) {
         defaults()
     } else {
-        let mut cleaned = normalize(raw);
-        cleaned.sort_by_key(|p| p.order);
-        cleaned
+        let mut filled = fill_missing_canonical_kinds(known);
+        filled.sort_by_key(|p| p.order);
+        filled
     };
     let enabled = all.iter().filter(|p| p.on).cloned().collect();
     let any_enabled = all.iter().any(|p| p.on);
@@ -116,5 +120,28 @@ fn normalize(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
     let known: std::collections::HashSet<TraySlotKind> =
         SLOT_KIND_IDS.iter().map(|(k, _)| *k).collect();
     prefs.into_iter().filter(|p| known.contains(&p.kind)).collect()
+}
+
+/// Append a default entry for every canonical kind missing from `prefs`,
+/// using `on = false` and `order = (current max order) + 1` per appended
+/// entry. The order is well-defined only in the absence of duplicate orders
+/// (the caller checks that first).
+fn fill_missing_canonical_kinds(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
+    let present: std::collections::HashSet<TraySlotKind> =
+        prefs.iter().map(|p| p.kind).collect();
+    let next_order = prefs.iter().map(|p| p.order).max().map_or(0, |m| m + 1);
+    let mut out = prefs;
+    let mut next = next_order;
+    for (kind, _) in SLOT_KIND_IDS {
+        if !present.contains(&kind) {
+            out.push(TraySlotPref {
+                kind,
+                on: false,
+                order: next,
+            });
+            next += 1;
+        }
+    }
+    out
 }
 

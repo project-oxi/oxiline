@@ -50,8 +50,10 @@ fn resolve_drops_unknown_ids() {
     let kinds: Vec<_> = r.all.iter().map(|p| p.kind).collect();
     assert!(kinds.contains(&TraySlotKind::NowRecording));
     assert!(kinds.contains(&TraySlotKind::NowNext));
-    // Only the two stored canonical kinds remain — the unknown id is dropped.
-    assert_eq!(r.all.len(), 2);
+    // The unknown `future_thing` is dropped; the missing canonical kind
+    // (StateDot) is filled in with `on = false` and `order` past the stored
+    // max (per spec §4 forward-compat).
+    assert_eq!(r.all.len(), 3);
     // The bogus id should not appear anywhere.
     let ids: Vec<_> = r
         .all
@@ -59,6 +61,58 @@ fn resolve_drops_unknown_ids() {
         .map(|p| tray_slots::slot_kind_to_id(p.kind))
         .collect();
     assert!(!ids.contains(&"future_thing"));
+    // The filled entry is `on = false` with `order >= 2` (the stored max).
+    let filled = r
+        .all
+        .iter()
+        .find(|p| p.kind == TraySlotKind::StateDot)
+        .expect("state_dot filled");
+    assert!(!filled.on);
+    assert!(filled.order >= 2);
+}
+
+#[test]
+fn resolve_appends_defaults_for_missing_canonical_kinds() {
+    let conn = open_and_migrate_in_memory_for_tests().unwrap();
+    // Storage contains only one canonical kind; the resolver must fill the
+    // other two with `on = false` and `order >= 1` (per spec §4).
+    let raw = serde_json::json!({
+        "slots": [
+            { "id": "now_recording", "on": true, "order": 0 }
+        ]
+    });
+    settings::set(&conn, "tray_slots", &raw).unwrap();
+
+    let r = tray_slots::resolve(&conn);
+    assert_eq!(r.all.len(), 3);
+    let kinds: Vec<_> = r.all.iter().map(|p| p.kind).collect();
+    assert!(kinds.contains(&TraySlotKind::NowRecording));
+    assert!(kinds.contains(&TraySlotKind::NowNext));
+    assert!(kinds.contains(&TraySlotKind::StateDot));
+    // The stored entry is preserved verbatim.
+    let recording = r
+        .all
+        .iter()
+        .find(|p| p.kind == TraySlotKind::NowRecording)
+        .unwrap();
+    assert!(recording.on);
+    assert_eq!(recording.order, 0);
+    // The filled entries are off and use orders past the stored max (0).
+    for kind in [TraySlotKind::NowNext, TraySlotKind::StateDot] {
+        let filled = r
+            .all
+            .iter()
+            .find(|p| p.kind == kind)
+            .expect("filled entry");
+        assert!(!filled.on);
+        assert!(filled.order >= 1);
+    }
+    // No duplicates were introduced (the fill uses distinct ordinals).
+    let mut orders: Vec<u32> = r.all.iter().map(|p| p.order).collect();
+    orders.sort_unstable();
+    let original = orders.clone();
+    orders.dedup();
+    assert_eq!(orders, original, "no duplicate orders after fill");
 }
 
 #[test]
