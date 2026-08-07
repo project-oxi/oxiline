@@ -81,7 +81,21 @@ jobs:
         working-directory: crates/oxiline-app
         run: bun install --frozen-lockfile
 
-      - name: Build Tauri app (universal, signed, notarized, .app + DMG)
+      # Build the `oxiline` CLI and stage it as a Tauri externalBin sidecar
+      # so the .app bundle ships a signed, runnable `oxiline` command
+      # (Settings → "Install command" symlinks it onto PATH). The
+      # downstream tauri-action builds a *universal* app — Tauri copies
+      # the staged sidecar into Contents/MacOS/oxiline regardless of
+      # target triple. The aarch64 CLI binary is the canonical artifact
+      # the cli matrix job also uploads, so we use the same target here.
+      - name: Build CLI sidecar
+        run: cargo build --release -p oxiline-cli --target aarch64-apple-darwin
+
+      - name: Stage CLI sidecar for app bundle
+        run: |
+          mkdir -p crates/oxiline-app/src-tauri/binaries
+          cp target/aarch64-apple-darwin/release/oxiline \
+             crates/oxiline-app/src-tauri/binaries/oxiline-aarch64-apple-darwin
         # tauri-action performs Apple code-signing + notarization + bundle
         # generation. We deliberately omit `tagName` / `releaseName` so the
         # action does NOT touch GitHub Releases; the `release` job below is
