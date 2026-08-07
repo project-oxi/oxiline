@@ -11,6 +11,7 @@ crates/oxiline-app/src/bindings.ts
 # Tauri
 crates/oxiline-app/src-tauri/target
 crates/oxiline-app/src-tauri/gen
+crates/oxiline-app/src-tauri/binaries
 
 # Local data (never commit)
 /data
