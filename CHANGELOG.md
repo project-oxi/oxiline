@@ -4,6 +4,28 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-07
+
+In-app CLI install — one `.dmg` now delivers both the GUI and the `oxiline`
+command on `$PATH`. Mirrors the proven `oximemo` flow (Tauri `externalBin`
+sidecar + one-time macOS admin prompt via `osascript`).
+
+### Desktop app (`oxiline-app`)
+
+- **feat**: bundle the `oxiline` CLI inside the `.app` as a Tauri
+  `externalBin` sidecar; Settings → "Command-line tool" installs it onto
+  `/usr/local/bin/oxiline` via a single macOS admin prompt
+  (`cli_status` / `install_cli` / `uninstall_cli` Tauri commands + pure
+  `classify()` helper with 5 unit tests)
+- **feat**: first-launch nudge banner (top-center, dismissed via
+  `localStorage`; only in the Tauri shell, never in browser/dev)
+- **build**: `build.rs` drops a placeholder sidecar when missing so
+  `cargo check` / `clippy` / `tauri dev` survive without the real CLI;
+  release workflow stages the real one before `tauri-action`
+- **build**: `stage-cli.sh` local helper for genuine `cargo tauri build`
+- **i18n**: ko/en strings for the CLI section + nudge
+
+
 ## [0.3.1] - 2026-08-06
 
 Release alignment and packaging metadata for the updated SQLite stack.
@@ -109,7 +131,7 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 - **feat**: Inspector `[주간 | 오늘]` compliance + total + recent sessions
 - **feat**: `ActivitySwitcher` (⌘⇧A quick record-switch)
 - **feat**: HUD (�⇧O) rework
-- **feat**: drag activity card from library → drop on timetable → `create_plan`
+
 - **feat**: OR-plan multi-select drag + drop-to-merge (`add_plan_options`)
 - **feat**: plan-card resize handle
 - **feat**: date popover month calendar with record markers (calendar-month
@@ -123,7 +145,6 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
   (Backlog / Week / Report / RoutineManager)
 - **refactor**: drop legacy commands, drop legacy backlog / block DnD branches
 - **refactor**: replace `NowContext` with recording-native `now_summary`
-
 [0.1.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.1.0
 
 [0.2.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.2.0
@@ -131,3 +152,5 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.3.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.0
 
 [0.3.1]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.1
+
+[0.4.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.4.0
