@@ -268,3 +268,38 @@ HUD card → main / minimize → reopen) pending a user check on wake.**
 
 Skill updated: `tauri-macos-window-close-vs-dock-reopen` (both policies, the
 `set_focus` precondition trap, the missing `show_menu()` trap).
+
+## In-app CLI install (2026-08-07) ✅ COMPLETE
+
+Mirror of `oximemo`'s proven approach — the `oxiline` CLI is now bundled
+inside the Tauri `.app` and exposed on `$PATH` via a one-click "Install
+command" button (one-time macOS admin prompt). One `.dmg` install now
+delivers both the GUI and `oxiline`. Spec: `docs/superpowers/specs/2026-08-07-in-app-cli-install.md`,
+plan: `docs/superpowers/plans/2026-08-07-cli-install.md`.
+
+Shipped (all green: `cargo test --workspace --locked` 41 pass + 6 new unit tests, `cargo clippy --workspace --all-targets -- -D warnings` clean, `cargo fmt --all -- --check` clean, `bun run build` PASS, `bun test` 28 pass, `cargo build -p oxiline-app --locked` PASS, `CI=false cargo tauri build --debug` produces a `.app` with `Contents/MacOS/oxiline` verified):
+
+- **Bundle config** — `tauri.conf.json` `bundle.externalBin: ["binaries/oxiline"]`; `binaries/` gitignored.
+- **`build.rs`** — drops a placeholder `binaries/oxiline-<triple>` when missing so `cargo check` / `clippy` / `tauri dev` survive without the real CLI; release workflow stages the real one. Verified gotcha #1 (tauri-build validates at compile time).
+- **Tauri commands** — new `cli.rs` module: `CliState` (`installed` | `not-installed` | `stale`, `serde + specta rename_all = "lowercase"`), `cli_status` / `install_cli` / `uninstall_cli` (`#[tauri::command] #[specta::specta]`), plus `bundled_cli_path()` (derived from `current_exe().parent().join("oxiline")` — tracks wherever the user dropped the `.app`), `run_admin` via `osascript -e "do shell script ... with administrator privileges"`, and `applescript_string` (escapes `"` and `\`). Pure `classify()` helper is unit-tested with 5 cases (no bundle → NotInstalled; missing link → NotInstalled; stray file → Stale; matching symlink → Installed; diverging symlink → Stale). `bundled_cli_path` runtime-resolution gotcha (#4 in spec) covered.
+- **Frontend** — `lib/api.ts` adds `cliStatus` / `installCli` / `uninstallCli` with an `inTauri` gate (browser/dev falls back to `"not-installed"`; install/uninstall throw). `hooks.ts` adds `useCliStatus` (staleTime Infinity) + `useInstallCli` / `useUninstallCli` (invalidate `["cli-status"]`). `types.ts` adds `CliState`.
+- **Settings → Command-line tool** — new section in `Preferences.tsx` mirroring oximemo's `CliSection`: status pill (`Installed`/`Not installed`), one button (Install / Reinstall / Uninstall depending on state), disabled + "…" while the mutation is in flight.
+- **First-launch nudge** — new `<CliNudge />` mounted in `App.tsx`. Shown only in the Tauri shell (gated on `"__TAURI_INTERNALS__" in window`), only when `cli_status !== "installed"`, dismissed via `localStorage["oxiline.cliNudgeDismissed"] = "1"`. "Install now" → `installCli`; "X" → dismiss.
+- **i18n** — `ko.json` source of truth, `en.json` mirror. New keys: `sectionCli`, `cliDesc`, `cliInstall`/`Uninstall`/`Reinstall`/`Installing`, `cliInstalled`/`NotInstalled`, `cliInstallDone`/`Failed`/`UninstallDone`, `cliNudgeTitle`/`Body`/`Install`/`Dismiss`.
+- **Local helper** — `stage-cli.sh` (executable) stages the release-mode CLI binary for a genuine local `cargo tauri build`. Smoke-tested: `binaries/oxiline-aarch64-apple-darwin --help` prints the full command tree.
+- **Release workflow** — `release.yml` `app` job: new "Build CLI sidecar" + "Stage CLI sidecar for app bundle" steps ahead of `tauri-action` (aarch64 CLI binary → `binaries/oxiline-aarch64-apple-darwin`).
+
+Verified the gotcha #2 (Tauri strips the `-<triple>` suffix when bundling):
+```
+ls target/debug/bundle/macos/OxiLine.app/Contents/MacOS/
+# oxiline       ← the sidecar (no -<triple> suffix)
+# oxiline-app   ← the main binary
+```
+
+Commits: `00fcbbc` (build.rs + externalBin) → `0160097` (cli.rs + lib.rs) →
+`55f97c1` (api+hooks) → `482a38f` (Preferences+CliNudge+i18n) → `683240c`
+(stage-cli.sh + release.yml) → `573f255` (cargo fmt).
+
+**Live check pending**: GUI button → macOS admin dialog → `which oxiline`
+cannot be automated headlessly (needs an interactive admin password).
+Verify on the next release tag or a locally-built `.app`.

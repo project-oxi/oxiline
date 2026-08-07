@@ -305,8 +305,8 @@
 - [x] 실제 레인·최근 세션이 활동 이름(비 id) 표시.
 - [x] 실제 기록 블록(ActualBlock)을 드래그로 이동(`edit_record`), 호버 ×로 삭제(라이브 제외).
 - [x] 우클릭 시 웹뷰 네이티브 메뉴 대신 앱 컨텍스트 메뉴(PlanCard/ActualBlock/활동/타임라인 배면)가 뜬다(§9.14).
-- [x] HUD가 대기 상태에서도 행동 가능(예정=`지금 시작`, 자유=오늘 총 기록)하며 카드 클릭으로 메인 창을 연다.
-
+- [x] HUD가 대기 상태에서도 행동 가능(예정=`지금 시작`, 자유=오늘 총 기록)이며 카드 클릭으로 메인 창을 연다.
+- [x] 환경설정 → 명령줄 도구에서 `oxiline` CLI를 `$PATH`에 설치/제거 가능(`externalBin` 사이드카 + macOS `osascript` admin). 첫 실행 시 상단 배너가 1회 노출.
 ---
 
 ## 9.12 구현 증거 (컴포넌트/함수 → 파일)
@@ -331,8 +331,8 @@
 | 토큰 | `src/tokens/{primitives,semantic,semantic-dark,components,theme}.css` |
 | 우클릭 컨텍스트 메뉴 | `lib/context-menu.ts` (`useContextMenu`, `clampMenuPosition`) + `components/ContextMenu.tsx` + `.context-menu` (`styles.css`) |
 | HUD 클릭→메인 창 | `src-tauri/src/commands.rs` (`show_main_window`) + `lib/api.ts` (`showMainWindow`) |
-
----
+| CLI 설치 (Tauri 사이드카) | `tauri.conf.json` (`bundle.externalBin`) + `build.rs` (placeholder) + `stage-cli.sh` + `release.yml` (CI staging) + `src-tauri/src/cli.rs` (`cli_status`/`install_cli`/`uninstall_cli`, `bundled_cli_path`, `osascript` admin) |
+| CLI 설치 UI + 첫 실행 안내 | `Preferences.tsx` (`CliSection`) + `CliNudge.tsx` + `App.tsx` (mount) + `lib/api.ts` (`cliStatus`/`installCli`/`uninstallCli` + `inTauri` 폴백) + `hooks.ts` (`useCliStatus`/`useInstallCli`/`useUninstallCli`) |
 
 ## 9.13 부록 — 진단 이력 (요약)
 
