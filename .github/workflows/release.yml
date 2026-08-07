@@ -90,13 +90,13 @@ jobs:
       # x86_64 release builds into one fat binary at that exact path.
       - name: Build CLI sidecar (universal)
         run: |
+          mkdir -p crates/oxiline-app/src-tauri/binaries
           cargo build --release -p oxiline-cli --target aarch64-apple-darwin
           cargo build --release -p oxiline-cli --target x86_64-apple-darwin
           lipo -create \
             target/aarch64-apple-darwin/release/oxiline \
             target/x86_64-apple-darwin/release/oxiline \
             -output crates/oxiline-app/src-tauri/binaries/oxiline-universal-apple-darwin
-
       - name: Build Tauri app (universal, signed, notarized, .app + DMG)
         # tauri-action performs Apple code-signing + notarization + bundle
         # generation. We deliberately omit `tagName` / `releaseName` so the
