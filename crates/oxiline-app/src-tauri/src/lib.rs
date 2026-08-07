@@ -7,6 +7,7 @@ mod notifier;
 mod shortcuts;
 mod state;
 mod tray;
+mod tray_render;
 mod watcher;
 
 use tauri::{Listener, WindowEvent};

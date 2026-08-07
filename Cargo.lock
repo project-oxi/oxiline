@@ -2781,6 +2781,7 @@ dependencies = [
  "chrono",
  "image",
  "notify",
+ "once_cell",
  "oxiline-core",
  "parking_lot",
  "r2d2",
