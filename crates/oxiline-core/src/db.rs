@@ -14,6 +14,7 @@ const V2_PHASE2: &str = include_str!("../migrations/V2__phase2.sql");
 const V3_OXI_PALETTE: &str = include_str!("../migrations/V3__oxi_palette.sql");
 const V4_RECORD: &str = include_str!("../migrations/V4__record.sql");
 const V5_DROP_LEGACY: &str = include_str!("../migrations/V5__drop_legacy.sql");
+const V6_TRAY_SLOTS: &str = include_str!("../migrations/V6__tray_slots.sql");
 
 fn migrations() -> Migrations<'static> {
     Migrations::new(vec![
@@ -22,6 +23,7 @@ fn migrations() -> Migrations<'static> {
         M::up(V3_OXI_PALETTE),
         M::up(V4_RECORD),
         M::up(V5_DROP_LEGACY),
+        M::up(V6_TRAY_SLOTS),
     ])
 }
 
@@ -50,4 +52,11 @@ pub fn open_and_migrate(path: &std::path::Path) -> Result<Connection> {
 /// Current schema version (count of applied migrations) for `doctor`.
 pub fn schema_version(conn: &Connection) -> Result<usize> {
     Ok(migrations().current_version(conn)?.into())
+}
+
+pub fn open_and_migrate_in_memory_for_tests() -> crate::error::Result<Connection> {
+    let mut conn = Connection::open_in_memory().map_err(CoreError::from)?;
+    apply_pragmas(&conn)?;
+    migrations().to_latest(&mut conn).map_err(CoreError::from)?;
+    Ok(conn)
 }

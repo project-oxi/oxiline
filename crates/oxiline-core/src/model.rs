@@ -42,8 +42,23 @@ pub struct NowEntry {
     pub remaining_minute: Option<i64>,
 }
 
-/// Typed snapshot of all known settings (avoids `serde_json::Value` which does
-/// not implement `specta::Type`).
+/// Menu-bar slot kind (`tray_slots` setting).
+#[derive(Serialize, Deserialize, Type, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum TraySlotKind {
+    NowRecording,
+    NowNext,
+    StateDot,
+}
+
+/// Per-slot preference persisted in the `tray_slots` setting.
+#[derive(Serialize, Deserialize, Type, Clone, Debug, PartialEq, Eq)]
+pub struct TraySlotPref {
+    pub kind: TraySlotKind,
+    pub on: bool,
+    pub order: u32,
+}
+
 #[derive(Serialize, Deserialize, Type, Clone, Debug)]
 pub struct SettingsSnapshot {
     pub locale: String,
@@ -58,6 +73,7 @@ pub struct SettingsSnapshot {
     pub onboarding_done: bool,
     pub notifications_enabled: bool,
     pub notification_lead_minutes: u32,
+    pub tray_slots: Vec<TraySlotPref>,
 }
 
 // ---- recording layer (docs/superpowers/specs/2026-08-01-record-layer-design.md §5.4) ----

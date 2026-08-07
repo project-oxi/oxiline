@@ -13,6 +13,7 @@ pub mod paths;
 pub mod plan;
 pub mod record;
 pub mod settings;
+pub mod tray_slots;
 pub mod util;
 
 pub use db::open_and_migrate;

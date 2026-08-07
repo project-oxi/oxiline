@@ -1,6 +1,7 @@
 //! Settings key-value store (`03-data-model.md` §3.8). Values are JSON-encoded.
 
 use crate::error::{CoreError, Result};
+use crate::model::{TraySlotKind, TraySlotPref};
 use rusqlite::{Connection, params};
 use serde_json::Value;
 
@@ -91,6 +92,86 @@ pub fn get_bool(conn: &Connection, key: &str, default: bool) -> bool {
         .unwrap_or(default)
 }
 
+/// v1 default state for the tray menu-bar slots.
+pub fn defaults() -> Vec<TraySlotPref> {
+    vec![
+        TraySlotPref {
+            kind: TraySlotKind::NowRecording,
+            on: true,
+            order: 0,
+        },
+        TraySlotPref {
+            kind: TraySlotKind::NowNext,
+            on: true,
+            order: 1,
+        },
+        TraySlotPref {
+            kind: TraySlotKind::StateDot,
+            on: false,
+            order: 2,
+        },
+    ]
+}
+
+/// Read the persisted `tray_slots` row; falls back to `defaults()` when the
+/// key is missing or unparseable.
+pub fn get_tray_slots(conn: &Connection) -> Vec<TraySlotPref> {
+    let value = match get_raw(conn, "tray_slots") {
+        Ok(v) => v,
+        Err(_) => return defaults(),
+    };
+    parse_tray_slots(&value).unwrap_or_else(defaults)
+}
+
+/// Persist `tray_slots` as a single JSON row under the `tray_slots` key.
+pub fn save_tray_slots(conn: &Connection, prefs: &[TraySlotPref]) -> Result<()> {
+    let slots: Vec<Value> = prefs
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "id": crate::tray_slots::slot_kind_to_id(p.kind),
+                "on": p.on,
+                "order": p.order,
+            })
+        })
+        .collect();
+    let value = Value::Object({
+        let mut map = serde_json::Map::new();
+        map.insert("slots".to_string(), Value::Array(slots));
+        map
+    });
+    set(conn, "tray_slots", &value)
+}
+
+/// Parse the persisted `tray_slots` JSON value into typed prefs. Unknown slot
+/// ids are silently dropped (the renderer can handle missing kinds).
+fn parse_tray_slots(value: &Value) -> Option<Vec<TraySlotPref>> {
+    let slots = value.get("slots")?.as_array()?;
+    let mut out = Vec::with_capacity(slots.len());
+    for s in slots {
+        if let Some(pref) = parse_slot(s) {
+            out.push(pref);
+        }
+    }
+    Some(out)
+}
+
+fn parse_slot(value: &Value) -> Option<TraySlotPref> {
+    let id = value.get("id")?.as_str()?;
+    let kind = crate::tray_slots::slot_id_to_kind(id)?;
+    let on = value
+        .get("on")
+        .and_then(Value::as_bool)
+        .or_else(|| value.get("on").and_then(Value::as_i64).map(|n| n != 0))
+        .unwrap_or(true);
+    let order = value
+        .get("order")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .unwrap_or(0);
+    Some(TraySlotPref { kind, on, order })
+}
+
 /// Ensure all known default keys exist (idempotent; called after migrate).
 #[allow(dead_code)]
 pub fn ensure_defaults(conn: &Connection) -> Result<()> {
@@ -129,5 +210,6 @@ pub fn snapshot(conn: &Connection) -> crate::model::SettingsSnapshot {
         onboarding_done: get_bool(conn, "onboarding_done", false),
         notifications_enabled: get_bool(conn, "notifications_enabled", false),
         notification_lead_minutes: get_i64(conn, "notification_lead_minutes", 5) as u32,
+        tray_slots: get_tray_slots(conn),
     }
 }
