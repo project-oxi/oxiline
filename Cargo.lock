@@ -2800,6 +2800,7 @@ dependencies = [
  "tauri-plugin-positioner",
  "tauri-plugin-single-instance",
  "tauri-specta",
+ "tempfile",
  "thiserror 2.0.19",
  "uuid",
 ]

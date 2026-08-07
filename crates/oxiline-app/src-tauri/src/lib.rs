@@ -1,5 +1,6 @@
 //! OxiLine Tauri GUI wiring (`04-architecture.md`).
 
+mod cli;
 mod commands;
 mod hud;
 mod notifier;
@@ -47,6 +48,9 @@ pub fn run() {
         commands::edit_record,
         commands::delete_record,
         commands::show_main_window,
+        cli::cli_status,
+        cli::install_cli,
+        cli::uninstall_cli,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.
