@@ -111,6 +111,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Key generated without a password (CI automation); the empty
+          # value is set explicitly so tauri doesn't prompt in the runner.
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           projectPath: crates/oxiline-app/src-tauri
           args: --target universal-apple-darwin --bundles app,dmg
@@ -122,6 +126,7 @@ jobs:
           path: |
             target/universal-apple-darwin/release/bundle/dmg/*.dmg
             target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+            target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
 
   release:
     name: GitHub Release
@@ -141,6 +146,24 @@ jobs:
           name: oxiline-app-bundle
           path: artifacts/app
 
+      - name: Generate updater manifest (latest.json)
+        run: |
+          set -euo pipefail
+          SIG=$(cat artifacts/app/*.app.tar.gz.sig)
+          VERSION="${GITHUB_REF_NAME#v}"
+          URL="https://github.com/project-oxi/oxiline/releases/download/${GITHUB_REF_NAME}/OxiLine.app.tar.gz"
+          PUB=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          # jq --arg safely JSON-encodes the multi-line minisign signature.
+          # (printf would inject raw newlines → invalid JSON → updater fails.)
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "OxiLine $VERSION" \
+            --arg pub_date "$PUB" \
+            --arg sig "$SIG" \
+            --arg url "$URL" \
+            '{version:$version,notes:$notes,pub_date:$pub_date,platforms:{darwin-aarch64:{signature:$sig,url:$url},"darwin-x86_64":{signature:$sig,url:$url}}}' \
+            > artifacts/latest.json
+          cat artifacts/latest.json
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
@@ -149,6 +172,8 @@ jobs:
             artifacts/**/oxiline-*.tar.gz
             artifacts/app/**/*.dmg
             artifacts/app/**/*.app.tar.gz
+            artifacts/app/**/*.app.tar.gz.sig
+            artifacts/latest.json
 
 
   crates-io:
