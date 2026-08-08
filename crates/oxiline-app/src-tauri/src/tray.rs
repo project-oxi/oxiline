@@ -100,10 +100,11 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
 fn build_slot(app: &AppHandle, kind: TraySlotKind) -> tauri::Result<()> {
     let label = slot_label(app, kind);
     let img = render_slot(&label, FG_COLOR);
+    let is_template = !matches!(kind, TraySlotKind::StateDot);
     let app_for_event = app.clone();
     let tray = tauri::tray::TrayIconBuilder::with_id(slot_tray_id(kind))
         .icon(img)
-        .icon_as_template(true)
+        .icon_as_template(is_template)
         .show_menu_on_left_click(false)
         .on_tray_icon_event(move |_tray, event| {
             if let tauri::tray::TrayIconEvent::Click { button, .. } = event
@@ -113,7 +114,7 @@ fn build_slot(app: &AppHandle, kind: TraySlotKind) -> tauri::Result<()> {
             }
         })
         .build(app)?;
-    let _ = tray.set_icon_as_template(true);
+    let _ = tray.set_icon_as_template(is_template);
     BUILT_SLOTS.lock().unwrap().insert(kind, tray);
     Ok(())
 }
