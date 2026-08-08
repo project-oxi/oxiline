@@ -4,6 +4,24 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+### Desktop app (`oxiline-app`)
+
+- **feat**: in-app auto-update — checks GitHub Releases on launch and every
+  6h; a top banner and Preferences → "Updates" offer one-click install
+  (download + relaunch). Backed by `tauri-plugin-updater` +
+  `tauri-plugin-process`; the release workflow signs `.app.tar.gz` and
+  publishes a `latest.json` manifest.
+- **fix**: Preferences → About shows the real app version (was a stale
+  "0.1.0" placeholder).
+
+### CLI (`oxiline-cli`)
+
+- **fix**: `doctor` has a help description (was blank in `--help`).
+- **fix**: `now --json` includes `generated_at` (spec §5.3) so agents can
+  stamp the snapshot without re-reading the system clock.
+- **fix**: `activity_rm_force_required_when_records_exist` test opened a
+  second unmigrated connection; now uses the migrated handle.
+
 ## [0.5.0] - 2026-08-08
 
 Menu-bar multi-slot display — CodexBar-style status bar replaces the single

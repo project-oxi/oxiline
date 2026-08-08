@@ -351,3 +351,45 @@ Implementation: 5 commits on `main`, base `c010e7a`..`05abecc`.
   REC slot update, theme recolor). The static gates cover correctness;
   the runtime click-through is documented as pending and should be
   exercised by the user on next launch.
+
+## In-app auto-update (2026-08-08) ✅ COMPLETE
+
+GitHub Releases–backed auto-update. On launch + every 6h the app fetches the
+`latest.json` manifest; a top `UpdateBanner` and Preferences → "Updates"
+offer one-click install (download + verified signature + relaunch).
+
+Shipped (all green: `cargo test --workspace`, `cargo clippy --workspace
+--all-targets -- -D warnings`, `cargo fmt --all -- --check`, `bun run build`,
+`bun test` 32):
+- **Backend**: `tauri-plugin-updater` + `tauri-plugin-process` deps;
+  `lib.rs` setup registers the updater plugin under `cfg(desktop)`;
+  `capabilities/default.json` adds `updater:default` + `process:allow-restart`.
+- **Config**: `tauri.conf.json` — `bundle.createUpdaterArtifacts: true` +
+  `plugins.updater.{pubkey, endpoints}` (endpoint =
+  `https://github.com/project-oxi/oxiline/releases/latest/download/latest.json`).
+- **Frontend**: `lib/updater.ts` (zustand store + `check`/`install` via
+  `@tauri-apps/plugin-updater` + `relaunch`); `main.tsx` boot auto-checks +
+  re-checks every 6h; `components/UpdateBanner.tsx` (top banner) +
+  `Preferences.tsx` `UpdateSection` (version + manual check + release notes +
+  progress). ko/en `updater.*` i18n keys.
+- **Release workflow**: `release.yml` signs the universal `.app.tar.gz`
+  (`TAURI_SIGNING_PRIVATE_KEY` env), uploads `.app.tar.gz.sig`, and emits a
+  `latest.json` manifest (built with `jq -n --arg` so the multi-line minisign
+  signature is JSON-escaped correctly).
+- **Signing keypair**: generated via `cargo tauri signer generate` at
+  `~/.tauri/oxiline-updater.key` (private) / `.key.pub` (public — embedded in
+  `tauri.conf.json`).
+- **CLI fixes** (same session): `doctor` help description; `now --json`
+  `generated_at`; Preferences About real version (was stale "0.1.0").
+
+### ⚠ One-time user action before the next tag
+Add the updater signing key to repo secrets (GitHub → Settings → Secrets and
+variables → Actions → New repository secret):
+- `TAURI_SIGNING_PRIVATE_KEY` = contents of `~/.tauri/oxiline-updater.key`
+
+The key was generated without a password, so the workflow sets
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to `""` directly (no second secret).
+Without `TAURI_SIGNING_PRIVATE_KEY`, the `app` job builds unsigned and the
+release lacks `.app.tar.gz.sig` / a valid `latest.json`, so installed
+clients reject the update. Verified locally: `cargo tauri build --debug`
+with the key produces `OxiLine.app.tar.gz` + `.app.tar.gz.sig`.
