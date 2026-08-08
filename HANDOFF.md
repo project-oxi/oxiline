@@ -303,3 +303,51 @@ Commits: `00fcbbc` (build.rs + externalBin) → `0160097` (cli.rs + lib.rs) →
 **Live check pending**: GUI button → macOS admin dialog → `which oxiline`
 cannot be automated headlessly (needs an interactive admin password).
 Verify on the next release tag or a locally-built `.app`.
+
+
+
+## Menu-bar multi-slot display (2026-08-08 session 1) ✅ COMPLETE
+
+Spec: `docs/superpowers/specs/2026-08-08-menubar-multi-slot-design.md`.
+Plan: `docs/superpowers/plans/2026-08-08-menubar-multi-slot.md`.
+Implementation: 5 commits on `main`, base `c010e7a`..`05abecc`.
+
+- 22×22 progress-bar tray replaced by CodexBar-style multi-slot status
+  bar (one `NSStatusItem` per enabled information slot).
+- New `oxiline_core::tray_slots` module owns typed preferences
+  (`TraySlotKind` enum + `TraySlotPref { kind, on, order }`) persisted
+  as a single JSON row under settings key `tray_slots` (migration V6).
+- New `tray_render` rasterizes ASCII labels via an inline 5×7 column-
+  major bitmap font; non-ASCII falls back to a 5×7 box (v1 limitation;
+  Korean activity names use the box fallback).
+- `tray::build` is idempotent for the always-on menu tray (guards on
+  `app.tray_by_id(MENU_TRAY_ID).is_none()`); `rebuild` tears down every
+  data-slot tray and re-runs `build`.
+- Preferences → "메뉴바 표시" exposes on/off + ▲/▼ ordering for the
+  three v1 slots (`now_recording`, `now_next`, `state_dot`).
+- Always-on menu slot preserves the context menu even when all data
+  slots are off.
+- Spec §11 Open question: Korean-glyph fallback is a deliberate v1
+  simplification. A future v2 could ship `fontdb` + `ab_glyph` + a 9 pt
+  CJK font.
+
+### Resolved during review
+- `tray_slots::resolve` now fills missing canonical kinds with defaults
+  per spec §4 (forward-compat path).
+- `tray_render` bitmap font is column-major per spec §5 (was row-major
+  in the brief, which would have transposed every glyph).
+- `tray::build` is idempotent for the menu tray per spec §6.3 (was
+  leaking duplicate `NSStatusItem` per preference toggle).
+
+### Runtime smoke test
+- Static gates: `cargo test --workspace`, `cargo clippy --workspace
+  -- -D warnings`, `bun run tsc --noEmit && bun run build`, `bun run
+  test` — all green.
+- Manual macOS click-through: pending. The compiled `oxiline-app`
+  binary launches successfully via `launchctl asuser 501` (PID stayed
+  alive in `Rsl` state across multiple 10 s observations) but this
+  shell harness has no interactive Aqua session to drive the menu-bar
+  click-through (Preferences toggle, ▲/▼ reorder, recording-start →
+  REC slot update, theme recolor). The static gates cover correctness;
+  the runtime click-through is documented as pending and should be
+  exercised by the user on next launch.
