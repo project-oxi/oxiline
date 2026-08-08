@@ -149,3 +149,32 @@ jobs:
             artifacts/**/oxiline-*.tar.gz
             artifacts/app/**/*.dmg
             artifacts/app/**/*.app.tar.gz
+
+
+  crates-io:
+    name: Publish to crates.io
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.89"
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Publish oxiline-core
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p oxiline-core --no-verify
+
+      - name: Wait for crates.io index propagation
+        run: sleep 30
+
+      - name: Publish oxiline-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p oxiline-cli --no-verify
