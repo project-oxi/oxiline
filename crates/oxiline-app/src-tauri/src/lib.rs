@@ -83,9 +83,19 @@ pub fn run() {
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_process::init())
         .manage(state::AppState::new())
         .invoke_handler(specta.invoke_handler())
         .setup(|app| {
+            // In-app auto-update: check the GitHub Releases `latest.json` manifest
+            // (§plugins.updater.endpoints). The frontend drives check/download/
+            // install via `@tauri-apps/plugin-updater`; this just wires the plugin.
+            #[cfg(desktop)]
+            {
+                let _ = app
+                    .handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build());
+            }
             // Dock icon hidden; the app lives in the menu bar (§4.3).
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
