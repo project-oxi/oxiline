@@ -99,11 +99,7 @@ fn resolve_appends_defaults_for_missing_canonical_kinds() {
     assert_eq!(recording.order, 0);
     // The filled entries are off and use orders past the stored max (0).
     for kind in [TraySlotKind::NowNext, TraySlotKind::StateDot] {
-        let filled = r
-            .all
-            .iter()
-            .find(|p| p.kind == kind)
-            .expect("filled entry");
+        let filled = r.all.iter().find(|p| p.kind == kind).expect("filled entry");
         assert!(!filled.on);
         assert!(filled.order >= 1);
     }

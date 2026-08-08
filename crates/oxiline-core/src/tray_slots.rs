@@ -119,7 +119,10 @@ fn has_duplicate_order(prefs: &[TraySlotPref]) -> bool {
 fn normalize(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
     let known: std::collections::HashSet<TraySlotKind> =
         SLOT_KIND_IDS.iter().map(|(k, _)| *k).collect();
-    prefs.into_iter().filter(|p| known.contains(&p.kind)).collect()
+    prefs
+        .into_iter()
+        .filter(|p| known.contains(&p.kind))
+        .collect()
 }
 
 /// Append a default entry for every canonical kind missing from `prefs`,
@@ -127,8 +130,7 @@ fn normalize(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
 /// entry. The order is well-defined only in the absence of duplicate orders
 /// (the caller checks that first).
 fn fill_missing_canonical_kinds(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
-    let present: std::collections::HashSet<TraySlotKind> =
-        prefs.iter().map(|p| p.kind).collect();
+    let present: std::collections::HashSet<TraySlotKind> = prefs.iter().map(|p| p.kind).collect();
     let next_order = prefs.iter().map(|p| p.order).max().map_or(0, |m| m + 1);
     let mut out = prefs;
     let mut next = next_order;
@@ -144,4 +146,3 @@ fn fill_missing_canonical_kinds(prefs: Vec<TraySlotPref>) -> Vec<TraySlotPref> {
     }
     out
 }
-

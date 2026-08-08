@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use tauri_plugin_autostart::ManagerExt;
 
-use crate::tray_render::{label_for, render_menu_dot, render_slot, LabelCtx};
+use crate::tray_render::{LabelCtx, label_for, render_menu_dot, render_slot};
 use crate::{hud, state::AppState};
 use oxiline_core::model::TraySlotKind;
 use oxiline_core::tray_slots;
@@ -128,7 +128,11 @@ pub fn refresh(app: &AppHandle) {
             TraySlotKind::StateDot => Some(render_state_dot(app)),
             _ => {
                 let label = slot_label(app, *kind);
-                if label.is_empty() { None } else { Some(render_slot(&label, FG_COLOR)) }
+                if label.is_empty() {
+                    None
+                } else {
+                    Some(render_slot(&label, FG_COLOR))
+                }
             }
         };
         if let Some(img) = img {
@@ -146,8 +150,12 @@ pub fn refresh(app: &AppHandle) {
 
 fn render_state_dot(app: &AppHandle) -> tauri::image::Image<'static> {
     let conn = app.state::<AppState>().conn();
-    let summary = oxiline_core::plan::now_summary(&conn, oxiline_core::util::now_minute_local()).ok();
-    let color = match (summary.as_ref().and_then(|s| s.current.as_ref()), summary.as_ref().and_then(|s| s.next.as_ref())) {
+    let summary =
+        oxiline_core::plan::now_summary(&conn, oxiline_core::util::now_minute_local()).ok();
+    let color = match (
+        summary.as_ref().and_then(|s| s.current.as_ref()),
+        summary.as_ref().and_then(|s| s.next.as_ref()),
+    ) {
         (Some(_), _) => STATE_DOT_RECORDING,
         (None, Some(n)) if n.starts_in_minute.unwrap_or(i64::MAX) <= 5 => STATE_DOT_NEXT_SOON,
         _ => STATE_DOT_IDLE,
@@ -161,7 +169,10 @@ fn slot_label(app: &AppHandle, kind: TraySlotKind) -> String {
     let locale = if locale_raw == "en" { "en" } else { "ko" };
     let now_minute = oxiline_core::util::now_minute_local();
     let summary = oxiline_core::plan::now_summary(&conn, now_minute).ok();
-    let summary = match summary { Some(s) => s, None => return String::new() };
+    let summary = match summary {
+        Some(s) => s,
+        None => return String::new(),
+    };
     let ctx = LabelCtx {
         now_minute,
         rounding_minutes: oxiline_core::settings::get_i64(&conn, "record_rounding_minutes", 5),

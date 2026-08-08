@@ -4,6 +4,42 @@ All notable changes to OxiLine will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-08
+
+Menu-bar multi-slot display — CodexBar-style status bar replaces the single
+22×22 progress-bar tray. Each enabled information slot gets its own
+`NSStatusItem`, ordered left → right per Preferences.
+
+### Desktop app (`oxiline-app`)
+
+- **feat**: multi-slot menu bar — `now_recording` (REC … Nm), `now_next`
+  (NEXT … Nm), and `state_dot` (color-coded: green=recording, amber=next
+  ≤5m, gray=idle). One slot per `NSStatusItem`, ordered per Preferences.
+- **feat**: always-on menu slot preserves the context menu even when all
+  data slots are off (CodexBar "merged" pattern).
+- **feat**: bitmapped tray renderer — inline 5×7 column-major ASCII font
+  rasterizes labels into 22 px RGBA; non-ASCII falls back to a 5×7 box
+  (v1 limitation, spec §6.4/§11).
+- **feat**: Preferences → "메뉴바 표시" section with on/off toggle and
+  ▲/▼ reorder for each slot.
+- **feat**: `update_tray_slots` Tauri command + `oxiline://tray-changed`
+  event for immediate rebuild on preference change.
+- **fix**: `tray_slots::resolve` fills missing canonical kinds with
+  defaults (spec §4 forward-compat).
+- **fix**: `tray::build` is idempotent for the menu tray — no duplicate
+  `NSStatusItem` per preference toggle (spec §6.3).
+- **fix**: `state_dot` keeps literal RGB via template-mode opt-out
+  (spec §5 — text slots stay template-adapted).
+- **fix**: legacy 22×22 progress-bar tray removed (illegible at menu-bar
+  resolution).
+
+### Recording core (`oxiline-core`)
+
+- **feat**: `TraySlotKind` enum + `TraySlotPref { kind, on, order }` typed
+  preferences persisted as a single JSON row under settings key
+  `tray_slots` (migration V6).
+- **feat**: `tray_slots::resolve` / `save` / `defaults` helpers.
+
 ## [0.4.0] - 2026-08-07
 
 In-app CLI install — one `.dmg` now delivers both the GUI and the `oxiline`
@@ -154,3 +190,4 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.3.1]: https://github.com/project-oxi/oxiline/releases/tag/v0.3.1
 
 [0.4.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.4.0
+[0.5.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.5.0

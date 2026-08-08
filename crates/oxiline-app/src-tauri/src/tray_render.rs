@@ -99,7 +99,11 @@ pub fn render_menu_dot(color: (u8, u8, u8, u8)) -> Image<'static> {
             let dx = x - cx;
             let dy = y - cy;
             if dx * dx + dy * dy <= DOT_RADIUS * DOT_RADIUS {
-                img.put_pixel(x as u32, y as u32, Rgba([color.0, color.1, color.2, color.3]));
+                img.put_pixel(
+                    x as u32,
+                    y as u32,
+                    Rgba([color.0, color.1, color.2, color.3]),
+                );
             }
         }
     }
@@ -130,12 +134,7 @@ fn draw_glyph(
     }
 }
 
-fn draw_unknown(
-    img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>,
-    x0: u32,
-    y0: u32,
-    fg: (u8, u8, u8, u8),
-) {
+fn draw_unknown(img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, x0: u32, y0: u32, fg: (u8, u8, u8, u8)) {
     for dy in 0..GLYPH_H {
         for dx in 0..GLYPH_W {
             let edge = dy == 0 || dy == GLYPH_H - 1 || dx == 0 || dx == GLYPH_W - 1;
@@ -217,7 +216,14 @@ fn is_foreground(img: &Image<'static>, fg: (u8, u8, u8, u8), x: u32, y: u32) -> 
 
 /// Count foreground pixels in a rectangular band of the image.
 #[cfg(test)]
-fn count_fg_pixels(img: &Image<'static>, fg: (u8, u8, u8, u8), x0: u32, y0: u32, w: u32, h: u32) -> usize {
+fn count_fg_pixels(
+    img: &Image<'static>,
+    fg: (u8, u8, u8, u8),
+    x0: u32,
+    y0: u32,
+    w: u32,
+    h: u32,
+) -> usize {
     let mut count = 0;
     for dy in 0..h {
         for dx in 0..w {
@@ -247,7 +253,10 @@ mod tests {
         // 'a' is in the font (cols at cursor_x = 2..7, y = 7..14); count fg
         // pixels in that band — must be > 0 for a real glyph render.
         let fg_pixels = count_fg_pixels(&img, (10, 20, 30, 255), 2, 7, GLYPH_W, GLYPH_H);
-        assert!(fg_pixels > 0, "expected 'a' to render some foreground pixels, got 0");
+        assert!(
+            fg_pixels > 0,
+            "expected 'a' to render some foreground pixels, got 0"
+        );
     }
 
     #[test]
