@@ -7,6 +7,7 @@ import { initI18n } from "./lib/i18n";
 import { applyTheme, watchSystemTheme } from "./lib/theme";
 import { useUi } from "./lib/store";
 import App from "./App";
+import { useUpdate } from "./lib/updater";
 
 async function boot() {
   // Replace the platform's native webview right-click menu with the app-native
@@ -62,6 +63,10 @@ async function boot() {
       /* running outside Tauri */
     }
   });
+  // Auto-check for app updates on launch + every 6h, so the long-running
+  // menu-bar session notices new GitHub Releases without a manual check.
+  void useUpdate.getState().check();
+  setInterval(() => void useUpdate.getState().check(), 6 * 60 * 60 * 1000);
 
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>

@@ -9,6 +9,7 @@ import { Inspector } from "./components/Inspector";
 import { ContextMenu } from "./components/ContextMenu";
 import { ActivitySwitcher } from "./components/ActivitySwitcher";
 import { CliNudge } from "./components/CliNudge";
+import { UpdateBanner } from "./components/UpdateBanner";
 import { useUi } from "./lib/store";
 
 function useGlobalKeys() {
@@ -70,6 +71,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-surface">
+      <UpdateBanner />
       <Header />
       <DndProvider>
         <div className="flex flex-1 overflow-hidden">

@@ -90,6 +90,16 @@
     "slotStateDot": "Status dot only",
     "menubarAllOffNote": "If you turn everything off, only the menu icon stays."
   },
+  "updater": {
+    "section": "Updates",
+    "checking": "Checking…",
+    "latest": "You're up to date",
+    "available": "v{{version}} available",
+    "install": "Install now",
+    "downloading": "Downloading… {{pct}}%",
+    "error": "Update check failed. Please try again later.",
+    "checkButton": "Check for updates"
+  },
   "onboarding": {
     "welcome": "Welcome",
     "welcomeBody": "A day flows. OxiLine shows the flow.",

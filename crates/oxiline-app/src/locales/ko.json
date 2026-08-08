@@ -90,6 +90,16 @@
     "slotStateDot": "상태 점만",
     "menubarAllOffNote": "모두 끄면 메뉴 아이콘은 메뉴용 1개만 남아요."
   },
+  "updater": {
+    "section": "업데이트",
+    "checking": "확인 중…",
+    "latest": "최신 버전이에요",
+    "available": "v{{version}} 사용 가능",
+    "install": "지금 설치",
+    "downloading": "다운로드 중… {{pct}}%",
+    "error": "업데이트 확인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    "checkButton": "업데이트 확인"
+  },
   "onboarding": {
     "welcome": "환영합니다",
     "welcomeBody": "하루는 흐릅니다. OxiLine은 그 흐름을 보여줍니다.",

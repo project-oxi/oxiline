@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronDown, ChevronUp, Terminal, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, RefreshCw, Terminal, X } from "lucide-react";
 import { useTraySlots, useUpdateTraySlots, useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory, useCliStatus, useInstallCli, useUninstallCli } from "../hooks";
 import { api } from "../lib/api";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -10,6 +10,8 @@ import { changeLang, type Lang } from "../lib/i18n";
 import { categoryColor } from "../lib/colors";
 import type { CliState, TraySlotPref } from "../types";
 import { Modal } from "./Modal";
+import { useUpdate } from "../lib/updater";
+import { getVersion } from "@tauri-apps/api/app";
 import { swapOrder } from "../lib/tray-slot-order";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -102,6 +104,86 @@ function CliSection() {
   );
 }
 
+/** In-app update UI: shows the current version, checks GitHub Releases for a
+ *  newer build, and installs it (download + relaunch) on user demand. The
+ *  auto-check runs on launch from `main.tsx`; this panel is the manual path. */
+function UpdateSection() {
+  const { t } = useTranslation();
+  const { status, check, install } = useUpdate();
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    // getVersion() only resolves in the Tauri shell; fall back to the
+    // bundled version for browser/dev previews.
+    getVersion()
+      .then(setVersion)
+      .catch(() => setVersion("0.5.0"));
+  }, []);
+  const pct =
+    status.kind === "downloading" && status.contentLength > 0
+      ? Math.min(100, Math.round((status.downloaded / status.contentLength) * 100))
+      : 0;
+  const showCheck =
+    status.kind === "idle" || status.kind === "latest" || status.kind === "error";
+  return (
+    <section className="mb-4">
+      <h3 className="mb-1 flex items-center gap-1.5 text-[12px] font-semibold uppercase text-text-subtle">
+        <RefreshCw size={12} />
+        {t("updater.section")}
+      </h3>
+      <Row label={t("settings.version")}>
+        <span className="font-mono text-[12px] text-text-muted">{version ? `v${version}` : "—"}</span>
+      </Row>
+      {status.kind === "checking" && (
+        <p className="py-1 text-[12px] text-text-subtle">{t("updater.checking")}</p>
+      )}
+      {status.kind === "latest" && (
+        <p className="py-1 text-[12px] text-status-success">{t("updater.latest")}</p>
+      )}
+      {status.kind === "available" && (
+        <div className="py-1">
+          <p className="text-[12px] text-text-muted">
+            {t("updater.available", { version: status.version })}
+          </p>
+          {status.notes && (
+            <pre className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap rounded bg-surface-sunken p-2 text-[11px] text-text-subtle">
+              {status.notes}
+            </pre>
+          )}
+          <button
+            className="mt-2 rounded bg-interactive-primary px-3 py-1.5 text-[12px] text-interactive-primary-foreground"
+            onClick={() => void install()}
+          >
+            {t("updater.install")}
+          </button>
+        </div>
+      )}
+      {status.kind === "downloading" && (
+        <div className="py-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
+            <div
+              className="h-full bg-interactive-primary transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-text-subtle">
+            {t("updater.downloading", { pct })}
+          </p>
+        </div>
+      )}
+      {status.kind === "error" && (
+        <p className="py-1 text-[12px] text-status-error">{t("updater.error")}</p>
+      )}
+      {showCheck && (
+        <button
+          className="mt-1 rounded bg-surface-muted px-2 py-1 text-[12px]"
+          onClick={() => void check()}
+        >
+          {t("updater.checkButton")}
+        </button>
+      )}
+    </section>
+  );
+}
 export function Preferences() {
   const { t } = useTranslation();
   const { preferencesOpen: open, setPreferencesOpen } = useUi();
@@ -400,10 +482,13 @@ export function Preferences() {
           </h3>
           <CliSection />
         </section>
+        <section className="mb-4">
+          <UpdateSection />
+        </section>
 
         <section>
           <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.about")}</h3>
-          <p className="text-[12px] text-text-muted">{t("settings.version")} 0.1.0</p>
+          <p className="text-[12px] text-text-muted">{t("app.tagline")}</p>
           <p className="mt-1 text-[12px] text-text-subtle">{t("settings.livesInMenubar")}</p>
         </section>
     </Modal>
