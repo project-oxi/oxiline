@@ -52,6 +52,7 @@ pub fn run() {
         cli::cli_status,
         cli::install_cli,
         cli::uninstall_cli,
+        commands::update_tray_slots,
     ]);
 
     // Emit typed TS bindings for the frontend in dev builds.
@@ -113,6 +114,12 @@ pub fn run() {
             let h = app.handle().clone();
             app.listen("oxiline://db-changed", move |_event| {
                 tray::refresh(&h);
+            });
+            // Rebuild the tray when slot preferences change (via
+            // `update_tray_slots`).
+            let h_tray = app.handle().clone();
+            app.listen("oxiline://tray-changed", move |_event| {
+                tray::rebuild(&h_tray);
             });
             Ok(())
         })

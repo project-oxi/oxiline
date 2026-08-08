@@ -1,15 +1,41 @@
 //! Menu-bar tray icon + menu (`07-ui-screens-and-flows.md` §7.7, §4.3).
+//!
+//! Multi-slot layout:
+//! - one always-on menu tray (`MENU_TRAY_ID`) that owns the dropdown menu;
+//! - one `TrayIcon` per enabled data slot (`tray-slot-{kind_id}`) tracked in
+//!   [`BUILT_SLOTS`]. Each data slot left-clicks to [`show_main`] and does
+//!   NOT show a menu on left-click.
 
+use std::collections::HashMap;
+use std::sync::Mutex;
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIcon;
 use tauri::{AppHandle, Emitter, Manager};
+
 use tauri_plugin_autostart::ManagerExt;
 
-use image::{ImageBuffer, Rgba};
-
+use crate::tray_render::{label_for, render_menu_dot, render_slot, LabelCtx};
 use crate::{hud, state::AppState};
+use oxiline_core::model::TraySlotKind;
+use oxiline_core::tray_slots;
 
 const EVENT_OPEN_PREFERENCES: &str = "oxiline://open-preferences";
 const EVENT_OPEN_QUICK_ADD: &str = "oxiline://open-quick-add";
+
+const MENU_TRAY_ID: &str = "tray-menu";
+
+fn slot_tray_id(kind: TraySlotKind) -> String {
+    format!("tray-slot-{}", tray_slots::slot_kind_to_id(kind))
+}
+
+static BUILT_SLOTS: once_cell::sync::Lazy<Mutex<HashMap<TraySlotKind, TrayIcon>>> =
+    once_cell::sync::Lazy::new(|| Mutex::new(HashMap::new()));
+
+const FG_COLOR: (u8, u8, u8, u8) = (60, 60, 60, 255);
+const MENU_DOT_COLOR: (u8, u8, u8, u8) = (130, 130, 130, 255);
+const STATE_DOT_RECORDING: (u8, u8, u8, u8) = (43, 179, 160, 255);
+const STATE_DOT_NEXT_SOON: (u8, u8, u8, u8) = (220, 160, 40, 255);
+const STATE_DOT_IDLE: (u8, u8, u8, u8) = (130, 130, 130, 255);
 
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let sep0 = PredefinedMenuItem::separator(app)?;
@@ -39,36 +65,111 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     )
 }
 
-/// Build the tray icon and its menu.
+/// Build the always-on menu tray and one `TrayIcon` per enabled data slot.
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app)?;
-    let icon = render_progress_icon(0.0);
-    tauri::tray::TrayIconBuilder::with_id("main-tray")
-        .icon(icon)
-        .tooltip("OxiLine")
+    let menu_dot = render_menu_dot(MENU_DOT_COLOR);
+    let menu_tray = tauri::tray::TrayIconBuilder::with_id(MENU_TRAY_ID)
+        .icon(menu_dot)
+        .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(true)
         .on_menu_event(on_menu_event)
         .build(app)?;
+    let _ = menu_tray.set_icon_as_template(true);
+
+    let conn = app.state::<AppState>().conn();
+    let resolved = tray_slots::resolve(&conn);
+    for pref in &resolved.enabled {
+        build_slot(app, pref.kind)?;
+    }
+    refresh(app);
     Ok(())
 }
 
-/// Refresh the dynamic menu (now-label + autostart) by rebuilding it.
-pub fn refresh(app: &AppHandle) {
-    // Update tray icon with current day progress.
-    if let Some(tray) = app.tray_by_id("main-tray") {
-        let state = app.state::<AppState>();
-        let conn = state.conn();
-        let now_min = oxiline_core::util::now_minute_local() as f32;
-        let day_start = oxiline_core::settings::get_i64(&conn, "day_start_hour", 5) as f32 * 60.0;
-        let day_end = oxiline_core::settings::get_i64(&conn, "day_end_hour", 26) as f32 * 60.0;
-        let progress = ((now_min - day_start) / (day_end - day_start)).clamp(0.0, 1.0);
-        let _ = tray.set_icon(Some(render_progress_icon(progress)));
+fn build_slot(app: &AppHandle, kind: TraySlotKind) -> tauri::Result<()> {
+    let label = slot_label(app, kind);
+    let img = render_slot(&label, FG_COLOR);
+    let app_for_event = app.clone();
+    let tray = tauri::tray::TrayIconBuilder::with_id(slot_tray_id(kind))
+        .icon(img)
+        .icon_as_template(true)
+        .show_menu_on_left_click(false)
+        .on_tray_icon_event(move |_tray, event| {
+            if let tauri::tray::TrayIconEvent::Click { button, .. } = event
+                && matches!(button, tauri::tray::MouseButton::Left)
+            {
+                show_main(&app_for_event);
+            }
+        })
+        .build(app)?;
+    let _ = tray.set_icon_as_template(true);
+    BUILT_SLOTS.lock().unwrap().insert(kind, tray);
+    Ok(())
+}
 
-        // Rebuild the menu (dynamic now-label + autostart state).
-        if let Ok(menu) = build_menu(app) {
-            let _ = tray.set_menu(Some(menu));
+/// Refresh the dynamic content of every data slot, then refresh the menu's
+/// "지금" row. Called from the 60-second timer and from `db-changed`.
+pub fn refresh(app: &AppHandle) {
+    let slots = BUILT_SLOTS.lock().unwrap();
+    for (kind, tray) in slots.iter() {
+        let img = match kind {
+            TraySlotKind::StateDot => Some(render_state_dot(app)),
+            _ => {
+                let label = slot_label(app, *kind);
+                if label.is_empty() { None } else { Some(render_slot(&label, FG_COLOR)) }
+            }
+        };
+        if let Some(img) = img {
+            let _ = tray.set_icon(Some(img));
         }
+    }
+    drop(slots);
+    // Also rebuild the menu so the dynamic "지금" row stays fresh.
+    if let Ok(menu) = build_menu(app)
+        && let Some(tray) = app.tray_by_id(MENU_TRAY_ID)
+    {
+        let _ = tray.set_menu(Some(menu));
+    }
+}
+
+fn render_state_dot(app: &AppHandle) -> tauri::image::Image<'static> {
+    let conn = app.state::<AppState>().conn();
+    let summary = oxiline_core::plan::now_summary(&conn, oxiline_core::util::now_minute_local()).ok();
+    let color = match (summary.as_ref().and_then(|s| s.current.as_ref()), summary.as_ref().and_then(|s| s.next.as_ref())) {
+        (Some(_), _) => STATE_DOT_RECORDING,
+        (None, Some(n)) if n.starts_in_minute.unwrap_or(i64::MAX) <= 5 => STATE_DOT_NEXT_SOON,
+        _ => STATE_DOT_IDLE,
+    };
+    render_menu_dot(color)
+}
+
+fn slot_label(app: &AppHandle, kind: TraySlotKind) -> String {
+    let conn = app.state::<AppState>().conn();
+    let locale_raw = oxiline_core::settings::get_string(&conn, "locale", "system");
+    let locale = if locale_raw == "en" { "en" } else { "ko" };
+    let now_minute = oxiline_core::util::now_minute_local();
+    let summary = oxiline_core::plan::now_summary(&conn, now_minute).ok();
+    let summary = match summary { Some(s) => s, None => return String::new() };
+    let ctx = LabelCtx {
+        now_minute,
+        rounding_minutes: oxiline_core::settings::get_i64(&conn, "record_rounding_minutes", 5),
+        now_summary: &summary,
+    };
+    label_for(kind, locale, &ctx)
+}
+
+/// Tear down every data-slot tray icon and rebuild from the persisted prefs.
+/// Used after `update_tray_slots` and on the `oxiline://tray-changed` event.
+pub fn rebuild(app: &AppHandle) {
+    let kinds: Vec<TraySlotKind> = BUILT_SLOTS.lock().unwrap().keys().copied().collect();
+    for kind in kinds {
+        let id = slot_tray_id(kind);
+        let _ = app.remove_tray_by_id(&id);
+    }
+    BUILT_SLOTS.lock().unwrap().clear();
+    if let Err(e) = build(app) {
+        eprintln!("tray::rebuild failed: {e}");
     }
 }
 
@@ -148,51 +249,4 @@ fn now_summary(app: &AppHandle) -> String {
         }
         Err(_) => "OxiLine".into(),
     }
-}
-
-/// render_progress_icon: 22×22 RGBA progress bar.
-/// `progress` = 0.0 (start of day) → 1.0 (end of day).
-fn render_progress_icon(progress: f32) -> tauri::image::Image<'static> {
-    const SIZE: u32 = 22;
-    const BAR_PAD: u32 = 4;
-    const OXIDE_R: u8 = 0x2b;
-    const OXIDE_G: u8 = 0xb3;
-    const OXIDE_B: u8 = 0xa0;
-
-    let p = progress.clamp(0.0, 1.0);
-    let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> =
-        ImageBuffer::from_pixel(SIZE, SIZE, Rgba([0, 0, 0, 0]));
-
-    // Bar background: subtle outline
-    for y in BAR_PAD..(SIZE - BAR_PAD) {
-        for x in 2..(SIZE - 2) {
-            img.put_pixel(x, y, Rgba([128, 128, 128, 60]));
-        }
-    }
-    // Bar fill
-    let fill_w = ((SIZE - 4) as f32 * p) as u32;
-    for y in BAR_PAD..(SIZE - BAR_PAD) {
-        for x in 2..(2 + fill_w) {
-            img.put_pixel(x, y, Rgba([OXIDE_R, OXIDE_G, OXIDE_B, 255]));
-        }
-    }
-    // Leading white dot at the fill edge
-    if p > 0.0 && fill_w > 0 {
-        let cx = (2 + fill_w - 1) as i32;
-        let cy = (SIZE / 2) as i32;
-        for dy in -2..=2 {
-            for dx in -2..=2 {
-                if dx * dx + dy * dy <= 4 {
-                    let px = (cx + dx) as u32;
-                    let py = (cy + dy) as u32;
-                    if px < SIZE && py < SIZE {
-                        img.put_pixel(px, py, Rgba([255, 255, 255, 255]));
-                    }
-                }
-            }
-        }
-    }
-
-    let rgba = img.into_raw();
-    tauri::image::Image::new_owned(rgba, SIZE, SIZE)
 }

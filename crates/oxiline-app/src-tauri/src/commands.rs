@@ -304,3 +304,20 @@ pub fn show_main_window(app: tauri::AppHandle) -> Result<(), String> {
     crate::tray::show_main(&app);
     Ok(())
 }
+
+/// Persist the user's menu-bar slot preferences and rebuild the tray so the
+/// change takes effect immediately.
+#[tauri::command]
+#[specta::specta]
+pub fn update_tray_slots(
+    state: State<AppState>,
+    app: tauri::AppHandle,
+    slots: Vec<oxiline_core::model::TraySlotPref>,
+) -> Result<(), String> {
+    if slots.is_empty() {
+        return Err("at least one slot row required".into());
+    }
+    oxiline_core::tray_slots::save(&state.conn(), &slots).map_err(map_err)?;
+    crate::tray::rebuild(&app);
+    Ok(())
+}
