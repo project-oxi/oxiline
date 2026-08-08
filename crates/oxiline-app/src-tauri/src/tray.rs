@@ -66,17 +66,27 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 }
 
 /// Build the always-on menu tray and one `TrayIcon` per enabled data slot.
+///
+/// Idempotent for the menu tray: when [`MENU_TRAY_ID`] already exists on the
+/// `AppHandle`, the existing tray is reused. This is load-bearing for
+/// [`rebuild`] — every preference toggle tears down and re-creates every
+/// data-slot tray, but the menu tray is the always-on anchor and must stay
+/// unique (spec §6.3). A naive second `TrayIconBuilder::with_id(MENU_TRAY_ID)
+/// .build(app)` would allocate a second `NSStatusItem` on macOS because the
+/// tray-icon crate's `id` is metadata only.
 pub fn build(app: &AppHandle) -> tauri::Result<()> {
-    let menu = build_menu(app)?;
-    let menu_dot = render_menu_dot(MENU_DOT_COLOR);
-    let menu_tray = tauri::tray::TrayIconBuilder::with_id(MENU_TRAY_ID)
-        .icon(menu_dot)
-        .icon_as_template(true)
-        .menu(&menu)
-        .show_menu_on_left_click(true)
-        .on_menu_event(on_menu_event)
-        .build(app)?;
-    let _ = menu_tray.set_icon_as_template(true);
+    if app.tray_by_id(MENU_TRAY_ID).is_none() {
+        let menu = build_menu(app)?;
+        let menu_dot = render_menu_dot(MENU_DOT_COLOR);
+        let menu_tray = tauri::tray::TrayIconBuilder::with_id(MENU_TRAY_ID)
+            .icon(menu_dot)
+            .icon_as_template(true)
+            .menu(&menu)
+            .show_menu_on_left_click(true)
+            .on_menu_event(on_menu_event)
+            .build(app)?;
+        let _ = menu_tray.set_icon_as_template(true);
+    }
 
     let conn = app.state::<AppState>().conn();
     let resolved = tray_slots::resolve(&conn);
