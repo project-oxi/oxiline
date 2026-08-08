@@ -56,7 +56,13 @@ fn run(opts: Cli) -> Result<()> {
         Command::Now => {
             let ctx = plan::now_summary(&conn, util::now_minute_local())?;
             if json {
-                say(output::json_pretty(&ctx));
+                // Embed a server-style `generated_at` so agents can stamp the
+                // snapshot without re-reading the system clock (spec §5.3).
+                let mut v = serde_json::to_value(&ctx).unwrap_or_else(|_| json!({}));
+                if let Some(obj) = v.as_object_mut() {
+                    obj.insert("generated_at".into(), json!(util::now_iso()));
+                }
+                say(serde_json::to_string_pretty(&v).unwrap_or_else(|_| "null".into()));
             } else {
                 say(output::now_text(l, &ctx));
             }

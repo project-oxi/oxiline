@@ -81,6 +81,7 @@ pub enum Command {
         #[command(subcommand)]
         action: PlanAction,
     },
+    /// Run a self-diagnostic (DB path, schema version, WAL state, categories).
     Doctor,
 }
 

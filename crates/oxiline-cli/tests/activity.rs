@@ -145,8 +145,7 @@ fn activity_rm_force_required_when_records_exist() {
     // Seed the activity + a record directly via the core API. The schema's
     // ON DELETE RESTRICT on records.activity_id is what delete_activity(force=false)
     // must catch.
-    let conn = rusqlite::Connection::open(&db_path).unwrap();
-    open_and_migrate(&db_path).unwrap();
+    let conn = open_and_migrate(&db_path).unwrap();
     settings::ensure_defaults(&conn).unwrap();
     let a = activities::create_activity(
         &conn,
