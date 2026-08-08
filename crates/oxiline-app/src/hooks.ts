@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useUi } from "./lib/store";
 import { useMemo } from "react";
+import { emit } from "@tauri-apps/api/event";
 import { api } from "./lib/api";
-import type { CliState, Scope } from "./types";
+import type { CliState, Scope, TraySlotPref } from "./types";
 
 export const qk = {
   categories: ["categories"] as const,
@@ -277,6 +278,34 @@ export function useUninstallCli() {
     mutationFn: () => api.uninstallCli(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cli-status"] });
+    },
+  });
+}
+
+
+// ---- tray-slot preferences ----------------------------------------------
+
+/** Tray-slot preferences sorted by `order` ascending. Reads from the same
+ *  settings query as `useSettings`. */
+export function useTraySlots(): TraySlotPref[] {
+  const settingsQ = useSettings();
+  const list = (settingsQ.data?.tray_slots as TraySlotPref[] | undefined) ?? [];
+  return [...list].sort((a, b) => a.order - b.order);
+}
+/** Persist updated tray-slot preferences, then invalidate the settings query
+ *  so `useTraySlots` re-reads the canonical state. Emits a best-effort
+ *  `oxiline://tray-changed` event so any menu-rebuild listeners (already
+ *  wired in `lib.rs`) can react — the Rust side ALSO rebuilds inside
+ *  `update_tray_slots`, so this emit is an extra signal only. */
+export function useUpdateTraySlots() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slots: TraySlotPref[]) => api.updateTraySlots(slots),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.settings });
+      if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+        emit("oxiline://tray-changed").catch(() => { /* Tauri not available in browser/dev mode */ });
+      }
     },
   });
 }

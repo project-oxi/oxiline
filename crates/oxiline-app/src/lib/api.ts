@@ -17,7 +17,8 @@ import type {
   RecordState,
   Scope,
   Settings,
-} from "../types";
+  TraySlotPref,
+ } from "../types";
 
 // Browser/dev fallback gate — matches oximemo's tauri.ts `inTauri` shim.
 // Only CLI install commands short-circuit here; all other commands are
@@ -95,6 +96,8 @@ export const api = {
   // preferences
   reloadShortcuts: () => invoke<void>("reload_shortcuts"),
   showMainWindow: () => invoke<void>("show_main_window"),
+  updateTraySlots: (slots: TraySlotPref[]) =>
+    invoke<void>("update_tray_slots", { slots }),
   // CLI install (in-app) — only meaningful in the desktop bundle; the
   // browser preview reports "not-installed" and rejects install/uninstall.
   cliStatus: (): Promise<CliState> =>

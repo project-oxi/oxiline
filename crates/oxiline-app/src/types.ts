@@ -110,6 +110,18 @@ export interface RecordState {
 
 export type Scope = "today" | "week";
 
+/** Menu-bar slot kind (`oxiline_core::model::TraySlotKind`).
+ *  Serde `rename_all = "snake_case"` so the wire values are snake_case. */
+export type TraySlotKind = "now_recording" | "now_next" | "state_dot";
+
+/** Per-slot preference persisted in the `tray_slots` setting
+ *  (`oxiline_core::model::TraySlotPref`). */
+export interface TraySlotPref {
+  kind: TraySlotKind;
+  on: boolean;
+  order: number;
+}
+
 /** Whether the bundled `oxiline` CLI is exposed on $PATH. Mirrors
  * `oxiline_app_lib::cli::CliState` (serde + specta rename_all =
  * "lowercase"). */

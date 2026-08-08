@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Terminal, X } from "lucide-react";
-import { useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory, useCliStatus, useInstallCli, useUninstallCli } from "../hooks";
+import { Check, ChevronDown, ChevronUp, Terminal, X } from "lucide-react";
+import { useTraySlots, useUpdateTraySlots, useSettings, useSetSetting, useCategories, useCreateCategory, useDeleteCategory, useCliStatus, useInstallCli, useUninstallCli } from "../hooks";
 import { api } from "../lib/api";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useUi } from "../lib/store";
 import { applyTheme, setThemeMode, type ThemeMode } from "../lib/theme";
 import { changeLang, type Lang } from "../lib/i18n";
 import { categoryColor } from "../lib/colors";
-import type { CliState } from "../types";
+import type { CliState, TraySlotPref } from "../types";
 import { Modal } from "./Modal";
+import { swapOrder } from "../lib/tray-slot-order";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -131,6 +132,28 @@ export function Preferences() {
   const changeLanguage = (lang: Lang) => {
     setSetting.mutate({ key: "locale", value: lang });
     changeLang(lang);
+  };
+
+  // ---- tray-slot preferences section ----
+  const traySlots = useTraySlots();
+  const updateTraySlots = useUpdateTraySlots();
+
+  function toggleSlot(idx: number) {
+    const next = traySlots.map((s, i) => (i === idx ? { ...s, on: !s.on } : s));
+    updateTraySlots.mutate(next);
+  }
+
+  function moveSlot(idx: number, dir: -1 | 1) {
+    updateTraySlots.mutate(swapOrder(traySlots, idx, dir));
+  }
+
+  const slotLabel = (kind: TraySlotPref["kind"]) => {
+    switch (kind) {
+      case "now_recording": return t("settings.slotNowRecording");
+      case "now_next": return t("settings.slotNowNext");
+      case "state_dot": return t("settings.slotStateDot");
+      default: return String(kind);
+    }
   };
 
   return (
@@ -296,6 +319,47 @@ export function Preferences() {
           </div>
         </section>
 
+        <section className="mb-4">
+          <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.menubar")}</h3>
+          <p className="mb-2 text-[12px] text-text-subtle">{t("settings.menubarHelp")}</p>
+          {traySlots.length === 0 ? (
+            <p className="text-[12px] text-text-subtle">{t("settings.menubarEmptyHint")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {traySlots.map((s, i) => (
+                <li key={s.kind} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-surface-sunken">
+                  <input
+                    type="checkbox"
+                    checked={s.on}
+                    onChange={() => toggleSlot(i)}
+                    aria-label={slotLabel(s.kind)}
+                  />
+                  <span className="flex-1 text-[13px]">{slotLabel(s.kind)}</span>
+                  <span className="text-[11px] text-text-subtle">{s.on ? "켬" : "끔"}</span>
+                  <button
+                    type="button"
+                    className="rounded p-1 hover:bg-surface-muted disabled:opacity-30"
+                    disabled={i === 0}
+                    onClick={() => moveSlot(i, -1)}
+                    aria-label="위로"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded p-1 hover:bg-surface-muted disabled:opacity-30"
+                    disabled={i === traySlots.length - 1}
+                    onClick={() => moveSlot(i, 1)}
+                    aria-label="아래로"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[11px] text-text-subtle">{t("settings.menubarAllOffNote")}</p>
+        </section>
         <section className="mb-4">
           <h3 className="mb-1 text-[12px] font-semibold uppercase text-text-subtle">{t("settings.categories")}</h3>
           <ul className="mb-2 space-y-1">

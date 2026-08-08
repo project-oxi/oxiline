@@ -81,7 +81,14 @@
     "cliNudgeTitle": "Enable the command-line tool",
     "cliNudgeBody": "OxiLine also runs from the terminal. Install once — great with agents.",
     "cliNudgeInstall": "Install now",
-    "cliNudgeDismiss": "Later"
+    "cliNudgeDismiss": "Later",
+    "menubar": "Menu bar",
+    "menubarHelp": "Choose what to show in the menu bar. Enabled items appear left to right.",
+    "menubarEmptyHint": "Nothing is shown in the menu bar right now. Enable at least one item to see it at a glance.",
+    "slotNowRecording": "What I'm doing now",
+    "slotNowNext": "Next up",
+    "slotStateDot": "Status dot only",
+    "menubarAllOffNote": "If you turn everything off, only the menu icon stays."
   },
   "onboarding": {
     "welcome": "Welcome",
