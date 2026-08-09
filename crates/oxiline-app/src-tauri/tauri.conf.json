@@ -47,7 +47,7 @@
   },
   "bundle": {
     "active": true,
-    "createUpdaterArtifacts": true,
+
     "targets": ["app"],
     "externalBin": ["binaries/oxiline"],
     "icon": [
@@ -58,12 +58,5 @@
       "icons/icon.png"
     ]
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2NTU3RTc3QTc2MzUwMTYKUldRV1VHT25kMzVWaHU1K3BqTmhaNXBCamQ0TisxWVR6OG5zZFRGbGx2bnJDWjc5SFNhdjdCM3UK",
-      "endpoints": [
-        "https://github.com/project-oxi/oxiline/releases/latest/download/latest.json"
-      ]
-    }
-  }
+  "plugins": {}
 }
