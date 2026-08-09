@@ -57,7 +57,24 @@ struct Manifest {
 #[derive(serde::Deserialize)]
 struct PlatformAsset {
     url: String,
-    signature: String,
+}
+
+/// NDJSON progress event on stdout when `--json-progress` is set. The schema
+/// is part of the GUI↔CLI contract (`doc/10-updater.md`); keep field names
+/// and types stable. The matching test block in `#[cfg(test)] mod tests`
+/// pins every event shape.
+#[derive(serde::Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum Event<'a> {
+    Checking,
+    Current { version: &'a str },
+    Available { from: &'a str, to: &'a str, notes: &'a str },
+    Latest { version: &'a str },
+    Download { pct: u8 },
+    Verifying,
+    Swapping { mode: &'a str },
+    Done { version: &'a str },
+    Error { message: &'a str },
 }
 
 /// `true` iff `latest` is strictly newer than `current` (numeric, X.Y.Z).
@@ -157,4 +174,65 @@ mod tests {
         let exe = std::path::PathBuf::from("/usr/local/bin/oxiline");
         assert_eq!(app_bundle_root_of(&exe), None);
     }
+
+    /// Wire contract: the exact JSON shapes here are what the GUI parses.
+    /// Renaming a field silently breaks the sidecar; these tests pin the
+    /// schema of every event (`doc/10-updater.md`).
+    #[test]
+    fn event_checking_serializes_to_typed_tag() {
+        assert_eq!(
+            serde_json::to_string(&Event::Checking).unwrap(),
+            r#"{"type":"checking"}"#
+        );
+    }
+
+    #[test]
+    fn event_available_carries_from_to_notes() {
+        let v = serde_json::to_value(&Event::Available {
+            from: "0.6.1",
+            to: "0.7.0",
+            notes: "OxiLine 0.7.0",
+        })
+        .unwrap();
+        assert_eq!(v["type"], "available");
+        assert_eq!(v["from"], "0.6.1");
+        assert_eq!(v["to"], "0.7.0");
+        assert_eq!(v["notes"], "OxiLine 0.7.0");
+    }
+
+    #[test]
+    fn event_download_pct_is_a_number_not_string() {
+        let v = serde_json::to_value(&Event::Download { pct: 42 }).unwrap();
+        assert_eq!(v["type"], "download");
+        assert_eq!(v["pct"].as_u64(), Some(42));
+    }
+
+    #[test]
+    fn event_swapping_mode_uses_snake_case_known_values() {
+        assert_eq!(
+            serde_json::to_string(&Event::Swapping { mode: "app" }).unwrap(),
+            r#"{"type":"swapping","mode":"app"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&Event::Swapping { mode: "standalone" }).unwrap(),
+            r#"{"type":"swapping","mode":"standalone"}"#
+        );
+    }
+
+    #[test]
+    fn event_done_and_latest_and_error_match_contract() {
+        assert_eq!(
+            serde_json::to_string(&Event::Done { version: "0.7.0" }).unwrap(),
+            r#"{"type":"done","version":"0.7.0"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&Event::Latest { version: "0.6.1" }).unwrap(),
+            r#"{"type":"latest","version":"0.6.1"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&Event::Error { message: "boom" }).unwrap(),
+            r#"{"type":"error","message":"boom"}"#
+        );
+    }
 }
+
