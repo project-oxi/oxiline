@@ -263,33 +263,6 @@ fn resource_out<T: serde::Serialize>(json: bool, label: &str, t: &T) -> String {
     }
 }
 
-/// Fetch the latest release version tag from the GitHub Releases `latest.json`.
-fn fetch_latest_release_version() -> Result<String> {
-    const URL: &str = "https://github.com/project-oxi/oxiline/releases/latest/download/latest.json";
-    let resp = ureq::get(URL)
-        .call()
-        .map_err(|e| CoreError::Internal(format!("update check: {e}")))?;
-    let body = resp
-        .into_string()
-        .map_err(|e| CoreError::Internal(format!("update check: {e}")))?;
-    let v: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| CoreError::Internal(format!("update check: invalid manifest: {e}")))?;
-    v.get("version")
-        .and_then(|x| x.as_str())
-        .map(|s| s.trim_start_matches('v').to_string())
-        .ok_or_else(|| CoreError::Internal("update check: manifest has no version field".into()))
-}
-
-/// True when `current` is at least `latest` (tolerates a leading 'v'; falls
-/// back to a plain string compare if either side isn't valid semver).
-fn is_up_to_date(current: &str, latest: &str) -> bool {
-    let cur = current.trim_start_matches('v');
-    let lat = latest.trim_start_matches('v');
-    match (semver::Version::parse(cur), semver::Version::parse(lat)) {
-        (Ok(c), Ok(l)) => c >= l,
-        _ => cur == lat,
-    }
-}
 
 fn preview(json: bool, label: &str, v: &Value) -> String {
     if json {

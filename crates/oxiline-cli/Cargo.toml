@@ -21,7 +21,6 @@ rusqlite.workspace = true
 # downloads / verifies / swaps; the GUI is a thin view that spawns this
 # binary as a sidecar and parses its `--json-progress` NDJSON contract.
 ureq = { version = "2", default-features = false, features = ["tls"] }
-semver = "1"
 minisign-verify = "0.2"
 flate2 = "1"
 tar = "0.4"
