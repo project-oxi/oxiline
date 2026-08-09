@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.6.1"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.95"
 authors = ["Oxi"]
@@ -15,8 +15,7 @@ license = "MIT"
 repository = "https://github.com/project-oxi/oxiline"
 
 [workspace.dependencies]
-oxiline-core = { version = "0.6.1", path = "crates/oxiline-core" }
-
+oxiline-core = { version = "0.7.0", path = "crates/oxiline-core" }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

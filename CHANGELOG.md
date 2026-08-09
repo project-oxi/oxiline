@@ -2,6 +2,100 @@
 
 All notable changes to OxiLine will be documented in this file.
 
+## [0.7.0] - 2026-08-09
+
+Unified self-update architecture — the CLI is the only engine; the GUI
+is a thin view that spawns the bundled `oxiline` sidecar and parses its
+NDJSON progress contract. Mirrors the proven `oximemo` flow (spec:
+`doc/10-updater.md`, plan: `docs/superpowers/plans/2026-08-09-unified-updater.md`).
+Net effect for downstream users: the standalone `oxiline` binary
+(e.g. on headless / agent / CI machines) finally has a self-update path
+it never had under the Tauri-only engine.
+
+### CLI (`oxiline-cli`)
+
+- **feat**: `oxiline upgrade [--check] [--json-progress] [-y]` — the new
+  canonical self-update subcommand. Downloads the platform asset, verifies
+  the minisign signature (or SHA-256 for the standalone tarball), and
+  swaps in place. Emits one JSON object per line on stdout when
+  `--json-progress` is set (`checking` / `available` / `download` /
+  `verifying` / `swapping` / `done` / `error`); the GUI sidecar parses
+  this stream verbatim.
+- **feat (TDD)**: 22 unit tests in `crates/oxiline-cli/src/upgrade.rs`
+  pin the wire contract, the manifest schema, the minisign verify path
+  (round-trip against the well-known `minisign-verify` test vector), the
+  streaming download, the tarball extract, the in-app atomic rename, and
+  the standalone SHA-256 path. An `#[ignore]`'d live test verifies
+  the OxiLine release signature against the public `latest.json`:
+  ```sh
+  cargo test -p oxiline-cli --bin oxiline --release \
+    -- --include-ignored verifies_live_release_signature
+  ```
+- **feat**: `oxiline update` is preserved as a hidden deprecated alias
+  for one release; it prints a deprecation notice and forwards to
+  `oxiline upgrade`. Existing user scripts keep working.
+- **refactor**: drop dead `fetch_latest_release_version` and
+  `is_up_to_date` from `main.rs` (the engine in `upgrade.rs` owns these
+  now; standalone CLI now uses semver `parse_version` instead of the
+  loose string-compare fallback).
+
+### Desktop app (`oxiline-app`)
+
+- **refactor**: drop `tauri-plugin-updater` and
+  `@tauri-apps/plugin-updater`; add `tauri-plugin-shell` for the sidecar
+  spawn. `bundle.createUpdaterArtifacts` and `plugins.updater` removed
+  from `tauri.conf.json`; the minisign pubkey lives only in
+  `crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY`. The GUI is a pure
+  view — it never downloads, verifies, or swaps a release.
+- **feat**: `lib/updater.ts` rewritten to spawn `binaries/oxiline`
+  via `@tauri-apps/plugin-shell` `Command.sidecar`, parse the NDJSON
+  stream, and drive the same `useUpdate` zustand store. 7 vitest cases
+  pin the reducer behavior (full check → install sequence, monotonic
+  download pct, swapping → restarting state).
+- **feat**: new "restarting" status in Preferences → Updates (renders
+  with `updater.restarting` i18n key, ko + en) — shown between the
+  successful swap and the GUI's own `tauri-plugin-process::relaunch()`.
+- **i18n**: `updater.restarting` key (ko + en).
+
+### Release pipeline (`.github/workflows/release.yml`)
+
+- **feat**: explicit `Package app bundle as .app.tar.gz` step tars the
+  tauri-action `.app` into the canonical `OxiLine.app.tar.gz` name the
+  manifest + minisign + upload steps expect (this replaces Tauri's
+  removed `createUpdaterArtifacts`).
+- **feat**: explicit `Sign the app bundle with minisign` step produces
+  the `.app.tar.gz.sig` artifact. Requires the
+  `OXILINE_MINISIGN_KEY` repository secret (base64 of the
+  `minisign` secret key matching `LIVE_PUBKEY`).
+
+### Release engineering — required action
+
+Before the next tagged release, add the `OXILINE_MINISIGN_KEY` secret
+to the repository (`Settings → Secrets and variables → Actions`):
+
+```sh
+# Locally, export the minisign secret key (base64 of the file produced
+# by `minisign -G`):
+minisign -G -p oxi-pub.key -s oxi.key
+export OXILINE_MINISIGN_KEY="$(base64 -w 0 < oxi.key)"
+# Add the secret via gh CLI:
+gh secret set OXILINE_MINISIGN_KEY -R project-oxi/oxiline
+rm oxi.key oxi-pub.key
+```
+
+The public half (`oxi-pub.key`) must match
+`crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY` (the
+inner `RWQ…u` base64 line, not the outer one).
+
+### Breaking changes (none at the user surface)
+
+- CLI command rename: `oxiline update` → `oxiline upgrade` (old name is
+  preserved as a hidden deprecation alias that forwards).
+- Capability permission `updater:default` removed; `shell:allow-execute`
+  added (the GUI now spawns the sidecar through the shell plugin).
+- Frontend dep swap: `@tauri-apps/plugin-updater` removed;
+  `@tauri-apps/plugin-shell` added.
+
 ## [0.6.1] - 2026-08-09
 
 ### CLI (`oxiline-cli`)
@@ -129,8 +223,6 @@ Timeline interaction, recording controls, HUD polish, and macOS window behavior.
   else first option; OR plans default to first)
 - **feat**: live re-register of `global_hotkey` / `quick_record_hotkey` from
   Preferences (no relaunch); new `reload_shortcuts` Tauri command
-- **feat**: HUD live 1-second tick — elapsed timer and "next in N분" countdown
-  refresh while open
 
 ## H4 polish (2026-08-05 session 4)
 
@@ -224,4 +316,5 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.4.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.4.0
 [0.5.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.5.0
 [0.6.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.6.0
+[0.7.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.7.0
 [0.6.1]: https://github.com/project-oxi/oxiline/releases/tag/v0.6.1
