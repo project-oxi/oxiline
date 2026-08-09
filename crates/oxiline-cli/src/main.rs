@@ -219,53 +219,31 @@ fn run(opts: Cli) -> Result<()> {
                 ));
             }
         }
+        Command::Upgrade { check, json_progress, yes } => {
+            upgrade::run(
+                &conn,
+                upgrade::Options {
+                    check: *check,
+                    json_progress: *json_progress,
+                    assume_yes: *yes,
+                },
+            )
+            .map_err(|e| CoreError::Internal(e.to_string()))?;
+        }
         Command::Update { check } => {
-            let current = env!("CARGO_PKG_VERSION");
-            let latest = fetch_latest_release_version()?;
-            if is_up_to_date(current, &latest) {
-                let msg = match lang {
-                    Lang::Ko => format!("OxiLine v{} — 최신 버전이에요.", current),
-                    Lang::En => format!("OxiLine v{} — you're up to date.", current),
-                };
-                say(if json {
-                    json!({"current": current, "latest": latest, "up_to_date": true}).to_string()
-                } else {
-                    msg
-                });
-                return Ok(());
-            }
-            if *check {
-                let msg = match lang {
-                    Lang::Ko => format!("업데이트가 있어요: v{} → v{}", current, latest),
-                    Lang::En => format!("Update available: v{} → v{}", current, latest),
-                };
-                say(if json {
-                    json!({"current": current, "latest": latest, "up_to_date": false}).to_string()
-                } else {
-                    msg
-                });
-                return Ok(());
-            }
-            // Ask the running GUI to install. Same watched-setting pattern as
-            // `hud`: the GUI observes `update_request_at` changing and runs the
-            // updater, which replaces the whole .app — CLI sidecar included —
-            // so the GUI and CLI update together.
-            settings::set(&conn, "update_request_at", &Value::String(util::now_iso()))?;
-            let msg = match lang {
-                Lang::Ko => format!(
-                    "v{} 설치를 앱에 요청했어요. 잠시 후 앱이 다운로드하고 재시작해요.",
-                    latest
-                ),
-                Lang::En => format!(
-                    "v{} install requested from the app. It will download and relaunch shortly.",
-                    latest
-                ),
-            };
-            say(if json {
-                json!({"current": current, "latest": latest, "update_requested": true}).to_string()
-            } else {
-                msg
-            });
+            // Deprecated alias for `upgrade --check`. Existing user scripts
+            // invoked `oxiline update`; preserve that, but signal the
+            // rename and forward to the engine.
+            eprintln!("warning: `oxiline update` is deprecated; use `oxiline upgrade`");
+            upgrade::run(
+                &conn,
+                upgrade::Options {
+                    check: *check,
+                    json_progress: false,
+                    assume_yes: false,
+                },
+            )
+            .map_err(|e| CoreError::Internal(e.to_string()))?;
         }
     }
     Ok(())

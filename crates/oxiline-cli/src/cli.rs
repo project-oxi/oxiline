@@ -81,9 +81,28 @@ pub enum Command {
         #[command(subcommand)]
         action: PlanAction,
     },
-    /// Check for a newer release; ask the running app to install it.
+    /// Check for a newer release; download, verify, and swap in place.
+    /// The CLI is the only engine; the GUI is a thin view that spawns
+    /// this binary as a sidecar with `--json-progress` and parses the
+    /// NDJSON contract (`doc/10-updater.md`).
+    Upgrade {
+        /// Only report availability; do not download or install.
+        #[arg(long)]
+        check: bool,
+        /// Emit one JSON object per line on stdout (NDJSON). Used by
+        /// the GUI sidecar to drive its progress UI.
+        #[arg(long)]
+        json_progress: bool,
+        /// Skip the interactive confirmation prompt.
+        #[arg(long, short = 'y')]
+        yes: bool,
+    },
+    /// Deprecated alias for `upgrade --check`. Preserved for one release
+    /// so existing user scripts keep working; prints a deprecation
+    /// notice and forwards.
+    #[command(hide = true)]
     Update {
-        /// Only report availability; don't ask the app to install.
+        /// Forwarded to `upgrade --check`.
         #[arg(long)]
         check: bool,
     },
