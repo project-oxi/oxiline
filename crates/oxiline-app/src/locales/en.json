@@ -98,6 +98,7 @@
     "install": "Install now",
     "downloading": "Downloading… {{pct}}%",
     "error": "Update check failed. Please try again later.",
+    "restarting": "Installed v{{version}} — restarting ({{mode}})…",
     "checkButton": "Check for updates"
   },
   "onboarding": {

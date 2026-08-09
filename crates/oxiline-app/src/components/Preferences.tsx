@@ -170,7 +170,12 @@ function UpdateSection() {
           </p>
         </div>
       )}
-      {status.kind === "error" && (
+      {status.kind === "restarting" && (
+        <p className="py-1 text-[12px] text-status-success">
+          {t("updater.restarting", { mode: status.mode, version: status.version })}
+        </p>
+      )}
+       {status.kind === "error" && (
         <p className="py-1 text-[12px] text-status-error">{t("updater.error")}</p>
       )}
       {showCheck && (

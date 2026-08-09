@@ -98,6 +98,7 @@
     "install": "지금 설치",
     "downloading": "다운로드 중… {{pct}}%",
     "error": "업데이트 확인에 실패했어요. 잠시 후 다시 시도해 주세요.",
+    "restarting": "v{{version}} 설치 완료 — 재시작 중 ({{mode}})…",
     "checkButton": "업데이트 확인"
   },
   "onboarding": {
