@@ -2,7 +2,7 @@
 
 All notable changes to OxiLine will be documented in this file.
 
-## [Unreleased]
+## [0.6.1] - 2026-08-09
 
 ### CLI (`oxiline-cli`)
 
@@ -224,3 +224,4 @@ headless CLI (`oxiline-cli`), and Tauri v2 macOS desktop app (`oxiline-app`).
 [0.4.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.4.0
 [0.5.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.5.0
 [0.6.0]: https://github.com/project-oxi/oxiline/releases/tag/v0.6.0
+[0.6.1]: https://github.com/project-oxi/oxiline/releases/tag/v0.6.1
