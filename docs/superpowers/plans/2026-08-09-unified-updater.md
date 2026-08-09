@@ -2034,41 +2034,40 @@ git push origin feat/unified-updater --tags
 **Type / name consistency:** `Options { check, json_progress, assume_yes }` is defined in Task 2 (interface) and used in Tasks 10, 11, 16 with the exact same names. `Event` enum is defined in Task 5 and referenced in Tasks 10 and 16 (the GUI test imports the same shape). `useUpdate` zustand store is preserved — `UpdateBanner.tsx` and `Preferences.UpdateSection` keep calling the same `status`, `install`, `check`, `reset` methods; the new `restarting` status kind is a superset of the existing one.
 
 
-## Release-engineering handoff (post-merge)
+## Post-merge correction (supersedes the original Task 14 / Task 18 / handoff)
 
-The `release.yml` minisign step (`Task 18`) writes the `OXILINE_MINISIGN_KEY`
-secret verbatim to `/tmp/oxiline.key` and passes it to `minisign -S`. The
-secret value must therefore be the **raw minisign `.key` file** —
-**not** a base64-of-the-key-file blob. `minisign` parses the key as
-two text lines (`untrusted comment: …` + base64 secret) and refuses
-a file that is just a single base64 string with no header.
+During implementation we discovered that Tauri's updater **is** minisign
+under the hood. The repo's existing `TAURI_SIGNING_PRIVATE_KEY` secret
+IS the minisign private key (Tauri just wraps it in a JSON envelope for
+`tauri.conf.json#plugins.updater`). The public half of that key matches
+`LIVE_PUBKEY` in `crates/oxiline-cli/src/upgrade.rs` (the live
+`verifies_live_release_signature` test proves this end-to-end).
 
-`gh secret set` preserves newlines, so push the file contents directly:
+**The original plan — replacing `bundle.createUpdaterArtifacts: true`
+with a manual `Package as .app.tar.gz` + `Sign with minisign` chain
+driven by a new `OXILINE_MINISIGN_KEY` secret — is wrong.** Three
+concrete problems with that approach:
 
-```sh
-# 1) Generate (or reuse) the minisign keypair. The public half MUST
-#    match `crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY` (the
-#    inner `RWQ…u` base64 line, not the outer `tauri.conf.json`
-#    envelope) — otherwise every existing 0.x install will fail to
-#    verify a v0.7.0 update and lose self-update forever.
-minisign -G -p oxi-pub.key -s oxi.key
-diff <(awk 'NR==2' oxi-pub.key) \
-  <(echo RWQWUGOnd35Vhu5+pjNhZ5pBjd4N+1YTz8nsdTFllvnrCZ79HSav7B3u) \
-  || { echo "oxi-pub.key does not match LIVE_PUBKEY — STOP"; exit 1; }
+1. The user doesn't have (and doesn't need) a separate minisign key
+   file. `TAURI_SIGNING_PRIVATE_KEY` is the key.
+2. The manual `minisign -S` produces a multi-line raw `.minisig` file,
+   but the CLI's `verify_minisign_with` does `base64::decode(sig)` and
+   then `Signature::decode()`. The format the CLI expects is the base64
+   *of* the raw `.minisig` file — exactly what `createUpdaterArtifacts`
+   puts into `latest.json#signature`.
+3. The `.sig` extension doesn't match: `minisign -S -m file` produces
+   `file.minisig`, but the upload glob and manifest `find` look for
+   `*.app.tar.gz.sig`. The signature would never be found.
 
-# 2) Push the secret. Raw file contents — do NOT base64-encode it.
-gh secret set OXILINE_MINISIGN_KEY -R project-oxi/oxiline < oxi.key
+**The fix:** `bundle.createUpdaterArtifacts: true` is restored in
+`tauri.conf.json`. The `Package as .app.tar.gz` and `Sign with
+minisign` steps are deleted from `release.yml`. The single tauri-action
+step uses the already-present `TAURI_SIGNING_PRIVATE_KEY` to produce
+both `OxiLine.app.tar.gz` and `OxiLine.app.tar.gz.sig` in the exact
+base64 format the CLI consumes. **No new secret is required.**
 
-# 3) Round-trip verify locally.
-gh secret get OXILINE_MINISIGN_KEY -R project-oxi/oxiline > /tmp/oxiline.key
-chmod 600 /tmp/oxiline.key
-minisign -V -p oxi-pub.key -m README.md 2>/dev/null && echo "secret matches pub"
-rm /tmp/oxiline.key oxi.key oxi-pub.key
-```
-
-If the secret is not set, `release.yml`'s `if: env.OXILINE_MINISIGN_KEY != ''`
-guard skips the minisign step and no `.app.tar.gz.sig` is produced;
-the manifest step then publishes a `latest.json` with an empty
-signature and every existing install fails to verify the next
-release. The maintainer MUST add the secret before the first tagged
-release that includes this architecture (v0.7.0 for oxiline).
+The corresponding `OXILINE_MINISIGN_KEY` handoff section that originally
+followed this one has been deleted. `tauri.conf.json` no longer needs
+`plugins.updater` (the runtime plugin is not initialized in `lib.rs`
+anyway — the CLI does all the update work), so the `plugins: {}`
+block is empty.

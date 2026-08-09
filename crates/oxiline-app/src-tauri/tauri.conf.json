@@ -47,6 +47,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["app"],
     "externalBin": ["binaries/oxiline"],
     "icon": [
@@ -56,6 +57,5 @@
       "icons/icon.icns",
       "icons/icon.png"
     ]
-  },
-  "plugins": {}
+  }
 }
