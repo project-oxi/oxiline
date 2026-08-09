@@ -69,7 +69,21 @@ pub fn run(conn: &rusqlite::Connection, opts: Options) -> anyhow::Result<()> {
         return Ok(());
     }
     human(&opts, &format!("Update available: v{current} → v{latest}."));
-    // The only side-effect the GUI cares about — the watcher in `App.tsx`
+    if !opts.assume_yes && !opts.json_progress {
+        // The only standalone-interactive prompt. GUI sidecar
+        // callers pass --yes (the user already clicked Install in
+        // the banner); JSON-progress callers are non-interactive by
+        // contract.
+        use std::io::{BufRead, Write};
+        print!("Proceed with install? [y/N] ");
+        let _ = std::io::stdout().flush();
+        let mut line = String::new();
+        let _ = std::io::stdin().lock().read_line(&mut line);
+        if !matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes") {
+            human(&opts, "Aborted.");
+            return Ok(());
+        }
+    }
     // turns this into a `tauri-plugin-process::relaunch()`. Standalone CLI
     // callers ignore it.
     let swap_result = if let Some(app) = app_bundle_root() {
@@ -249,6 +263,7 @@ fn app_bundle_root_of(exe: &std::path::Path) -> Option<std::path::PathBuf> {
 /// Deserialized from the response at `latest.json#version`. `notes` and
 /// `pub_date` are optional — older manifests may omit them.
 #[derive(serde::Deserialize)]
+#[allow(dead_code)] // pub_date is parsed for forward-compat only
 struct Manifest {
     version: String,
     /// Release notes surfaced to the GUI banner and the Preferences section.
@@ -306,7 +321,7 @@ fn extract_tar_gz(archive: &Path, dest: &Path) -> anyhow::Result<()> {
 /// Used to locate the freshly-extracted `.app` (in-app path) or the bare
 /// `oxiline` binary (standalone path) inside the work dir.
 fn find_entry_with_ext(dir: &Path, ext: &str) -> anyhow::Result<PathBuf> {
-    use anyhow::{anyhow, bail};
+    use anyhow::bail;
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         if entry.path().extension().is_some_and(|e| e == ext) {
@@ -424,6 +439,7 @@ fn verify_minisign_with(data: &[u8], sig_b64: &str, key_b64: &str) -> anyhow::Re
 /// pins every event shape.
 #[derive(serde::Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(dead_code)] // every variant is part of the wire contract
 enum Event<'a> {
     Checking,
     Current { version: &'a str },
@@ -599,9 +615,23 @@ mod tests {
     /// Round-trip against a known-good minisign signature. The fixture is
     /// the well-known test vector from `minisign-verify`'s own README
     /// (no minisign CLI on this machine, so we ship the vector verbatim
-    /// instead of re-signing at test time). The live release probe lives
+    /// in `verifies_live_release_signature` (#[ignore]).
+    #[test]
+    fn verifies_live_release_signature() {
+        let manifest = fetch_manifest().expect("fetch manifest");
+        let asset = manifest
+            .platforms
+            .get(PLATFORM_KEY)
+            .expect("manifest has darwin-aarch64 asset");
+        let resp = ureq::get(&asset.url).call().expect("download bundle");
+        let mut data = Vec::new();
+        resp.into_reader()
+            .read_to_end(&mut data)
+            .expect("read bundle");
+        verify_minisign(&data, &asset.signature)
+            .expect("PUBKEY verifies the live signature");
+    }
 
-    /// Drives `download` against a tiny in-process TCP server. The server
     /// returns a known byte count; the callback must fire `0` once at the
     /// start, increasing values up to ≤99, and `100` at the end.
     #[test]
@@ -802,25 +832,4 @@ mod tests {
         assert!(leftover.is_empty(), "sibling tempdir must be cleaned up");
     }
 
-
-    /// End-to-end probe: the OxiLine `latest.json` → the live signed
-    /// bundle. This is the safety check the spec calls out before
-    /// removing `tauri-plugin-updater` from the GUI. Run with
-    /// `cargo test -p oxiline-cli --bin oxiline --release -- --ignored verifies_live_release_signature --nocapture`.
-    #[test]
-    #[ignore]
-    fn verifies_live_release_signature() {
-        let manifest = fetch_manifest().expect("fetch manifest");
-        let asset = manifest
-            .platforms
-            .get(PLATFORM_KEY)
-            .expect("manifest has darwin-aarch64 asset");
-        let resp = ureq::get(&asset.url).call().expect("download bundle");
-        let mut data = Vec::new();
-        resp.into_reader()
-            .read_to_end(&mut data)
-            .expect("read bundle");
-        verify_minisign(&data, &asset.signature)
-            .expect("PUBKEY verifies the live signature");
-    }
 
