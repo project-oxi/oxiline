@@ -17,6 +17,7 @@
 | `06-design-system.md` | OKLCH 컬러 토큰, 타이포그래피, 모션, 시그니처 비주얼(Oxide Bar) |
 | `07-ui-screens-and-flows.md` | 화면별 상세 설계, 주요 플로우, 컴포넌트 명세 |
 | `08-roadmap.md` | 구현 단계(Phase 0~3), 각 단계별 완료 기준 |
+| `10-updater.md` | 인-앱 업데이트 아키텍처 (CLI가 엔진, GUI는 뷰). 정식 RFC는 [oximemo/doc/UPDATER.md](https://github.com/project-oxi/oximemo/blob/main/doc/UPDATER.md). |
 
 ## 이 문서를 원샷 프롬프트로 쓸 때
 
