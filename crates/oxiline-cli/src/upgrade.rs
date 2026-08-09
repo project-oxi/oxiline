@@ -15,6 +15,27 @@ fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     let patch = patch_str.split('-').next()?.parse().ok()?;
     Some((maj, min, patch))
 }
+
+/// The `.app` bundle the running binary lives in, if any (the sidecar case).
+fn app_bundle_root() -> Option<std::path::PathBuf> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| app_bundle_root_of(&exe))
+}
+
+/// Factored out of [`app_bundle_root`] for testing on synthetic paths.
+/// Walks the executable's ancestors and returns the first directory whose
+/// extension is `app` (the canonical Tauri/macOS bundle marker).
+fn app_bundle_root_of(exe: &std::path::Path) -> Option<std::path::PathBuf> {
+    for ancestor in exe.ancestors() {
+        if ancestor.extension().is_some_and(|e| e == "app") {
+            return Some(ancestor.to_path_buf());
+        }
+    }
+    None
+}
+
+/// `true` iff `latest` is strictly newer than `current` (numeric, X.Y.Z).
 /// Unparseable inputs are treated as not-newer — we never claim an update
 /// for a version we can't compare.
 fn is_newer(latest: &str, current: &str) -> bool {
@@ -57,5 +78,24 @@ mod tests {
     fn unparseable_never_newer() {
         assert!(!is_newer("oops", "0.9.0"));
         assert!(!is_newer("0.9.1", "oops"));
+    }
+
+    #[test]
+    fn detects_app_bundle_from_sidecar_path() {
+        let exe = std::path::PathBuf::from("/Applications/OxiLine.app/Contents/MacOS/oxiline");
+        assert_eq!(
+            app_bundle_root_of(&exe),
+            Some(std::path::PathBuf::from("/Applications/OxiLine.app"))
+        );
+    }
+
+    #[test]
+    fn no_app_bundle_for_standalone() {
+        let exe = std::path::PathBuf::from("/Users/x/.cargo/bin/oxiline");
+        assert_eq!(app_bundle_root_of(&exe), None);
+        // No `.app` ancestor even if a directory is literally named
+        // `something.app` mid-path — only an actual `.app` ancestor counts.
+        let exe = std::path::PathBuf::from("/usr/local/bin/oxiline");
+        assert_eq!(app_bundle_root_of(&exe), None);
     }
 }
