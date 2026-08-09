@@ -35,6 +35,31 @@ fn app_bundle_root_of(exe: &std::path::Path) -> Option<std::path::PathBuf> {
     None
 }
 
+/// `latest.json` manifest for OxiLine releases (`doc/10-updater.md`).
+/// Deserialized from the response at `latest.json#version`. `notes` and
+/// `pub_date` are optional — older manifests may omit them.
+#[derive(serde::Deserialize)]
+struct Manifest {
+    version: String,
+    /// Release notes surfaced to the GUI banner and the Preferences section.
+    /// Optional; the JSON `available` event falls back to
+    /// `"OxiLine <version>"` when the manifest omits it.
+    #[serde(default)]
+    notes: Option<String>,
+    /// Tauri-shaped `pub_date` (RFC 3339). Kept optional — we don't surface
+    /// it to the GUI today but parsing it preserves forward-compat.
+    #[serde(default)]
+    pub_date: Option<String>,
+    #[serde(default)]
+    platforms: std::collections::HashMap<String, PlatformAsset>,
+}
+
+#[derive(serde::Deserialize)]
+struct PlatformAsset {
+    url: String,
+    signature: String,
+}
+
 /// `true` iff `latest` is strictly newer than `current` (numeric, X.Y.Z).
 /// Unparseable inputs are treated as not-newer — we never claim an update
 /// for a version we can't compare.
@@ -78,6 +103,40 @@ mod tests {
     fn unparseable_never_newer() {
         assert!(!is_newer("oops", "0.9.0"));
         assert!(!is_newer("0.9.1", "oops"));
+    }
+
+    #[test]
+    fn manifest_deserializes_minimal_shape() {
+        let json = r#"{
+            "version": "0.7.0",
+            "notes": "OxiLine 0.7.0",
+            "pub_date": "2026-08-01T00:00:00Z",
+            "platforms": {
+                "darwin-aarch64": {
+                    "url": "https://example.com/OxiLine.app.tar.gz",
+                    "signature": "AAA"
+                }
+            }
+        }"#;
+        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
+        assert_eq!(m.version, "0.7.0");
+        assert_eq!(m.notes.as_deref(), Some("OxiLine 0.7.0"));
+        assert!(m.platforms.contains_key("darwin-aarch64"));
+    }
+
+    #[test]
+    fn manifest_notes_is_optional() {
+        let json = r#"{
+            "version": "0.7.0",
+            "platforms": {
+                "darwin-aarch64": {
+                    "url": "https://example.com/OxiLine.app.tar.gz",
+                    "signature": "AAA"
+                }
+            }
+        }"#;
+        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
+        assert_eq!(m.notes, None);
     }
 
     #[test]
