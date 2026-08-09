@@ -163,7 +163,7 @@ jobs:
             --arg pub_date "$PUB" \
             --arg sig "$SIG" \
             --arg url "$URL" \
-            '{version:$version,notes:$notes,pub_date:$pub_date,platforms:{darwin-aarch64:{signature:$sig,url:$url},"darwin-x86_64":{signature:$sig,url:$url}}}' \
+            '{"version":$version,"notes":$notes,"pub_date":$pub_date,"platforms":{"darwin-aarch64":{"signature":$sig,"url":$url},"darwin-x86_64":{"signature":$sig,"url":$url}}}' \
             > artifacts/latest.json
           cat artifacts/latest.json
       - name: Create release
