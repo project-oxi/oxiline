@@ -2879,7 +2879,7 @@ dependencies = [
 
 [[package]]
 name = "oxiline-app"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "chrono",
  "image",
@@ -2913,7 +2913,7 @@ dependencies = [
 
 [[package]]
 name = "oxiline-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "assert_cmd",
  "chrono",
@@ -2928,7 +2928,7 @@ dependencies = [
 
 [[package]]
 name = "oxiline-core"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "chrono",
  "dirs 5.0.1",
