@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 
 
 /// Parse `v` as a `MAJOR.MINOR.PATCH` triple. Tolerant of a leading `v`
-/// and of a pre-release suffix on the patch (e.g. `1.2.3-rc1` → `(1,2,3)`).
 /// Returns `None` for anything else — we never auto-update on a guess.
 fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     let v = v.strip_prefix('v').unwrap_or(v);
@@ -20,6 +19,60 @@ fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     Some((maj, min, patch))
 }
 
+/// Key under `platforms` in the manifest that carries the macOS arm64 bundle.
+const PLATFORM_KEY: &str = "darwin-aarch64";
+
+/// Caller-facing options for [`upgrade_in_app_with_verify`].
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Options {
+    pub check: bool,
+    pub json_progress: bool,
+    pub assume_yes: bool,
+}
+
+/// Download the signed `OxiLine.app.tar.gz`, verify the signature, and
+/// replace the bundle on disk with an atomic rename. The `verify` hook is
+/// a test seam: production passes [`verify_minisign`]; the unit test
+/// passes a no-op so the in-app happy path can be exercised without
+/// re-signing a synthetic tarball.
+fn upgrade_in_app_with_verify(
+    manifest: &Manifest,
+    app: &Path,
+    _opts: &Options,
+    verify: fn(&[u8], &str) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let asset = manifest
+        .platforms
+        .get(PLATFORM_KEY)
+        .ok_or_else(|| anyhow::anyhow!("manifest has no asset for {PLATFORM_KEY}"))?;
+    let parent = app
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("app bundle has no parent directory"))?;
+    let work = sibling_tempdir(parent)?;
+    let result: anyhow::Result<()> = (|| {
+        let archive = work.join("bundle.app.tar.gz");
+        let mut on_pct = |_pct: u8| {};
+        download(&asset.url, &archive, &mut on_pct)?;
+        let data = std::fs::read(&archive)?;
+        verify(&data, &asset.signature)?;
+        extract_tar_gz(&archive, &work)?;
+        let new_app = find_entry_with_ext(&work, "app")?;
+        let old = work.join(".previous.app");
+        if app.exists() {
+            std::fs::rename(app, &old)
+                .with_context(|| format!("move aside {}", app.display()))?;
+        }
+        std::fs::rename(&new_app, app)
+            .with_context(|| format!("install {}", app.display()))?;
+        let _ = std::fs::remove_dir_all(&old);
+        Ok(())
+    })();
+    let _ = std::fs::remove_dir_all(&work);
+    result
+}
+
+ /// The `.app` bundle the running binary lives in, if any (the sidecar case).
 /// The `.app` bundle the running binary lives in, if any (the sidecar case).
 fn app_bundle_root() -> Option<std::path::PathBuf> {
     std::env::current_exe()
@@ -505,4 +558,80 @@ mod tests {
         std::fs::remove_dir_all(&work).unwrap();
     }
 
+
+
+    /// In-app swap on a synthetic path. The fake HTTP server returns a
+    /// tarball that contains a directory called `OxiLine.app/foo.txt`. The
+    /// test exercises the public manifest API end-to-end (parse, download,
+    /// extract, find `.app`, rename into place) and confirms the parent
+    /// directory ends up holding the new bundle. The verify hook is
+    /// bypassed so we don't need a real signature for a synthetic tarball.
+    #[test]
+    fn upgrade_in_app_replaces_bundle_on_disk() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::path::PathBuf;
+        // Build a tar.gz in memory: OxiLine.app/foo.txt = "fresh".
+        let mut builder = tar::Builder::new(flate2::write::GzEncoder::new(
+            Vec::new(),
+            flate2::Compression::fast(),
+        ));
+        let body = b"fresh".to_vec();
+        let mut header = tar::Header::new_gnu();
+        header.set_path("OxiLine.app/foo.txt").unwrap();
+        header.set_size(body.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append(&header, body.as_slice()).unwrap();
+        let gz = builder.into_inner().unwrap().finish().unwrap();
+        // Server: respond 200 with the tarball, regardless of path.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let gz_len = gz.len();
+        let gz_clone = gz.clone();
+        std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = s.read(&mut buf);
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {gz_len}\r\nConnection: close\r\n\r\n"
+            );
+            s.write_all(resp.as_bytes()).unwrap();
+            s.write_all(&gz_clone).unwrap();
+        });
+        let sig = std::fs::read_to_string("tests/fixtures/payload.txt.minisig")
+            .expect("fixture signature present");
+        let mut platforms = std::collections::HashMap::new();
+        platforms.insert(
+            "darwin-aarch64".into(),
+            PlatformAsset {
+                url: format!("http://{addr}/bundle.app.tar.gz"),
+                signature: sig,
+            },
+        );
+        let manifest = Manifest {
+            version: "9.9.9".into(),
+            notes: Some("test".into()),
+            pub_date: None,
+            platforms,
+        };
+        let work = tempfile::tempdir().unwrap();
+        let app: PathBuf = work.path().join("OxiLine.app");
+        std::fs::create_dir(&app).unwrap();
+        std::fs::write(app.join("old.txt"), b"old").unwrap();
+        upgrade_in_app_with_verify(&manifest, &app, &Options::default(), |_, _| Ok(()))
+            .expect("swap should succeed");
+        assert!(app.join("foo.txt").exists(), "new foo.txt must be in place");
+        assert!(!app.join("old.txt").exists(), "old file must be gone");
+        let leftover: Vec<_> = std::fs::read_dir(work.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with(".oxiline-upgrade-")
+            })
+            .collect();
+        assert!(leftover.is_empty(), "sibling tempdir must be cleaned up");
+    }
 
