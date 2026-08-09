@@ -2032,3 +2032,43 @@ git push origin feat/unified-updater --tags
 **Placeholder scan:** no `TODO`/`TBD`/`fill in` strings; every step has a concrete code/test/commit recipe.
 
 **Type / name consistency:** `Options { check, json_progress, assume_yes }` is defined in Task 2 (interface) and used in Tasks 10, 11, 16 with the exact same names. `Event` enum is defined in Task 5 and referenced in Tasks 10 and 16 (the GUI test imports the same shape). `useUpdate` zustand store is preserved — `UpdateBanner.tsx` and `Preferences.UpdateSection` keep calling the same `status`, `install`, `check`, `reset` methods; the new `restarting` status kind is a superset of the existing one.
+
+
+## Release-engineering handoff (post-merge)
+
+The `release.yml` minisign step (`Task 18`) writes the `OXILINE_MINISIGN_KEY`
+secret verbatim to `/tmp/oxiline.key` and passes it to `minisign -S`. The
+secret value must therefore be the **raw minisign `.key` file** —
+**not** a base64-of-the-key-file blob. `minisign` parses the key as
+two text lines (`untrusted comment: …` + base64 secret) and refuses
+a file that is just a single base64 string with no header.
+
+`gh secret set` preserves newlines, so push the file contents directly:
+
+```sh
+# 1) Generate (or reuse) the minisign keypair. The public half MUST
+#    match `crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY` (the
+#    inner `RWQ…u` base64 line, not the outer `tauri.conf.json`
+#    envelope) — otherwise every existing 0.x install will fail to
+#    verify a v0.7.0 update and lose self-update forever.
+minisign -G -p oxi-pub.key -s oxi.key
+diff <(awk 'NR==2' oxi-pub.key) \
+  <(echo RWQWUGOnd35Vhu5+pjNhZ5pBjd4N+1YTz8nsdTFllvnrCZ79HSav7B3u) \
+  || { echo "oxi-pub.key does not match LIVE_PUBKEY — STOP"; exit 1; }
+
+# 2) Push the secret. Raw file contents — do NOT base64-encode it.
+gh secret set OXILINE_MINISIGN_KEY -R project-oxi/oxiline < oxi.key
+
+# 3) Round-trip verify locally.
+gh secret get OXILINE_MINISIGN_KEY -R project-oxi/oxiline > /tmp/oxiline.key
+chmod 600 /tmp/oxiline.key
+minisign -V -p oxi-pub.key -m README.md 2>/dev/null && echo "secret matches pub"
+rm /tmp/oxiline.key oxi.key oxi-pub.key
+```
+
+If the secret is not set, `release.yml`'s `if: env.OXILINE_MINISIGN_KEY != ''`
+guard skips the minisign step and no `.app.tar.gz.sig` is produced;
+the manifest step then publishes a `latest.json` with an empty
+signature and every existing install fails to verify the next
+release. The maintainer MUST add the secret before the first tagged
+release that includes this architecture (v0.7.0 for oxiline).

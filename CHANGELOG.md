@@ -72,20 +72,38 @@ it never had under the Tauri-only engine.
 
 Before the next tagged release, add the `OXILINE_MINISIGN_KEY` secret
 to the repository (`Settings → Secrets and variables → Actions`):
-
 ```sh
-# Locally, export the minisign secret key (base64 of the file produced
-# by `minisign -G`):
+# 1) Locally, generate the minisign keypair (one-time). The public half
+#    (oxi-pub.key) MUST match the inner `RWQ…u` base64 line in
+#    `crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY` — otherwise
+#    every existing 0.x install will fail to verify a v0.7.0 update.
 minisign -G -p oxi-pub.key -s oxi.key
-export OXILINE_MINISIGN_KEY="$(base64 -w 0 < oxi.key)"
-# Add the secret via gh CLI:
-gh secret set OXILINE_MINISIGN_KEY -R project-oxi/oxiline
-rm oxi.key oxi-pub.key
+diff <(awk 'NR==2' oxi-pub.key) <(echo RWQWUGOnd35Vhu5+pjNhZ5pBjd4N+1YTz8nsdTFllvnrCZ79HSav7B3u) \
+  || { echo "oxi-pub.key does not match LIVE_PUBKEY — STOP"; exit 1; }
+
+# 2) Push the secret to GitHub. The minisign `.key` file is a small
+#    text file (≈ 200 bytes) with a `untrusted comment:` line + a
+#    base64 line; `gh secret set` preserves newlines, so pass the raw
+#    file contents (do NOT base64-encode it — `release.yml` writes the
+#    secret verbatim to /tmp/oxiline.key and `minisign -S` rejects a
+#    base64 blob in place of the real .key file).
+gh secret set OXILINE_MINISIGN_KEY -R project-oxi/oxiline < oxi.key
+
+# 3) Verify the round-trip locally:
+gh secret get OXILINE_MINISIGN_KEY -R project-oxi/oxiline > /tmp/oxiline.key
+chmod 600 /tmp/oxiline.key
+minisign -V -p oxi-pub.key -m README.md 2>/dev/null && echo "secret matches pub"
+rm /tmp/oxiline.key oxi.key oxi-pub.key
 ```
 
-The public half (`oxi-pub.key`) must match
-`crates/oxiline-cli/src/upgrade.rs::LIVE_PUBKEY` (the
-inner `RWQ…u` base64 line, not the outer one).
+**Why raw, not base64:** `release.yml` runs
+`echo "$OXILINE_MINISIGN_KEY" > /tmp/oxiline.key` and then
+`minisign -S -s /tmp/oxiline.key`. minisign parses the file as the
+minisign key format (`untrusted comment: …` + base64 secret) — NOT
+as a base64 blob of a base64 blob. If the secret holds
+`base64(oxi.key)`, the echoed file is just the base64 string with no
+`untrusted comment:` header and minisign refuses it.
+
 
 ### Breaking changes (none at the user surface)
 
