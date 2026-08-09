@@ -119,7 +119,31 @@ jobs:
           projectPath: crates/oxiline-app/src-tauri
           args: --target universal-apple-darwin --bundles app,dmg
 
-      - name: Upload signed bundles
+      # Sign the `.app.tar.gz` with minisign so the CLI's verify step
+      # (`doc/10-updater.md`) can authenticate it. Tauri's
+      # `createUpdaterArtifacts` was the previous producer; with that
+      # flag off the manual sign below is the only way the
+      # `*.app.tar.gz.sig` artifact exists. The public half of
+      # `OXILINE_MINISIGN_KEY` must match the `LIVE_PUBKEY` constant in
+      # `crates/oxiline-cli/src/upgrade.rs`.
+      - name: Sign the app bundle with minisign
+        if: env.OXILINE_MINISIGN_KEY != ''
+        env:
+          OXILINE_MINISIGN_KEY: ${{ secrets.OXILINE_MINISIGN_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$OXILINE_MINISIGN_KEY" ]; then
+            echo "OXILINE_MINISIGN_KEY secret missing; the release cannot publish without it" >&2
+            exit 1
+          fi
+          echo "$OXILINE_MINISIGN_KEY" > /tmp/oxiline.key
+          chmod 600 /tmp/oxiline.key
+          for f in target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz; do
+            minisign -S -s /tmp/oxiline.key -m "$f" -t "OxiLine.app.tar.gz"
+          done
+          rm -f /tmp/oxiline.key
+
+       - name: Upload signed bundles
         uses: actions/upload-artifact@v4
         with:
           name: oxiline-app-bundle
