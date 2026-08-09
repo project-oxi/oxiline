@@ -17,8 +17,17 @@ clap.workspace = true
 serde_json.workspace = true
 serde.workspace = true
 rusqlite.workspace = true
-ureq = "2"
+# Self-update engine (`doc/10-updater.md`). The CLI is the only place that
+# downloads / verifies / swaps; the GUI is a thin view that spawns this
+# binary as a sidecar and parses its `--json-progress` NDJSON contract.
+ureq = { version = "2", default-features = false, features = ["tls"] }
 semver = "1"
+minisign-verify = "0.2"
+flate2 = "1"
+tar = "0.4"
+sha2 = "0.10"
+base64 = "0.22"
+anyhow = "1"
 
 [dev-dependencies]
 assert_cmd = "2"
