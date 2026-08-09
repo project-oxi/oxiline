@@ -1,38 +1,70 @@
 //! Self-update engine (`doc/10-updater.md`). See the plan in
 //! `docs/superpowers/plans/2026-08-09-unified-updater.md`.
+//!
+//! The CLI is the only place that downloads, verifies, and swaps a release.
+//! The GUI is a thin view of this engine: it spawns the same `oxiline`
+//! binary as a sidecar with `--json-progress` and parses the NDJSON
+//! progress events on stdout.
+//!
+//! Two swap paths, decided at runtime by where the binary lives:
+//!
+//! - **In-app** (the sidecar inside the Tauri `.app` bundle): downloads the
+//!   signed `OxiLine.app.tar.gz`, verifies its minisign signature, and
+//!   replaces the whole bundle. Because the CLI lives inside that bundle,
+//!   the GUI and CLI update together.
+//! - **Standalone** (a real binary on a headless/agent machine, e.g.
+//!   `~/.cargo/bin/oxiline`): downloads the release CLI tarball, verifies
+//!   its SHA-256, and replaces the binary in place.
 
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use oxiline_core::{settings, util};
 
-/// Parse `v` as a `MAJOR.MINOR.PATCH` triple. Tolerant of a leading `v`
-/// Returns `None` for anything else — we never auto-update on a guess.
-fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
-    let v = v.strip_prefix('v').unwrap_or(v);
-    let mut it = v.split('.');
-    let maj = it.next()?.parse().ok()?;
-    let min = it.next()?.parse().ok()?;
-    // Strictly X.Y.Z — refuse two-part inputs so a 0.7 release is never
-    // compared against a 0.7.0 manifest.
-    let patch_str = it.next()?;
-    let patch = patch_str.split('-').next()?.parse().ok()?;
-    Some((maj, min, patch))
-}
+// ---- constants --------------------------------------------------------------
 
-const PLATFORM_KEY: &str = "darwin-aarch64";
-/// Where the desktop app's updater also points. Serves the version manifest.
+/// Where the desktop app's updater also pointed. Serves the version
+/// manifest. The CLI fetches the same `latest.json` Tauri used to read.
 const ENDPOINT: &str =
     "https://github.com/project-oxi/oxiline/releases/latest/download/latest.json";
+
 const REPO: &str = "project-oxi/oxiline";
-/// Rust target triple used in the CLI tarball asset name.
+
+/// Rust target triple used in the standalone CLI tarball asset name.
 const TARGET_TRIPLE: &str = "aarch64-apple-darwin";
 
-/// Caller-facing options for [`upgrade_in_app_with_verify`].
+/// Key under `platforms` in the manifest that carries the macOS arm64
+/// bundle. We only target Apple Silicon today; the manifest is the
+/// only place the platform key is named.
+const PLATFORM_KEY: &str = "darwin-aarch64";
+
+/// Minisign public key for the live OxiLine release. The value is the
+/// same `pubkey` that used to live in `tauri.conf.json` →
+/// `plugins.updater.pubkey` — i.e. the outer base64 encoding of the
+/// `minisign.pub` file. We hand it to `minisign_verify::PublicKey::decode`
+/// after one round of base64 decoding.
+const LIVE_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2NTU3RTc3QTc2MzUwMTYKUldRV1VHT25kMzVWaHU1K3BqTmhaNXBCamQ0TisxWVR6OG5zZFRGbGx2bnJDWjc5SFNhdjdCM3UK";
+
+/// Well-known minisign test public key (from `minisign-verify`'s
+/// README). Used by the unit tests so we can ship the well-known
+/// signature verbatim instead of re-signing at test time.
+#[cfg(test)]
+const TEST_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXkgMEYzQ0MzMDMxQjg1RjNGQTFBNjVFQzI5RDJEODBDNEIwQUI2QzhCNUEzRUJFMDhFOEM4RDFFRDBFNUIzRkExQQpSV1FmNkxSQ0dBOWk1M21sWWVjTzRJelQ1MVRHUHB2V3VjTlNDaDFDQk0wUVRhTG43M1k3R0ZPMwo=";
+
+// ---- public surface --------------------------------------------------------
+
+/// Caller-facing options for [`run`]. Each flag maps 1:1 to a CLI arg.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
+    /// `--check`: only report availability; never download or swap.
     pub check: bool,
+    /// `--json-progress`: emit one NDJSON event per line on stdout
+    /// instead of human-readable text. The GUI sidecar is the only
+    /// consumer.
     pub json_progress: bool,
+    /// `--yes`: skip the interactive confirmation prompt. Always
+    /// true for the GUI sidecar (the user already clicked Install in
+    /// the banner).
     pub assume_yes: bool,
 }
 
@@ -52,6 +84,7 @@ pub fn run(conn: &rusqlite::Connection, opts: Options) -> anyhow::Result<()> {
         .notes
         .clone()
         .unwrap_or_else(|| format!("OxiLine {latest}"));
+
     if !is_newer(latest, current) {
         emit(&opts, Event::Latest { version: current });
         human(&opts, &format!("Already up to date (v{current})."));
@@ -69,27 +102,22 @@ pub fn run(conn: &rusqlite::Connection, opts: Options) -> anyhow::Result<()> {
         return Ok(());
     }
     human(&opts, &format!("Update available: v{current} → v{latest}."));
-    if !opts.assume_yes && !opts.json_progress {
-        // The only standalone-interactive prompt. GUI sidecar
-        // callers pass --yes (the user already clicked Install in
-        // the banner); JSON-progress callers are non-interactive by
-        // contract.
-        use std::io::{BufRead, Write};
-        print!("Proceed with install? [y/N] ");
-        let _ = std::io::stdout().flush();
-        let mut line = String::new();
-        let _ = std::io::stdin().lock().read_line(&mut line);
-        if !matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes") {
-            human(&opts, "Aborted.");
-            return Ok(());
-        }
+
+    // Standalone interactive prompt. GUI sidecar callers pass --yes
+    // (the user already clicked Install in the banner); JSON-progress
+    // callers are non-interactive by contract.
+    if !opts.assume_yes && !opts.json_progress && !confirm("Proceed with install? [y/N] ")? {
+        human(&opts, "Aborted.");
+        return Ok(());
     }
-    // turns this into a `tauri-plugin-process::relaunch()`. Standalone CLI
-    // callers ignore it.
+
+    // The only side-effect the GUI cares about — the watcher in
+    // `App.tsx` turns this into a `tauri-plugin-process::relaunch()`.
+    // Standalone CLI callers ignore it.
     let swap_result = if let Some(app) = app_bundle_root() {
-        upgrade_in_app_with_verify(&manifest, &app, &opts, verify_minisign)
+        upgrade_in_app_with_verify(&manifest, &app, verify_minisign)
     } else {
-        upgrade_standalone(latest, &opts)
+        upgrade_standalone(latest)
     };
     if let Err(e) = swap_result {
         emit_err(&opts, e.to_string());
@@ -108,6 +136,8 @@ pub fn run(conn: &rusqlite::Connection, opts: Options) -> anyhow::Result<()> {
     Ok(())
 }
 
+// ---- manifest + version ----------------------------------------------------
+
 /// Fetch the live `latest.json` manifest and parse it. Network errors
 /// become `anyhow` errors so the caller can emit a JSON `error` event.
 fn fetch_manifest() -> anyhow::Result<Manifest> {
@@ -119,6 +149,80 @@ fn fetch_manifest() -> anyhow::Result<Manifest> {
         .into_string()
         .map_err(|e| anyhow!("read manifest: {e}"))?;
     serde_json::from_str(&body).map_err(|e| anyhow!("parse manifest: {e}"))
+}
+
+/// Parse `v` as a `MAJOR.MINOR.PATCH` triple. Tolerant of a leading `v`
+/// and of a pre-release suffix on the patch (e.g. `1.2.3-rc1` →
+/// `(1,2,3)`). Returns `None` for anything else — we never auto-update
+/// on a guess.
+fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
+    let v = v.strip_prefix('v').unwrap_or(v);
+    let mut it = v.split('.');
+    let maj = it.next()?.parse().ok()?;
+    let min = it.next()?.parse().ok()?;
+    // Strictly X.Y.Z — refuse two-part inputs so a 0.7 release is never
+    // compared against a 0.7.0 manifest.
+    let patch_str = it.next()?;
+    let patch = patch_str.split('-').next()?.parse().ok()?;
+    Some((maj, min, patch))
+}
+
+/// `true` iff `latest` is strictly newer than `current` (numeric, X.Y.Z).
+/// Unparseable inputs are treated as not-newer — we never claim an update
+/// for a version we can't compare.
+fn is_newer(latest: &str, current: &str) -> bool {
+    match (parse_version(latest), parse_version(current)) {
+        (Some(l), Some(c)) => l > c,
+        _ => false,
+    }
+}
+
+/// `latest.json` manifest for OxiLine releases (`doc/10-updater.md`).
+/// Deserialized from the response at `latest.json#version`. `notes` and
+/// `pub_date` are optional — older manifests may omit them.
+#[derive(serde::Deserialize)]
+#[allow(dead_code)] // pub_date is parsed for forward-compat only
+struct Manifest {
+    version: String,
+    /// Release notes surfaced to the GUI banner and the Preferences
+    /// section. Optional; the JSON `available` event falls back to
+    /// `"OxiLine <version>"` when the manifest omits it.
+    #[serde(default)]
+    notes: Option<String>,
+    /// Tauri-shaped `pub_date` (RFC 3339). Kept optional — we don't
+    /// surface it to the GUI today but parsing it preserves
+    /// forward-compat.
+    #[serde(default)]
+    pub_date: Option<String>,
+    #[serde(default)]
+    platforms: std::collections::HashMap<String, PlatformAsset>,
+}
+
+#[derive(serde::Deserialize)]
+struct PlatformAsset {
+    url: String,
+    signature: String,
+}
+
+// ---- NDJSON progress events (wire contract) -------------------------------
+
+/// NDJSON progress event on stdout when `--json-progress` is set. The
+/// schema is part of the GUI↔CLI contract (`doc/10-updater.md`); keep
+/// field names and types stable. The matching test block in
+/// `mod tests` pins every event shape.
+#[derive(serde::Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[allow(dead_code)] // every variant is part of the wire contract
+enum Event<'a> {
+    Checking,
+    Current { version: &'a str },
+    Available { from: &'a str, to: &'a str, notes: &'a str },
+    Latest { version: &'a str },
+    Download { pct: u8 },
+    Verifying,
+    Swapping { mode: &'a str },
+    Done { version: &'a str },
+    Error { message: &'a str },
 }
 
 /// Emit a single NDJSON event on stdout if `--json-progress` is set. The
@@ -145,10 +249,104 @@ fn human(opts: &Options, line: &str) {
     }
 }
 
-/// Standalone CLI: download the release CLI tarball, verify SHA-256, and
-/// replace the running binary in place. The standalone tarball is verified
-/// via the GitHub-release `.sha256` side file (no minisign).
-fn upgrade_standalone(latest: &str, opts: &Options) -> anyhow::Result<()> {
+/// Read a y/N confirmation from stdin. Returns `false` on EOF or any
+/// non-y/yes input.
+fn confirm(prompt: &str) -> anyhow::Result<bool> {
+    use std::io::BufRead;
+    use std::io::Write;
+    print!("{prompt}");
+    std::io::stdout().flush().ok();
+    let mut line = String::new();
+    std::io::stdin()
+        .lock()
+        .read_line(&mut line)
+        .map_err(|e| anyhow::anyhow!("read confirmation: {e}"))?;
+    Ok(matches!(
+        line.trim().to_ascii_lowercase().as_str(),
+        "y" | "yes"
+    ))
+}
+
+// ---- in-app context detection ----------------------------------------------
+
+/// The `.app` bundle the running binary lives in, if any (the sidecar
+/// case). Returns `None` for a standalone binary.
+fn app_bundle_root() -> Option<PathBuf> {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| app_bundle_root_of(&exe))
+}
+
+/// Factored out of [`app_bundle_root`] for testing on synthetic paths.
+/// Walks the executable's ancestors and returns the first directory whose
+/// extension is `app` (the canonical Tauri/macOS bundle marker).
+fn app_bundle_root_of(exe: &Path) -> Option<PathBuf> {
+    for ancestor in exe.ancestors() {
+        if ancestor.extension().is_some_and(|e| e == "app") {
+            return Some(ancestor.to_path_buf());
+        }
+    }
+    None
+}
+
+// ---- in-app swap -----------------------------------------------------------
+
+/// Download the signed `OxiLine.app.tar.gz`, verify the signature, and
+/// replace the bundle on disk with an atomic rename. The `verify`
+/// parameter is a test seam: production passes [`verify_minisign`];
+/// the unit test passes a no-op so the in-app happy path can be
+/// exercised without re-signing a synthetic tarball.
+fn upgrade_in_app_with_verify(
+    manifest: &Manifest,
+    app: &Path,
+    verify: fn(&[u8], &str) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let asset = manifest
+        .platforms
+        .get(PLATFORM_KEY)
+        .ok_or_else(|| anyhow::anyhow!("manifest has no asset for {PLATFORM_KEY}"))?;
+    let parent = app
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("app bundle has no parent directory"))?;
+    let work = sibling_tempdir(parent)?;
+    // Inner closure so any error still cleans the tempdir before we
+    // return. After the closure, emit `swapping` only on success — a
+    // failed download or verify must not claim the swap started.
+    let result: anyhow::Result<()> = (|| {
+        let archive = work.join("bundle.app.tar.gz");
+        let mut on_pct = |_pct: u8| {};
+        download(&asset.url, &archive, &mut on_pct)?;
+        let data = std::fs::read(&archive)?;
+        verify(&data, &asset.signature)?;
+        extract_tar_gz(&archive, &work)?;
+        let new_app = find_entry_with_ext(&work, "app")?;
+        // Swap on the same volume (atomic rename). The running GUI/CLI
+        // keep their open file descriptors; a restart picks up the new
+        // bundle.
+        let old = work.join(".previous.app");
+        if app.exists() {
+            std::fs::rename(app, &old)
+                .with_context(|| format!("move aside {}", app.display()))?;
+        }
+        std::fs::rename(&new_app, app)
+            .with_context(|| format!("install {}", app.display()))?;
+        let _ = std::fs::remove_dir_all(&old);
+        Ok(())
+    })();
+    let _ = std::fs::remove_dir_all(&work);
+    if result.is_ok() {
+        emit_event(Event::Swapping { mode: "app" });
+    }
+    result
+}
+
+// ---- standalone swap -------------------------------------------------------
+
+/// Standalone CLI: download the release CLI tarball, verify SHA-256,
+/// and replace the running binary in place. The standalone tarball is
+/// verified via the GitHub-release `.sha256` side file (no minisign).
+fn upgrade_standalone(latest: &str) -> anyhow::Result<()> {
     use anyhow::{Context, anyhow, bail};
     let exe = std::env::current_exe().context("resolve running binary")?;
     let parent = exe
@@ -181,6 +379,9 @@ fn upgrade_standalone(latest: &str, opts: &Options) -> anyhow::Result<()> {
             perm.set_mode(0o755);
             std::fs::set_permissions(&new_bin, perm)?;
         }
+        // Rename-over: on Unix the running binary's inode persists
+        // until the process exits, so the directory entry can be
+        // replaced underneath it.
         let old = work.join(".previous.bin");
         std::fs::rename(&exe, &old)
             .with_context(|| format!("move aside {}", exe.display()))?;
@@ -191,149 +392,16 @@ fn upgrade_standalone(latest: &str, opts: &Options) -> anyhow::Result<()> {
     })();
     let _ = std::fs::remove_dir_all(&work);
     if result.is_ok() {
-        emit(opts, Event::Swapping { mode: "standalone" });
+        emit_event(Event::Swapping { mode: "standalone" });
     }
     result
 }
 
- /// Download the signed `OxiLine.app.tar.gz`, verify the signature, and
-/// Download the signed `OxiLine.app.tar.gz`, verify the signature, and
-/// replace the bundle on disk with an atomic rename. The `verify` hook is
-/// a test seam: production passes [`verify_minisign`]; the unit test
-/// passes a no-op so the in-app happy path can be exercised without
-/// re-signing a synthetic tarball.
-fn upgrade_in_app_with_verify(
-    manifest: &Manifest,
-    app: &Path,
-    _opts: &Options,
-    verify: fn(&[u8], &str) -> anyhow::Result<()>,
-) -> anyhow::Result<()> {
-    use anyhow::Context;
-    let asset = manifest
-        .platforms
-        .get(PLATFORM_KEY)
-        .ok_or_else(|| anyhow::anyhow!("manifest has no asset for {PLATFORM_KEY}"))?;
-    let parent = app
-        .parent()
-        .ok_or_else(|| anyhow::anyhow!("app bundle has no parent directory"))?;
-    let work = sibling_tempdir(parent)?;
-    let result: anyhow::Result<()> = (|| {
-        let archive = work.join("bundle.app.tar.gz");
-        let mut on_pct = |_pct: u8| {};
-        download(&asset.url, &archive, &mut on_pct)?;
-        let data = std::fs::read(&archive)?;
-        verify(&data, &asset.signature)?;
-        extract_tar_gz(&archive, &work)?;
-        let new_app = find_entry_with_ext(&work, "app")?;
-        let old = work.join(".previous.app");
-        if app.exists() {
-            std::fs::rename(app, &old)
-                .with_context(|| format!("move aside {}", app.display()))?;
-        }
-        std::fs::rename(&new_app, app)
-            .with_context(|| format!("install {}", app.display()))?;
-        let _ = std::fs::remove_dir_all(&old);
-        Ok(())
-    })();
-    let _ = std::fs::remove_dir_all(&work);
-    result
-}
+// ---- file-system + download helpers ----------------------------------------
 
- /// The `.app` bundle the running binary lives in, if any (the sidecar case).
-/// The `.app` bundle the running binary lives in, if any (the sidecar case).
-fn app_bundle_root() -> Option<std::path::PathBuf> {
-    std::env::current_exe()
-        .ok()
-        .and_then(|exe| app_bundle_root_of(&exe))
-}
-
-/// Factored out of [`app_bundle_root`] for testing on synthetic paths.
-/// Walks the executable's ancestors and returns the first directory whose
-/// extension is `app` (the canonical Tauri/macOS bundle marker).
-fn app_bundle_root_of(exe: &std::path::Path) -> Option<std::path::PathBuf> {
-    for ancestor in exe.ancestors() {
-        if ancestor.extension().is_some_and(|e| e == "app") {
-            return Some(ancestor.to_path_buf());
-        }
-    }
-    None
-}
-
-/// `latest.json` manifest for OxiLine releases (`doc/10-updater.md`).
-/// Deserialized from the response at `latest.json#version`. `notes` and
-/// `pub_date` are optional — older manifests may omit them.
-#[derive(serde::Deserialize)]
-#[allow(dead_code)] // pub_date is parsed for forward-compat only
-struct Manifest {
-    version: String,
-    /// Release notes surfaced to the GUI banner and the Preferences section.
-    /// Optional; the JSON `available` event falls back to
-    /// `"OxiLine <version>"` when the manifest omits it.
-    #[serde(default)]
-    notes: Option<String>,
-    /// Tauri-shaped `pub_date` (RFC 3339). Kept optional — we don't surface
-    /// it to the GUI today but parsing it preserves forward-compat.
-    #[serde(default)]
-    pub_date: Option<String>,
-    #[serde(default)]
-    platforms: std::collections::HashMap<String, PlatformAsset>,
-}
-
-#[derive(serde::Deserialize)]
-struct PlatformAsset {
-    url: String,
-    signature: String,
-}
-
-
-fn sha256_hex(path: &Path) -> anyhow::Result<String> {
-    use anyhow::Context;
-    use sha2::{Digest, Sha256};
-    let mut f = std::fs::File::open(path)
-        .with_context(|| format!("open {}", path.display()))?;
-    let mut hasher = Sha256::new();
-    let mut buf = [0u8; 64 * 1024];
-    loop {
-        let n = std::io::Read::read(&mut f, &mut buf).context("read for hashing")?;
-        if n == 0 {
-            break;
-        }
-        hasher.update(&buf[..n]);
-    }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
-}
-
-/// Extract a `.tar.gz` into `dest` (overwriting). Used by both the in-app
-/// (`.app.tar.gz`) and standalone (CLI tarball) upgrade paths.
-fn extract_tar_gz(archive: &Path, dest: &Path) -> anyhow::Result<()> {
-    use anyhow::Context;
-    let f = std::fs::File::open(archive)
-        .with_context(|| format!("open {}", archive.display()))?;
-    let gz = flate2::read::GzDecoder::new(f);
-    let mut tar = tar::Archive::new(gz);
-    tar.set_overwrite(true);
-    tar.unpack(dest)
-        .with_context(|| format!("extract {}", archive.display()))?;
-    Ok(())
-}
-
-/// Return the first entry under `dir` whose extension equals `ext`.
-/// Used to locate the freshly-extracted `.app` (in-app path) or the bare
-/// `oxiline` binary (standalone path) inside the work dir.
-fn find_entry_with_ext(dir: &Path, ext: &str) -> anyhow::Result<PathBuf> {
-    use anyhow::bail;
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        if entry.path().extension().is_some_and(|e| e == ext) {
-            return Ok(entry.path());
-        }
-    }
-    bail!("extracted archive contained no .{ext}");
-}
-
-/// A temp dir on the same volume as `sibling_of` so renames stay atomic
-/// (the swap is the rename onto the live `.app` or binary; a cross-volume
-/// rename would fail or copy).
+/// A temp dir on the same volume as `sibling_of` so renames stay
+/// atomic (the swap is the rename onto the live `.app` or binary; a
+/// cross-volume rename would fail or copy).
 fn sibling_tempdir(sibling_of: &Path) -> anyhow::Result<PathBuf> {
     use anyhow::Context;
     let dir = sibling_of.join(format!(".oxiline-upgrade-{}", std::process::id()));
@@ -342,12 +410,12 @@ fn sibling_tempdir(sibling_of: &Path) -> anyhow::Result<PathBuf> {
     Ok(dir)
 }
 
- /// Stream a download to `dest`, calling `on_pct` with `0` once at the start
-/// Stream a download to `dest`, calling `on_pct` with `0` once at the start
-/// and `100` at the end, with monotonic intermediate values while bytes
-/// stream in. The `pct` we report is best-effort — `ureq`'s `into_reader()`
-/// discards the response headers (and thus the real `content-length`), so
-/// the GUI's own progress bar (which has the byte counter) is authoritative.
+/// Stream a download to `dest`, calling `on_pct` with `0` once at the
+/// start and `100` at the end, with monotonic intermediate values
+/// while bytes stream in. The `pct` we report is best-effort —
+/// `ureq`'s `into_reader()` discards the response headers (and thus
+/// the real `content-length`), so the GUI's own progress bar (which
+/// has the byte counter) is authoritative.
 fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Result<()> {
     use anyhow::anyhow;
     let resp = ureq::get(url)
@@ -367,9 +435,9 @@ fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Resul
         }
         f.write_all(&buf[..n]).map_err(|e| anyhow!("download write: {e}"))?;
         total += n;
-        // 1 MiB granularity keeps the bar visibly moving without spamming
-        // NDJSON lines. The maximum we report is 99 — `done` is the
-        // authoritative completion event.
+        // 1 MiB granularity keeps the bar visibly moving without
+        // spamming NDJSON lines. The maximum we report is 99 — `done`
+        // is the authoritative completion event.
         let approx = ((total / (1024 * 1024)) as u8).min(99);
         if approx > last_pct {
             last_pct = approx;
@@ -381,36 +449,77 @@ fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Resul
     Ok(())
 }
 
-/// Minisign public key for the live OxiLine release.
-/// Minisign public key for the live OxiLine release. The inner base64
-/// `RWQ…u` line from the `minisign.pub` file (the outer `tauri.conf.json`
-/// pubkey was a base64-of-the-pub-file; we store the decoded line here so
-/// the call site is one `from_base64` away). The CLI is the only
-/// verifier; the GUI no longer embeds this.
-const LIVE_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg2NTU3RTc3QTc2MzUwMTYKUldRV1VHT25kMzVWaHU1K3BqTmhaNXBCamQ0TisxWVR6OG5zZFRGbGx2bnJDWjc5SFNhdjdCM3UK";
-/// Well-known minisign test public key (from `minisign-verify`'s README).
-/// Used by the unit tests so we can ship the well-known signature
-/// verbatim instead of re-signing at test time.
-#[cfg(test)]
-/// Well-known minisign test public key in base64-of-the-`minisign.pub` file
-/// form (the same wire shape Tauri uses in `tauri.conf.json`). The
-/// corresponding file is reconstructed in the unit tests as needed.
-#[cfg(test)]
-const TEST_PUBKEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXkgMEYzQ0MzMDMxQjg1RjNGQTFBNjVFQzI5RDJEODBDNEIwQUI2QzhCNUEzRUJFMDhFOEM4RDFFRDBFNUIzRkExQQpSV1FmNkxSQ0dBOWk1M21sWWVjTzRJelQ1MVRHUHB2V3VjTlNDaDFDQk0wUVRhTG43M1k3R0ZPMwo=";
-fn verify_minisign(data: &[u8], sig: &str) -> anyhow::Result<()> {
-    verify_minisign_with(data, sig, LIVE_PUBKEY)
+/// Hash a file with SHA-256 and return the lower-case hex digest.
+fn sha256_hex(path: &Path) -> anyhow::Result<String> {
+    use anyhow::Context;
+    use sha2::{Digest, Sha256};
+    let mut f = std::fs::File::open(path)
+        .with_context(|| format!("open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let n = std::io::Read::read(&mut f, &mut buf).context("read for hashing")?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
 }
 
-/// Verifies a minisign signature with an explicit key. The test seam exists
-/// so unit tests can drive the verify path with the well-known test pubkey
-/// from `minisign-verify`'s own README without baking that key into the
-/// production binary.
-fn verify_minisign_with(data: &[u8], sig_b64: &str, key_b64: &str) -> anyhow::Result<()> {
+/// Extract a `.tar.gz` into `dest` (overwriting). Used by both the
+/// in-app (`.app.tar.gz`) and standalone (CLI tarball) upgrade paths.
+fn extract_tar_gz(archive: &Path, dest: &Path) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let f = std::fs::File::open(archive)
+        .with_context(|| format!("open {}", archive.display()))?;
+    let gz = flate2::read::GzDecoder::new(f);
+    let mut tar = tar::Archive::new(gz);
+    tar.set_overwrite(true);
+    tar.unpack(dest)
+        .with_context(|| format!("extract {}", archive.display()))?;
+    Ok(())
+}
+
+/// Return the first entry under `dir` whose extension equals `ext`.
+/// Used to locate the freshly-extracted `.app` (in-app path) or the
+/// bare `oxiline` binary (standalone path) inside the work dir.
+fn find_entry_with_ext(dir: &Path, ext: &str) -> anyhow::Result<PathBuf> {
+    use anyhow::bail;
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        if entry.path().extension().is_some_and(|e| e == ext) {
+            return Ok(entry.path());
+        }
+    }
+    bail!("extracted archive contained no .{ext}");
+}
+
+// ---- minisign verify --------------------------------------------------------
+
+/// Production entry point. Verifies a minisign signature over `data`
+/// using the live OxiLine public key. The `sig_b64` argument is the
+/// raw content of the `.minisig` file (untrusted comment + base64 sig
+/// box + trusted comment + final base64).
+fn verify_minisign(data: &[u8], sig_b64: &str) -> anyhow::Result<()> {
+    verify_minisign_with(data, sig_b64, LIVE_PUBKEY)
+}
+
+/// Verifies a minisign signature with an explicit key. The test seam
+/// exists so unit tests can drive the verify path with the well-known
+/// test pubkey from `minisign-verify`'s README without baking that key
+/// into the production binary.
+///
+/// Both `key_b64` and `sig_b64` are base64-encoded `minisign` files (the
+/// format Tauri shipped in `tauri.conf.json` and `latest.json`). We
+/// decode each once, then hand the inner file to `minisign_verify`.
+fn verify_minisign_with(
+    data: &[u8],
+    sig_b64: &str,
+    key_b64: &str,
+) -> anyhow::Result<()> {
     use anyhow::anyhow;
     use base64::Engine as _;
-    // The pubkey constant is base64-of-the-`minisign.pub` file (same
-    // shape Tauri shipped in `tauri.conf.json` until this commit). Decode
-    // once to recover the inner pub file, then hand it to the parser.
     let key_raw = base64::engine::general_purpose::STANDARD
         .decode(key_b64.trim().as_bytes())
         .map_err(|e| anyhow!("decode public key: {e}"))?;
@@ -418,8 +527,6 @@ fn verify_minisign_with(data: &[u8], sig_b64: &str, key_b64: &str) -> anyhow::Re
         .map_err(|e| anyhow!("public key not utf-8: {e}"))?;
     let pk = minisign_verify::PublicKey::decode(&key_box)
         .map_err(|e| anyhow!("parse public key: {e}"))?;
-    // The signature arg from `latest.json#platforms.darwin-aarch64.signature`
-    // is also base64-of-the-`.minisig` file.
     let sig_raw = base64::engine::general_purpose::STANDARD
         .decode(sig_b64.trim().as_bytes())
         .map_err(|e| anyhow!("decode signature: {e}"))?;
@@ -432,39 +539,31 @@ fn verify_minisign_with(data: &[u8], sig_b64: &str, key_b64: &str) -> anyhow::Re
     Ok(())
 }
 
-/// NDJSON progress event on stdout when `--json-progress` is set.
-/// NDJSON progress event on stdout when `--json-progress` is set. The schema
-/// is part of the GUI↔CLI contract (`doc/10-updater.md`); keep field names
-/// and types stable. The matching test block in `#[cfg(test)] mod tests`
-/// pins every event shape.
-#[derive(serde::Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-#[allow(dead_code)] // every variant is part of the wire contract
-enum Event<'a> {
-    Checking,
-    Current { version: &'a str },
-    Available { from: &'a str, to: &'a str, notes: &'a str },
-    Latest { version: &'a str },
-    Download { pct: u8 },
-    Verifying,
-    Swapping { mode: &'a str },
-    Done { version: &'a str },
-    Error { message: &'a str },
-}
+// ---- internal emit helper (no opts gate; used by swap paths) ---------------
 
-/// `true` iff `latest` is strictly newer than `current` (numeric, X.Y.Z).
-/// Unparseable inputs are treated as not-newer — we never claim an update
-/// for a version we can't compare.
-fn is_newer(latest: &str, current: &str) -> bool {
-    match (parse_version(latest), parse_version(current)) {
-        (Some(l), Some(c)) => l > c,
-        _ => false,
+/// Emit an event unconditionally. The swap paths call this AFTER a
+/// successful operation — the contract says `swapping`/`done` follow
+/// success, so we don't gate on `json_progress` here (the JSON form
+/// already implies a JSON-progress caller). The `run` function uses
+/// [`emit`] for `available`/`latest` which are pre-swap and must be
+/// gated.
+fn emit_event(ev: Event<'_>) {
+    if let Ok(line) = serde_json::to_string(&ev) {
+        let mut out = std::io::stdout().lock();
+        let _ = writeln!(out, "{line}");
+        let _ = out.flush();
     }
 }
+
+// ===========================================================================
+// tests
+// ===========================================================================
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---- version compare ---------------------------------------------------
 
     #[test]
     fn parses_plain_versions() {
@@ -478,8 +577,8 @@ mod tests {
     fn rejects_garbage_versions() {
         assert_eq!(parse_version("latest"), None);
         assert_eq!(parse_version(""), None);
-        // Two-part versions are not X.Y.Z; refuse so we never auto-update
-        // on a guess.
+        // Two-part versions are not X.Y.Z; refuse so we never
+        // auto-update on a guess.
         assert_eq!(parse_version("1.2"), None);
     }
 
@@ -497,62 +596,33 @@ mod tests {
         assert!(!is_newer("0.9.1", "oops"));
     }
 
-    #[test]
-    fn manifest_deserializes_minimal_shape() {
-        let json = r#"{
-            "version": "0.7.0",
-            "notes": "OxiLine 0.7.0",
-            "pub_date": "2026-08-01T00:00:00Z",
-            "platforms": {
-                "darwin-aarch64": {
-                    "url": "https://example.com/OxiLine.app.tar.gz",
-                    "signature": "AAA"
-                }
-            }
-        }"#;
-        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
-        assert_eq!(m.version, "0.7.0");
-        assert_eq!(m.notes.as_deref(), Some("OxiLine 0.7.0"));
-        assert!(m.platforms.contains_key("darwin-aarch64"));
-    }
-
-    #[test]
-    fn manifest_notes_is_optional() {
-        let json = r#"{
-            "version": "0.7.0",
-            "platforms": {
-                "darwin-aarch64": {
-                    "url": "https://example.com/OxiLine.app.tar.gz",
-                    "signature": "AAA"
-                }
-            }
-        }"#;
-        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
-        assert_eq!(m.notes, None);
-    }
+    // ---- in-app context detection -----------------------------------------
 
     #[test]
     fn detects_app_bundle_from_sidecar_path() {
-        let exe = std::path::PathBuf::from("/Applications/OxiLine.app/Contents/MacOS/oxiline");
+        let exe = PathBuf::from("/Applications/OxiLine.app/Contents/MacOS/oxiline");
         assert_eq!(
             app_bundle_root_of(&exe),
-            Some(std::path::PathBuf::from("/Applications/OxiLine.app"))
+            Some(PathBuf::from("/Applications/OxiLine.app"))
         );
     }
 
     #[test]
     fn no_app_bundle_for_standalone() {
-        let exe = std::path::PathBuf::from("/Users/x/.cargo/bin/oxiline");
+        let exe = PathBuf::from("/Users/x/.cargo/bin/oxiline");
         assert_eq!(app_bundle_root_of(&exe), None);
         // No `.app` ancestor even if a directory is literally named
-        // `something.app` mid-path — only an actual `.app` ancestor counts.
-        let exe = std::path::PathBuf::from("/usr/local/bin/oxiline");
+        // `something.app` mid-path — only an actual `.app` ancestor
+        // counts.
+        let exe = PathBuf::from("/usr/local/bin/oxiline");
         assert_eq!(app_bundle_root_of(&exe), None);
     }
 
-    /// Wire contract: the exact JSON shapes here are what the GUI parses.
-    /// Renaming a field silently breaks the sidecar; these tests pin the
-    /// schema of every event (`doc/10-updater.md`).
+    // ---- NDJSON event schema (the wire contract) -------------------------
+
+    /// The exact JSON shapes here are what the GUI parses. Renaming a
+    /// field silently breaks the sidecar; these tests pin the schema
+    /// of every event (`doc/10-updater.md`).
     #[test]
     fn event_checking_serializes_to_typed_tag() {
         assert_eq!(
@@ -609,31 +679,92 @@ mod tests {
             r#"{"type":"error","message":"boom"}"#
         );
     }
-}
 
+    // ---- manifest deser ----------------------------------------------------
 
-    /// Round-trip against a known-good minisign signature. The fixture is
-    /// the well-known test vector from `minisign-verify`'s own README
-    /// (no minisign CLI on this machine, so we ship the vector verbatim
-    /// in `verifies_live_release_signature` (#[ignore]).
     #[test]
-    fn verifies_live_release_signature() {
-        let manifest = fetch_manifest().expect("fetch manifest");
-        let asset = manifest
-            .platforms
-            .get(PLATFORM_KEY)
-            .expect("manifest has darwin-aarch64 asset");
-        let resp = ureq::get(&asset.url).call().expect("download bundle");
-        let mut data = Vec::new();
-        resp.into_reader()
-            .read_to_end(&mut data)
-            .expect("read bundle");
-        verify_minisign(&data, &asset.signature)
-            .expect("PUBKEY verifies the live signature");
+    fn manifest_deserializes_minimal_shape() {
+        let json = r#"{
+            "version": "0.7.0",
+            "notes": "OxiLine 0.7.0",
+            "pub_date": "2026-08-01T00:00:00Z",
+            "platforms": {
+                "darwin-aarch64": {
+                    "url": "https://example.com/OxiLine.app.tar.gz",
+                    "signature": "AAA"
+                }
+            }
+        }"#;
+        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
+        assert_eq!(m.version, "0.7.0");
+        assert_eq!(m.notes.as_deref(), Some("OxiLine 0.7.0"));
+        assert!(m.platforms.contains_key("darwin-aarch64"));
     }
 
-    /// returns a known byte count; the callback must fire `0` once at the
-    /// start, increasing values up to ≤99, and `100` at the end.
+    #[test]
+    fn manifest_notes_is_optional() {
+        let json = r#"{
+            "version": "0.7.0",
+            "platforms": {
+                "darwin-aarch64": {
+                    "url": "https://example.com/OxiLine.app.tar.gz",
+                    "signature": "AAA"
+                }
+            }
+        }"#;
+        let m: Manifest = serde_json::from_str(json).expect("manifest parses");
+        assert_eq!(m.notes, None);
+    }
+
+    // ---- minisign verify (fixture-backed) ---------------------------------
+
+    /// Round-trip against a known-good minisign signature. The fixture
+    /// is the well-known test vector from `minisign-verify`'s own
+    /// README (no minisign CLI on this machine, so we ship the vector
+    /// verbatim instead of re-signing at test time).
+    #[test]
+    fn verify_minisign_accepts_known_good_signature() {
+        let payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
+            .expect("fixture signature present");
+        verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY)
+            .expect("valid signature verifies");
+    }
+
+    #[test]
+    fn verify_minisign_rejects_tampered_payload() {
+        let mut payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
+            .expect("fixture signature present");
+        payload[0] ^= 0x01; // flip a bit
+        assert!(
+            verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY).is_err(),
+            "tampered payload must fail"
+        );
+    }
+
+    #[test]
+    fn verify_minisign_rejects_wrong_key() {
+        let payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
+            .expect("fixture signature present");
+        // The OxiLine live pubkey is different bytes from the test
+        // pubkey — a verify with the wrong key must fail.
+        assert!(
+            verify_minisign_with(&payload, &sig_raw, LIVE_PUBKEY).is_err(),
+            "mismatched key must fail"
+        );
+    }
+
+    // ---- download progress -------------------------------------------------
+
+    /// Drives `download` against a tiny in-process TCP server. The
+    /// server returns a known byte count; the callback must fire
+    /// `0` once at the start, increasing values up to ≤99, and
+    /// `100` at the end.
     #[test]
     fn download_emits_zero_then_ascending_then_100() {
         use std::io::{Read, Write};
@@ -665,43 +796,7 @@ mod tests {
         assert_eq!(std::fs::metadata(&dest).unwrap().len() as usize, body_len);
     }
 
-    /// in `verifies_live_release_signature` (#[ignore]).
-    #[test]
-    fn verify_minisign_accepts_known_good_signature() {
-        let payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
-        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
-            .expect("fixture signature present");
-        verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY)
-            .expect("valid signature verifies");
-    }
-
-    #[test]
-    fn verify_minisign_rejects_tampered_payload() {
-        let mut payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
-        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
-            .expect("fixture signature present");
-        payload[0] ^= 0x01; // flip a bit
-        assert!(
-            verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY).is_err(),
-            "tampered payload must fail"
-        );
-    }
-
-    #[test]
-    fn verify_minisign_rejects_wrong_key() {
-        let payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
-        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
-            .expect("fixture signature present");
-        // The OxiLine live pubkey is different bytes from the test pubkey
-        // — a verify with the wrong key must fail.
-        assert!(
-            verify_minisign_with(&payload, &sig_raw, LIVE_PUBKEY).is_err(),
-            "mismatched key must fail"
-        );
-    }
+    // ---- file-system + extraction helpers --------------------------------
 
     #[test]
     fn sha256_hex_matches_known_digest() {
@@ -734,7 +829,10 @@ mod tests {
         let dest = tmp.path().join("out");
         std::fs::create_dir(&dest).unwrap();
         extract_tar_gz(&archive, &dest).unwrap();
-        assert_eq!(std::fs::read_to_string(dest.join("hello.txt")).unwrap(), "hi\n");
+        assert_eq!(
+            std::fs::read_to_string(dest.join("hello.txt")).unwrap(),
+            "hi\n"
+        );
     }
 
     #[test]
@@ -755,14 +853,15 @@ mod tests {
         std::fs::remove_dir_all(&work).unwrap();
     }
 
-
+    // ---- in-app swap (synthetic tarball) ---------------------------------
 
     /// In-app swap on a synthetic path. The fake HTTP server returns a
-    /// tarball that contains a directory called `OxiLine.app/foo.txt`. The
-    /// test exercises the public manifest API end-to-end (parse, download,
-    /// extract, find `.app`, rename into place) and confirms the parent
-    /// directory ends up holding the new bundle. The verify hook is
-    /// bypassed so we don't need a real signature for a synthetic tarball.
+    /// tarball that contains a directory called `OxiLine.app/foo.txt`.
+    /// The test exercises the public manifest API end-to-end (parse,
+    /// download, extract, find `.app`, rename into place) and confirms
+    /// the parent directory ends up holding the new bundle. The verify
+    /// hook is bypassed so we don't need a real signature for a
+    /// synthetic tarball.
     #[test]
     fn upgrade_in_app_replaces_bundle_on_disk() {
         use std::io::{Read, Write};
@@ -816,7 +915,7 @@ mod tests {
         let app: PathBuf = work.path().join("OxiLine.app");
         std::fs::create_dir(&app).unwrap();
         std::fs::write(app.join("old.txt"), b"old").unwrap();
-        upgrade_in_app_with_verify(&manifest, &app, &Options::default(), |_, _| Ok(()))
+        upgrade_in_app_with_verify(&manifest, &app, |_, _| Ok(()))
             .expect("swap should succeed");
         assert!(app.join("foo.txt").exists(), "new foo.txt must be in place");
         assert!(!app.join("old.txt").exists(), "old file must be gone");
@@ -832,4 +931,26 @@ mod tests {
         assert!(leftover.is_empty(), "sibling tempdir must be cleaned up");
     }
 
+    // ---- end-to-end live probe (#[ignore]) -------------------------------
 
+    /// End-to-end probe: the OxiLine `latest.json` → the live signed
+    /// bundle. This is the safety check the spec calls out before
+    /// removing `tauri-plugin-updater` from the GUI. Run with
+    /// `cargo test -p oxiline-cli --bin oxiline --release -- --include-ignored verifies_live_release_signature`.
+    #[test]
+    #[ignore]
+    fn verifies_live_release_signature() {
+        let manifest = fetch_manifest().expect("fetch manifest");
+        let asset = manifest
+            .platforms
+            .get(PLATFORM_KEY)
+            .expect("manifest has darwin-aarch64 asset");
+        let resp = ureq::get(&asset.url).call().expect("download bundle");
+        let mut data = Vec::new();
+        resp.into_reader()
+            .read_to_end(&mut data)
+            .expect("read bundle");
+        verify_minisign(&data, &asset.signature)
+            .expect("PUBKEY verifies the live signature");
+    }
+}

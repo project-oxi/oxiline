@@ -47,7 +47,6 @@
   },
   "bundle": {
     "active": true,
-
     "targets": ["app"],
     "externalBin": ["binaries/oxiline"],
     "icon": [
