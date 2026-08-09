@@ -2,7 +2,7 @@
 //! `docs/superpowers/plans/2026-08-09-unified-updater.md`.
 
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 
 /// Parse `v` as a `MAJOR.MINOR.PATCH` triple. Tolerant of a leading `v`
@@ -61,8 +61,67 @@ struct Manifest {
 #[derive(serde::Deserialize)]
 struct PlatformAsset {
     url: String,
+    signature: String,
 }
 
+
+fn sha256_hex(path: &Path) -> anyhow::Result<String> {
+    use anyhow::Context;
+    use sha2::{Digest, Sha256};
+    let mut f = std::fs::File::open(path)
+        .with_context(|| format!("open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let n = std::io::Read::read(&mut f, &mut buf).context("read for hashing")?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Extract a `.tar.gz` into `dest` (overwriting). Used by both the in-app
+/// (`.app.tar.gz`) and standalone (CLI tarball) upgrade paths.
+fn extract_tar_gz(archive: &Path, dest: &Path) -> anyhow::Result<()> {
+    use anyhow::Context;
+    let f = std::fs::File::open(archive)
+        .with_context(|| format!("open {}", archive.display()))?;
+    let gz = flate2::read::GzDecoder::new(f);
+    let mut tar = tar::Archive::new(gz);
+    tar.set_overwrite(true);
+    tar.unpack(dest)
+        .with_context(|| format!("extract {}", archive.display()))?;
+    Ok(())
+}
+
+/// Return the first entry under `dir` whose extension equals `ext`.
+/// Used to locate the freshly-extracted `.app` (in-app path) or the bare
+/// `oxiline` binary (standalone path) inside the work dir.
+fn find_entry_with_ext(dir: &Path, ext: &str) -> anyhow::Result<PathBuf> {
+    use anyhow::{anyhow, bail};
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        if entry.path().extension().is_some_and(|e| e == ext) {
+            return Ok(entry.path());
+        }
+    }
+    bail!("extracted archive contained no .{ext}");
+}
+
+/// A temp dir on the same volume as `sibling_of` so renames stay atomic
+/// (the swap is the rename onto the live `.app` or binary; a cross-volume
+/// rename would fail or copy).
+fn sibling_tempdir(sibling_of: &Path) -> anyhow::Result<PathBuf> {
+    use anyhow::Context;
+    let dir = sibling_of.join(format!(".oxiline-upgrade-{}", std::process::id()));
+    std::fs::create_dir_all(&dir)
+        .with_context(|| format!("create work dir {}", dir.display()))?;
+    Ok(dir)
+}
+
+ /// Stream a download to `dest`, calling `on_pct` with `0` once at the start
 /// Stream a download to `dest`, calling `on_pct` with `0` once at the start
 /// and `100` at the end, with monotonic intermediate values while bytes
 /// stream in. The `pct` we report is best-effort — `ureq`'s `into_reader()`
@@ -393,4 +452,57 @@ mod tests {
             "mismatched key must fail"
         );
     }
+
+    #[test]
+    fn sha256_hex_matches_known_digest() {
+        // Echoed "abc" → SHA-256 (NIST test vector).
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path().join("abc.txt");
+        std::fs::write(&p, b"abc").unwrap();
+        assert_eq!(
+            sha256_hex(&p).unwrap(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn extract_tar_gz_preserves_entry() {
+        // Build a tar.gz in memory containing "hello.txt" → "hi\n".
+        let tmp = tempfile::tempdir().unwrap();
+        let archive = tmp.path().join("in.tar.gz");
+        let mut builder = tar::Builder::new(flate2::write::GzEncoder::new(
+            std::fs::File::create(&archive).unwrap(),
+            flate2::Compression::fast(),
+        ));
+        let mut header = tar::Header::new_gnu();
+        header.set_path("hello.txt").unwrap();
+        header.set_size(3);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append(&header, b"hi\n" as &[u8]).unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+        let dest = tmp.path().join("out");
+        std::fs::create_dir(&dest).unwrap();
+        extract_tar_gz(&archive, &dest).unwrap();
+        assert_eq!(std::fs::read_to_string(dest.join("hello.txt")).unwrap(), "hi\n");
+    }
+
+    #[test]
+    fn find_entry_with_ext_finds_app_but_ignores_others() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("a.txt"), b"x").unwrap();
+        std::fs::write(tmp.path().join("OxiLine.app"), b"x").unwrap();
+        let found = find_entry_with_ext(tmp.path(), "app").unwrap();
+        assert!(found.ends_with("OxiLine.app"));
+    }
+
+    #[test]
+    fn sibling_tempdir_lives_next_to_sibling_and_uses_pid() {
+        let tmp = tempfile::tempdir().unwrap();
+        let work = sibling_tempdir(tmp.path()).unwrap();
+        assert!(work.starts_with(tmp.path()));
+        assert!(work.to_string_lossy().contains(&std::process::id().to_string()));
+        std::fs::remove_dir_all(&work).unwrap();
+    }
+
 
