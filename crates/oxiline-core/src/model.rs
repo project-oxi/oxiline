@@ -74,6 +74,9 @@ pub struct SettingsSnapshot {
     pub notifications_enabled: bool,
     pub notification_lead_minutes: u32,
     pub tray_slots: Vec<TraySlotPref>,
+    /// Non-empty when `oxiline update` (CLI) asked the running app to install.
+    /// The GUI clears it after handling so a later launch doesn't refire.
+    pub update_request_at: String,
 }
 
 // ---- recording layer (docs/superpowers/specs/2026-08-01-record-layer-design.md §5.4) ----

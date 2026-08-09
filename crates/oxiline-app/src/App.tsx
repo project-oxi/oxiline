@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Header } from "./components/Header";
 import { RecordTimeline } from "./components/RecordTimeline";
 import { CommandPalette } from "./components/CommandPalette";
@@ -11,6 +11,9 @@ import { ActivitySwitcher } from "./components/ActivitySwitcher";
 import { CliNudge } from "./components/CliNudge";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { useUi } from "./lib/store";
+import { useSettings } from "./hooks";
+import { useUpdate } from "./lib/updater";
+import { api } from "./lib/api";
 
 function useGlobalKeys() {
   const ui = useUi();
@@ -67,6 +70,24 @@ function useGlobalKeys() {
 import { DndProvider } from "./lib/dnd";
 
 export default function App() {
+  // CLI `oxiline update` writes the `update_request_at` setting; the running
+  // app reacts by running the updater, which replaces the whole .app (CLI
+  // sidecar included) so GUI + CLI advance together.
+  const settings = useSettings();
+  const seenUpdateReq = useRef<string | null>(null);
+  useEffect(() => {
+    const req = (settings.data?.update_request_at as string | undefined) ?? null;
+    if (!req || req === seenUpdateReq.current) return;
+    seenUpdateReq.current = req;
+    // Clear so a later GUI launch doesn't refire on the stale timestamp
+    // (and auto-install a version that appeared in the meantime, unattended).
+    void api.setSetting("update_request_at", "");
+    void useUpdate.getState().check().then(() => {
+      if (useUpdate.getState().status.kind === "available") {
+        void useUpdate.getState().install();
+      }
+    });
+  }, [settings.data?.update_request_at]);
   useGlobalKeys();
 
   return (

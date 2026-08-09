@@ -217,6 +217,54 @@ fn run(opts: Cli) -> Result<()> {
                 ));
             }
         }
+        Command::Update { check } => {
+            let current = env!("CARGO_PKG_VERSION");
+            let latest = fetch_latest_release_version()?;
+            if is_up_to_date(current, &latest) {
+                let msg = match lang {
+                    Lang::Ko => format!("OxiLine v{} — 최신 버전이에요.", current),
+                    Lang::En => format!("OxiLine v{} — you're up to date.", current),
+                };
+                say(if json {
+                    json!({"current": current, "latest": latest, "up_to_date": true}).to_string()
+                } else {
+                    msg
+                });
+                return Ok(());
+            }
+            if *check {
+                let msg = match lang {
+                    Lang::Ko => format!("업데이트가 있어요: v{} → v{}", current, latest),
+                    Lang::En => format!("Update available: v{} → v{}", current, latest),
+                };
+                say(if json {
+                    json!({"current": current, "latest": latest, "up_to_date": false}).to_string()
+                } else {
+                    msg
+                });
+                return Ok(());
+            }
+            // Ask the running GUI to install. Same watched-setting pattern as
+            // `hud`: the GUI observes `update_request_at` changing and runs the
+            // updater, which replaces the whole .app — CLI sidecar included —
+            // so the GUI and CLI update together.
+            settings::set(&conn, "update_request_at", &Value::String(util::now_iso()))?;
+            let msg = match lang {
+                Lang::Ko => format!(
+                    "v{} 설치를 앱에 요청했어요. 잠시 후 앱이 다운로드하고 재시작해요.",
+                    latest
+                ),
+                Lang::En => format!(
+                    "v{} install requested from the app. It will download and relaunch shortly.",
+                    latest
+                ),
+            };
+            say(if json {
+                json!({"current": current, "latest": latest, "update_requested": true}).to_string()
+            } else {
+                msg
+            });
+        }
     }
     Ok(())
 }
@@ -232,6 +280,34 @@ fn resource_out<T: serde::Serialize>(json: bool, label: &str, t: &T) -> String {
             label,
             serde_json::to_string_pretty(t).unwrap_or_default()
         )
+    }
+}
+
+/// Fetch the latest release version tag from the GitHub Releases `latest.json`.
+fn fetch_latest_release_version() -> Result<String> {
+    const URL: &str = "https://github.com/project-oxi/oxiline/releases/latest/download/latest.json";
+    let resp = ureq::get(URL)
+        .call()
+        .map_err(|e| CoreError::Internal(format!("update check: {e}")))?;
+    let body = resp
+        .into_string()
+        .map_err(|e| CoreError::Internal(format!("update check: {e}")))?;
+    let v: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| CoreError::Internal(format!("update check: invalid manifest: {e}")))?;
+    v.get("version")
+        .and_then(|x| x.as_str())
+        .map(|s| s.trim_start_matches('v').to_string())
+        .ok_or_else(|| CoreError::Internal("update check: manifest has no version field".into()))
+}
+
+/// True when `current` is at least `latest` (tolerates a leading 'v'; falls
+/// back to a plain string compare if either side isn't valid semver).
+fn is_up_to_date(current: &str, latest: &str) -> bool {
+    let cur = current.trim_start_matches('v');
+    let lat = latest.trim_start_matches('v');
+    match (semver::Version::parse(cur), semver::Version::parse(lat)) {
+        (Ok(c), Ok(l)) => c >= l,
+        _ => cur == lat,
     }
 }
 

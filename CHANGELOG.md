@@ -2,6 +2,20 @@
 
 All notable changes to OxiLine will be documented in this file.
 
+## [Unreleased]
+
+### CLI (`oxiline-cli`)
+
+- **feat**: `oxiline update` — checks GitHub Releases for a newer version and
+  asks the running app to install it (writes the `update_request_at` setting,
+  mirroring the `hud` pattern). The app's updater replaces the whole `.app`
+  (CLI sidecar included), so GUI and CLI advance together. `--check` reports
+  without installing.
+### Desktop app (`oxiline-app`)
+
+- **feat**: react to a CLI `oxiline update` request by running the updater
+  immediately (download + relaunch), so the two surfaces stay in sync.
+
 ## [0.6.0] - 2026-08-09
 
 ### Desktop app (`oxiline-app`)

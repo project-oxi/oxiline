@@ -211,5 +211,6 @@ pub fn snapshot(conn: &Connection) -> crate::model::SettingsSnapshot {
         notifications_enabled: get_bool(conn, "notifications_enabled", false),
         notification_lead_minutes: get_i64(conn, "notification_lead_minutes", 5) as u32,
         tray_slots: get_tray_slots(conn),
+        update_request_at: get_string(conn, "update_request_at", ""),
     }
 }

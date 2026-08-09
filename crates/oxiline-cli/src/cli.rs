@@ -81,6 +81,12 @@ pub enum Command {
         #[command(subcommand)]
         action: PlanAction,
     },
+    /// Check for a newer release; ask the running app to install it.
+    Update {
+        /// Only report availability; don't ask the app to install.
+        #[arg(long)]
+        check: bool,
+    },
     /// Run a self-diagnostic (DB path, schema version, WAL state, categories).
     Doctor,
 }
