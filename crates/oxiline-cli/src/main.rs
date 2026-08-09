@@ -3,6 +3,8 @@
 mod cli;
 mod lang;
 mod output;
+mod upgrade;
+
 
 use std::process::ExitCode;
 
