@@ -215,14 +215,30 @@ struct PlatformAsset {
 #[allow(dead_code)] // every variant is part of the wire contract
 enum Event<'a> {
     Checking,
-    Current { version: &'a str },
-    Available { from: &'a str, to: &'a str, notes: &'a str },
-    Latest { version: &'a str },
-    Download { pct: u8 },
+    Current {
+        version: &'a str,
+    },
+    Available {
+        from: &'a str,
+        to: &'a str,
+        notes: &'a str,
+    },
+    Latest {
+        version: &'a str,
+    },
+    Download {
+        pct: u8,
+    },
     Verifying,
-    Swapping { mode: &'a str },
-    Done { version: &'a str },
-    Error { message: &'a str },
+    Swapping {
+        mode: &'a str,
+    },
+    Done {
+        version: &'a str,
+    },
+    Error {
+        message: &'a str,
+    },
 }
 
 /// Emit a single NDJSON event on stdout if `--json-progress` is set. The
@@ -326,11 +342,9 @@ fn upgrade_in_app_with_verify(
         // bundle.
         let old = work.join(".previous.app");
         if app.exists() {
-            std::fs::rename(app, &old)
-                .with_context(|| format!("move aside {}", app.display()))?;
+            std::fs::rename(app, &old).with_context(|| format!("move aside {}", app.display()))?;
         }
-        std::fs::rename(&new_app, app)
-            .with_context(|| format!("install {}", app.display()))?;
+        std::fs::rename(&new_app, app).with_context(|| format!("install {}", app.display()))?;
         let _ = std::fs::remove_dir_all(&old);
         Ok(())
     })();
@@ -383,10 +397,8 @@ fn upgrade_standalone(latest: &str) -> anyhow::Result<()> {
         // until the process exits, so the directory entry can be
         // replaced underneath it.
         let old = work.join(".previous.bin");
-        std::fs::rename(&exe, &old)
-            .with_context(|| format!("move aside {}", exe.display()))?;
-        std::fs::rename(&new_bin, &exe)
-            .with_context(|| format!("install {}", exe.display()))?;
+        std::fs::rename(&exe, &old).with_context(|| format!("move aside {}", exe.display()))?;
+        std::fs::rename(&new_bin, &exe).with_context(|| format!("install {}", exe.display()))?;
         let _ = std::fs::remove_file(&old);
         Ok(())
     })();
@@ -405,8 +417,7 @@ fn upgrade_standalone(latest: &str) -> anyhow::Result<()> {
 fn sibling_tempdir(sibling_of: &Path) -> anyhow::Result<PathBuf> {
     use anyhow::Context;
     let dir = sibling_of.join(format!(".oxiline-upgrade-{}", std::process::id()));
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("create work dir {}", dir.display()))?;
+    std::fs::create_dir_all(&dir).with_context(|| format!("create work dir {}", dir.display()))?;
     Ok(dir)
 }
 
@@ -422,18 +433,21 @@ fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Resul
         .call()
         .map_err(|e| anyhow!("download {url}: {e}"))?;
     let mut reader = resp.into_reader();
-    let mut f = std::fs::File::create(dest)
-        .map_err(|e| anyhow!("create {}: {e}", dest.display()))?;
+    let mut f =
+        std::fs::File::create(dest).map_err(|e| anyhow!("create {}: {e}", dest.display()))?;
     let mut buf = [0u8; 64 * 1024];
     let mut total: usize = 0;
     let mut last_pct: u8 = 0;
     on_pct(0);
     loop {
-        let n = reader.read(&mut buf).map_err(|e| anyhow!("download read: {e}"))?;
+        let n = reader
+            .read(&mut buf)
+            .map_err(|e| anyhow!("download read: {e}"))?;
         if n == 0 {
             break;
         }
-        f.write_all(&buf[..n]).map_err(|e| anyhow!("download write: {e}"))?;
+        f.write_all(&buf[..n])
+            .map_err(|e| anyhow!("download write: {e}"))?;
         total += n;
         // 1 MiB granularity keeps the bar visibly moving without
         // spamming NDJSON lines. The maximum we report is 99 — `done`
@@ -453,8 +467,7 @@ fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Resul
 fn sha256_hex(path: &Path) -> anyhow::Result<String> {
     use anyhow::Context;
     use sha2::{Digest, Sha256};
-    let mut f = std::fs::File::open(path)
-        .with_context(|| format!("open {}", path.display()))?;
+    let mut f = std::fs::File::open(path).with_context(|| format!("open {}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 64 * 1024];
     loop {
@@ -464,15 +477,18 @@ fn sha256_hex(path: &Path) -> anyhow::Result<String> {
         }
         hasher.update(&buf[..n]);
     }
-    Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect())
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect())
 }
 
 /// Extract a `.tar.gz` into `dest` (overwriting). Used by both the
 /// in-app (`.app.tar.gz`) and standalone (CLI tarball) upgrade paths.
 fn extract_tar_gz(archive: &Path, dest: &Path) -> anyhow::Result<()> {
     use anyhow::Context;
-    let f = std::fs::File::open(archive)
-        .with_context(|| format!("open {}", archive.display()))?;
+    let f = std::fs::File::open(archive).with_context(|| format!("open {}", archive.display()))?;
     let gz = flate2::read::GzDecoder::new(f);
     let mut tar = tar::Archive::new(gz);
     tar.set_overwrite(true);
@@ -513,25 +529,19 @@ fn verify_minisign(data: &[u8], sig_b64: &str) -> anyhow::Result<()> {
 /// Both `key_b64` and `sig_b64` are base64-encoded `minisign` files (the
 /// format Tauri shipped in `tauri.conf.json` and `latest.json`). We
 /// decode each once, then hand the inner file to `minisign_verify`.
-fn verify_minisign_with(
-    data: &[u8],
-    sig_b64: &str,
-    key_b64: &str,
-) -> anyhow::Result<()> {
+fn verify_minisign_with(data: &[u8], sig_b64: &str, key_b64: &str) -> anyhow::Result<()> {
     use anyhow::anyhow;
     use base64::Engine as _;
     let key_raw = base64::engine::general_purpose::STANDARD
         .decode(key_b64.trim().as_bytes())
         .map_err(|e| anyhow!("decode public key: {e}"))?;
-    let key_box = String::from_utf8(key_raw)
-        .map_err(|e| anyhow!("public key not utf-8: {e}"))?;
+    let key_box = String::from_utf8(key_raw).map_err(|e| anyhow!("public key not utf-8: {e}"))?;
     let pk = minisign_verify::PublicKey::decode(&key_box)
         .map_err(|e| anyhow!("parse public key: {e}"))?;
     let sig_raw = base64::engine::general_purpose::STANDARD
         .decode(sig_b64.trim().as_bytes())
         .map_err(|e| anyhow!("decode signature: {e}"))?;
-    let sig_box = String::from_utf8(sig_raw)
-        .map_err(|e| anyhow!("signature not utf-8: {e}"))?;
+    let sig_box = String::from_utf8(sig_raw).map_err(|e| anyhow!("signature not utf-8: {e}"))?;
     let parsed = minisign_verify::Signature::decode(&sig_box)
         .map_err(|e| anyhow!("parse signature: {e}"))?;
     pk.verify(data, &parsed, false)
@@ -724,18 +734,16 @@ mod tests {
     /// verbatim instead of re-signing at test time).
     #[test]
     fn verify_minisign_accepts_known_good_signature() {
-        let payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
+        let payload = std::fs::read("tests/fixtures/payload.txt").expect("fixture payload present");
         let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
             .expect("fixture signature present");
-        verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY)
-            .expect("valid signature verifies");
+        verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY).expect("valid signature verifies");
     }
 
     #[test]
     fn verify_minisign_rejects_tampered_payload() {
-        let mut payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
+        let mut payload =
+            std::fs::read("tests/fixtures/payload.txt").expect("fixture payload present");
         let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
             .expect("fixture signature present");
         payload[0] ^= 0x01; // flip a bit
@@ -747,8 +755,7 @@ mod tests {
 
     #[test]
     fn verify_minisign_rejects_wrong_key() {
-        let payload = std::fs::read("tests/fixtures/payload.txt")
-            .expect("fixture payload present");
+        let payload = std::fs::read("tests/fixtures/payload.txt").expect("fixture payload present");
         let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig.b64")
             .expect("fixture signature present");
         // The OxiLine live pubkey is different bytes from the test
@@ -786,7 +793,10 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dest = tmp.path().join("out.bin");
         let mut calls: Vec<u8> = Vec::new();
-        download(&format!("http://{addr}/"), &dest, &mut |pct| calls.push(pct)).unwrap();
+        download(&format!("http://{addr}/"), &dest, &mut |pct| {
+            calls.push(pct)
+        })
+        .unwrap();
         assert_eq!(calls.first(), Some(&0));
         assert_eq!(calls.last(), Some(&100));
         // Monotonic non-decreasing.
@@ -849,7 +859,10 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let work = sibling_tempdir(tmp.path()).unwrap();
         assert!(work.starts_with(tmp.path()));
-        assert!(work.to_string_lossy().contains(&std::process::id().to_string()));
+        assert!(
+            work.to_string_lossy()
+                .contains(&std::process::id().to_string())
+        );
         std::fs::remove_dir_all(&work).unwrap();
     }
 
@@ -889,9 +902,8 @@ mod tests {
             let (mut s, _) = listener.accept().unwrap();
             let mut buf = [0u8; 1024];
             let _ = s.read(&mut buf);
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {gz_len}\r\nConnection: close\r\n\r\n"
-            );
+            let resp =
+                format!("HTTP/1.1 200 OK\r\nContent-Length: {gz_len}\r\nConnection: close\r\n\r\n");
             s.write_all(resp.as_bytes()).unwrap();
             s.write_all(&gz_clone).unwrap();
         });
@@ -915,8 +927,7 @@ mod tests {
         let app: PathBuf = work.path().join("OxiLine.app");
         std::fs::create_dir(&app).unwrap();
         std::fs::write(app.join("old.txt"), b"old").unwrap();
-        upgrade_in_app_with_verify(&manifest, &app, |_, _| Ok(()))
-            .expect("swap should succeed");
+        upgrade_in_app_with_verify(&manifest, &app, |_, _| Ok(())).expect("swap should succeed");
         assert!(app.join("foo.txt").exists(), "new foo.txt must be in place");
         assert!(!app.join("old.txt").exists(), "old file must be gone");
         let leftover: Vec<_> = std::fs::read_dir(work.path())
@@ -950,7 +961,6 @@ mod tests {
         resp.into_reader()
             .read_to_end(&mut data)
             .expect("read bundle");
-        verify_minisign(&data, &asset.signature)
-            .expect("PUBKEY verifies the live signature");
+        verify_minisign(&data, &asset.signature).expect("PUBKEY verifies the live signature");
     }
 }

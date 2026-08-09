@@ -5,7 +5,6 @@ mod lang;
 mod output;
 mod upgrade;
 
-
 use std::process::ExitCode;
 
 use clap::Parser;
@@ -219,7 +218,11 @@ fn run(opts: Cli) -> Result<()> {
                 ));
             }
         }
-        Command::Upgrade { check, json_progress, yes } => {
+        Command::Upgrade {
+            check,
+            json_progress,
+            yes,
+        } => {
             upgrade::run(
                 &conn,
                 upgrade::Options {
@@ -262,7 +265,6 @@ fn resource_out<T: serde::Serialize>(json: bool, label: &str, t: &T) -> String {
         )
     }
 }
-
 
 fn preview(json: bool, label: &str, v: &Value) -> String {
     if json {
