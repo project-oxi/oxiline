@@ -59,6 +59,43 @@ struct PlatformAsset {
     url: String,
 }
 
+/// Minisign public key for the live OxiLine release. The inner base64
+/// `RWQ…u` line from the `minisign.pub` file (the outer `tauri.conf.json`
+/// pubkey was a base64-of-the-pub-file; we store the decoded line here so
+/// the call site is one `from_base64` away). The CLI is the only
+/// verifier; the GUI no longer embeds this.
+const LIVE_PUBKEY: &str = "RWQWUGOnd35Vhu5+pjNhZ5pBjd4N+1YTz8nsdTFllvnrCZ79HSav7B3u";
+
+/// Well-known minisign test public key (from `minisign-verify`'s README).
+/// Used by the unit tests so we can ship the well-known signature
+/// verbatim instead of re-signing at test time.
+#[cfg(test)]
+const TEST_PUBKEY: &str = "RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+
+/// Production entry point. Verifies a minisign signature over `data` using
+/// the live OxiLine public key. Wire format: the raw `.minisig` file
+/// content (untrusted comment + base64 sig box + trusted comment + final
+/// base64).
+fn verify_minisign(data: &[u8], sig: &str) -> anyhow::Result<()> {
+    verify_minisign_with(data, sig, LIVE_PUBKEY)
+}
+
+/// Verifies a minisign signature with an explicit key. The test seam exists
+/// so unit tests can drive the verify path with the well-known test pubkey
+/// from `minisign-verify`'s own README without baking that key into the
+/// production binary.
+fn verify_minisign_with(data: &[u8], sig: &str, key_b64: &str) -> anyhow::Result<()> {
+    use anyhow::anyhow;
+    let pk = minisign_verify::PublicKey::from_base64(key_b64.trim())
+        .map_err(|e| anyhow!("parse public key: {e}"))?;
+    let parsed = minisign_verify::Signature::decode(sig)
+        .map_err(|e| anyhow!("parse signature: {e}"))?;
+    pk.verify(data, &parsed, false)
+        .map_err(|e| anyhow!("signature verification failed: {e}"))?;
+    Ok(())
+}
+
+/// NDJSON progress event on stdout when `--json-progress` is set.
 /// NDJSON progress event on stdout when `--json-progress` is set. The schema
 /// is part of the GUI↔CLI contract (`doc/10-updater.md`); keep field names
 /// and types stable. The matching test block in `#[cfg(test)] mod tests`
@@ -235,4 +272,47 @@ mod tests {
         );
     }
 }
+
+
+    /// Round-trip against a known-good minisign signature. The fixture is
+    /// the well-known test vector from `minisign-verify`'s own README
+    /// (no minisign CLI on this machine, so we ship the vector verbatim
+    /// instead of re-signing at test time). The live release probe lives
+    /// in `verifies_live_release_signature` (#[ignore]).
+    #[test]
+    fn verify_minisign_accepts_known_good_signature() {
+        let payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig")
+            .expect("fixture signature present");
+        verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY)
+            .expect("valid signature verifies");
+    }
+
+    #[test]
+    fn verify_minisign_rejects_tampered_payload() {
+        let mut payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig")
+            .expect("fixture signature present");
+        payload[0] ^= 0x01; // flip a bit
+        assert!(
+            verify_minisign_with(&payload, &sig_raw, TEST_PUBKEY).is_err(),
+            "tampered payload must fail"
+        );
+    }
+
+    #[test]
+    fn verify_minisign_rejects_wrong_key() {
+        let payload = std::fs::read("tests/fixtures/payload.txt")
+            .expect("fixture payload present");
+        let sig_raw = std::fs::read_to_string("tests/fixtures/payload.txt.minisig")
+            .expect("fixture signature present");
+        // The OxiLine live pubkey is different bytes from the test pubkey
+        // — a verify with the wrong key must fail.
+        assert!(
+            verify_minisign_with(&payload, &sig_raw, LIVE_PUBKEY).is_err(),
+            "mismatched key must fail"
+        );
+    }
 
