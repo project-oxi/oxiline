@@ -1,6 +1,10 @@
 //! Self-update engine (`doc/10-updater.md`). See the plan in
 //! `docs/superpowers/plans/2026-08-09-unified-updater.md`.
 
+use std::io::{Read, Write};
+use std::path::Path;
+
+
 /// Parse `v` as a `MAJOR.MINOR.PATCH` triple. Tolerant of a leading `v`
 /// and of a pre-release suffix on the patch (e.g. `1.2.3-rc1` → `(1,2,3)`).
 /// Returns `None` for anything else — we never auto-update on a guess.
@@ -59,6 +63,45 @@ struct PlatformAsset {
     url: String,
 }
 
+/// Stream a download to `dest`, calling `on_pct` with `0` once at the start
+/// and `100` at the end, with monotonic intermediate values while bytes
+/// stream in. The `pct` we report is best-effort — `ureq`'s `into_reader()`
+/// discards the response headers (and thus the real `content-length`), so
+/// the GUI's own progress bar (which has the byte counter) is authoritative.
+fn download(url: &str, dest: &Path, on_pct: &mut dyn FnMut(u8)) -> anyhow::Result<()> {
+    use anyhow::anyhow;
+    let resp = ureq::get(url)
+        .call()
+        .map_err(|e| anyhow!("download {url}: {e}"))?;
+    let mut reader = resp.into_reader();
+    let mut f = std::fs::File::create(dest)
+        .map_err(|e| anyhow!("create {}: {e}", dest.display()))?;
+    let mut buf = [0u8; 64 * 1024];
+    let mut total: usize = 0;
+    let mut last_pct: u8 = 0;
+    on_pct(0);
+    loop {
+        let n = reader.read(&mut buf).map_err(|e| anyhow!("download read: {e}"))?;
+        if n == 0 {
+            break;
+        }
+        f.write_all(&buf[..n]).map_err(|e| anyhow!("download write: {e}"))?;
+        total += n;
+        // 1 MiB granularity keeps the bar visibly moving without spamming
+        // NDJSON lines. The maximum we report is 99 — `done` is the
+        // authoritative completion event.
+        let approx = ((total / (1024 * 1024)) as u8).min(99);
+        if approx > last_pct {
+            last_pct = approx;
+            on_pct(last_pct);
+        }
+    }
+    f.sync_all().ok();
+    on_pct(100);
+    Ok(())
+}
+
+/// Minisign public key for the live OxiLine release.
 /// Minisign public key for the live OxiLine release. The inner base64
 /// `RWQ…u` line from the `minisign.pub` file (the outer `tauri.conf.json`
 /// pubkey was a base64-of-the-pub-file; we store the decoded line here so
@@ -278,6 +321,41 @@ mod tests {
     /// the well-known test vector from `minisign-verify`'s own README
     /// (no minisign CLI on this machine, so we ship the vector verbatim
     /// instead of re-signing at test time). The live release probe lives
+
+    /// Drives `download` against a tiny in-process TCP server. The server
+    /// returns a known byte count; the callback must fire `0` once at the
+    /// start, increasing values up to ≤99, and `100` at the end.
+    #[test]
+    fn download_emits_zero_then_ascending_then_100() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let body: Vec<u8> = (0..(5 * 1024 * 1024)).map(|i| (i % 251) as u8).collect();
+        let body_len = body.len();
+        std::thread::spawn(move || {
+            let (mut s, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = s.read(&mut buf); // drain request line
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {body_len}\r\nConnection: close\r\n\r\n"
+            );
+            s.write_all(resp.as_bytes()).unwrap();
+            s.write_all(&body).unwrap();
+        });
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("out.bin");
+        let mut calls: Vec<u8> = Vec::new();
+        download(&format!("http://{addr}/"), &dest, &mut |pct| calls.push(pct)).unwrap();
+        assert_eq!(calls.first(), Some(&0));
+        assert_eq!(calls.last(), Some(&100));
+        // Monotonic non-decreasing.
+        for w in calls.windows(2) {
+            assert!(w[0] <= w[1], "progress must be non-decreasing: {w:?}");
+        }
+        assert_eq!(std::fs::metadata(&dest).unwrap().len() as usize, body_len);
+    }
+
     /// in `verifies_live_release_signature` (#[ignore]).
     #[test]
     fn verify_minisign_accepts_known_good_signature() {
