@@ -149,7 +149,9 @@ jobs:
       - name: Generate updater manifest (latest.json)
         run: |
           set -euo pipefail
-          SIG=$(cat artifacts/app/*.app.tar.gz.sig)
+          SIG_FILE=$(find artifacts/app -name '*.app.tar.gz.sig' -print -quit)
+          [ -n "$SIG_FILE" ] || { echo "no .app.tar.gz.sig under artifacts/app" >&2; exit 1; }
+          SIG=$(cat "$SIG_FILE")
           VERSION="${GITHUB_REF_NAME#v}"
           URL="https://github.com/project-oxi/oxiline/releases/download/${GITHUB_REF_NAME}/OxiLine.app.tar.gz"
           PUB=$(date -u +%Y-%m-%dT%H:%M:%SZ)
