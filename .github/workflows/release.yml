@@ -119,7 +119,29 @@ jobs:
           projectPath: crates/oxiline-app/src-tauri
           args: --target universal-apple-darwin --bundles app,dmg
 
-      # Sign the `.app.tar.gz` with minisign so the CLI's verify step
+      # Package the freshly-built `.app` into a `.app.tar.gz` for the
+      # self-update flow. We removed `bundle.createUpdaterArtifacts` so
+      # Tauri no longer auto-emits this artifact; we now build it
+      # explicitly here. The CLI's `verify_minisign` step
+      # (`doc/10-updater.md`) authenticates this exact file.
+      - name: Package app bundle as .app.tar.gz
+        run: |
+          set -euo pipefail
+          BUNDLE_DIR=target/universal-apple-darwin/release/bundle/macos
+          OUT_DIR="$BUNDLE_DIR/../update-stage"
+          mkdir -p "$OUT_DIR"
+          for app in "$BUNDLE_DIR"/*.app; do
+            base=$(basename "$app")
+            # Use the canonical asset name the CLI expects in
+            # `latest.json#platforms.darwin-aarch64.url`.
+            tar -C "$BUNDLE_DIR" -czf "$OUT_DIR/OxiLine.app.tar.gz" "$base"
+            # Copy next to the .app so the minisign/upload globs below
+            # find it without re-rooting.
+            cp "$OUT_DIR/OxiLine.app.tar.gz" "$BUNDLE_DIR/OxiLine.app.tar.gz"
+          done
+          ls -la "$BUNDLE_DIR/OxiLine.app.tar.gz"
+
+       # Sign the `.app.tar.gz` with minisign so the CLI's verify step
       # (`doc/10-updater.md`) can authenticate it. Tauri's
       # `createUpdaterArtifacts` was the previous producer; with that
       # flag off the manual sign below is the only way the
@@ -142,8 +164,7 @@ jobs:
             minisign -S -s /tmp/oxiline.key -m "$f" -t "OxiLine.app.tar.gz"
           done
           rm -f /tmp/oxiline.key
-
-       - name: Upload signed bundles
+      - name: Upload signed bundles
         uses: actions/upload-artifact@v4
         with:
           name: oxiline-app-bundle
@@ -151,6 +172,7 @@ jobs:
             target/universal-apple-darwin/release/bundle/dmg/*.dmg
             target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
             target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+
 
   release:
     name: GitHub Release
