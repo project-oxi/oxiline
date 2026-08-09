@@ -1,14 +1,13 @@
 # OxiLine in-app update architecture
 
-Status: **Proposed**. OxiLine currently uses the Tauri updater plugin in the
-GUI and a CLI "signal" command that only writes a setting. The unification
-to "CLI as the only engine, GUI as a view" is documented in the canonical
-RFC at the oximemo repo:
+Status: **Implemented**. The CLI is the only engine (`oxiline upgrade`);
+the GUI is a thin view that spawns the bundled `oxiline` sidecar with
+`--json-progress` and parses its NDJSON progress contract. The Tauri
+updater plugin is removed; the minisign pubkey lives in
+`crates/oxiline-cli/src/upgrade.rs#LIVE_PUBKEY` and is verified against
+the live release by the `#[ignore]`'d
+`verifies_live_release_signature` test (`cargo test -- --ignored`).
 
-> **Canonical design:** [`oximemo/doc/UPDATER.md`](https://github.com/project-oxi/oximemo/blob/main/doc/UPDATER.md)
-
-Read that one first. This document is OxiLine's projection of it: the
-shared design plus the OxiLine-specific names, files, and migration steps.
 
 ## What stays the same as the canonical RFC
 
