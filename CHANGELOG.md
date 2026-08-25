@@ -2,6 +2,21 @@
 
 All notable changes to OxiLine will be documented in this file.
 
+## [Unreleased]
+
+### Docs / agent integration
+
+- **feat**: `.agent/skills/oxiline-cli/SKILL.md` — CLI-driven agent skill covering
+  `now/category/activity/settings/hud/report/record/plan/upgrade/doctor`, the
+  `--json`/exit-code contract, and do/don't guidance (no MCP server; see
+  `docs/superpowers/specs/2026-08-25-oxi-ecosystem-integration-design.md`). Also
+  registered as a globally discoverable managed skill.
+- **docs**: `doc/01-product-vision.md` §1.3.1 records the ecosystem-integration
+  boundary decision (SQLite stays canonical, no `.oxi/vault` migration, no oxibrain
+  write-back yet). `doc/08-roadmap.md` Phase 3 MCP item annotated as evaluated and
+  deferred. `doc/05-cli-spec.md` flagged stale against the actual recording-centered
+  CLI (`activity`/`record`/`plan`/`report`, not the original routine/task model).
+
 ## [0.7.0] - 2026-08-09
 
 Unified self-update architecture — the CLI is the only engine; the GUI

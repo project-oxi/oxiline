@@ -44,6 +44,15 @@ OxiLine은 **"일정(schedule)"이 아니라 "하루의 흐름(routine of a day)
 4. **미니멀리즘**: 기능을 최대한 쌓지 않는다. Structured나 Sunsama가 가진 기능의 70%를 의도적으로 버리고,
    "지금 흐름을 본다"는 한 가지에 집중한다.
 
+### 1.3.1 통합 경계 (2026-08-25 결정)
+
+OxiLine은 `.oxi/` 생태계(oxibrain, `.oxi/vault`)에 데이터를 넘기지 않는다. SQLite가
+유일한 원본이고, `.oxi/vault`의 마크다운 그래머는 이 앱의 관계형 스케줄 데이터를 표현하지
+못한다. 에이전트 연동은 상주 MCP 서버가 아니라 **CLI + `.agent/skills/oxiline-cli/`
+스킬 문서** 조합으로 한다 — 이미 완비된 `--json`/종료 코드 계약을 그대로 재사용하고,
+상주 프로세스를 새로 만들지 않는다. 근거와 대안 검토는
+`docs/superpowers/specs/2026-08-25-oxi-ecosystem-integration-design.md` 참고.
+
 ## 1.4 타깃 사용자
 
 - 1차 사용자: 개발자 본인. 터미널/에이전트 워크플로우에 이미 익숙하고, 자신의 하루도 코드처럼

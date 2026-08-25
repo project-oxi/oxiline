@@ -71,7 +71,11 @@
 
 ## Phase 3 — 확장 아이디어 (평가 후 채택)
 
-- [ ] `oxiline mcp serve` — MCP 서버 모드로 에이전트 연동 고도화 — `05-cli-spec.md` §5.6
+- [ ] `oxiline mcp serve` — MCP 서버 모드로 에이전트 연동 고도화 — `05-cli-spec.md` §5.6.
+      **평가 완료(2026-08-25): 보류.** CLI + `.agent/skills/oxiline-cli/` 스킬 조합으로
+      상주 프로세스 없이 동일 목표를 달성 — 근거는
+      `docs/superpowers/specs/2026-08-25-oxi-ecosystem-integration-design.md`. Claude
+      Desktop처럼 셸 실행이 불가능한 MCP 전용 호스트가 실제로 필요해지면 재검토.
 - [ ] Apple Calendar(EventKit) 읽기 전용 임포트 — 다른 캘린더 이벤트를 타임라인에 참고용으로 겹쳐보기
       (동기화 아님, 로컬 읽기 전용 스냅샷)
 - [ ] Shortcuts.app 연동(AppleScript/URL scheme)으로 시스템 단축어에서 할일 추가

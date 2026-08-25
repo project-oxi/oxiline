@@ -1,5 +1,11 @@
 # 05. CLI Spec — `oxiline` 명령줄 인터페이스
 
+> **stale 안내 (2026-08-25):** 이 문서는 초기 설계 시점의 routine/task 모델을 기술한다.
+> 실제 구현은 레코딩 중심 모델(`activity`/`record`/`plan`/`report`)로 피벗되어 이
+> 커맨드 트리와 일치하지 않는다. 최신 명령 트리는 `crates/oxiline-cli/src/cli.rs`와
+> `.agent/skills/oxiline-cli/SKILL.md`를 기준으로 삼을 것. 아래 §5.1(설계 원칙)과
+> §5.4~§5.7(에러 형식/종료 코드/MCP 검토/시나리오)의 원칙 수준 내용은 여전히 유효하다.
+
 ## 5.1 설계 원칙
 
 Oxi 생태계의 규칙대로, CLI는 GUI의 부산물이 아니라 **1급 클라이언트**다. 사람이 터미널에서 직접 쓸 수도
